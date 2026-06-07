@@ -2,7 +2,7 @@
 
 > 基于图谱技术的 AI 上下文处理与精准问答系统 — 逻辑视图 · 步骤五
 >
-> 版本：v1.0 | 创建日期：2026-06-05
+> 版本：v1.1 | 创建日期：2026-06-05 | 修订日期：2026-06-05
 >
 > 参考文档：[logical-view.md](logical-view.md)
 
@@ -50,45 +50,78 @@
 ├───────────────┤ ├──────────────────┤  ├──────────────────────┤
 │ studentId: ID  │ │ kpId: ID         │  │ docId: ID            │
 │ name: String   │ │ name: String     │  │ fileName: String     │
-│ classId: ID    │ │ description: Str │  │ subjectId: ID        │
-│ enrollYear: Int│ │ subjectId: ID    │  │ status: DocStatus    │
-│ status: StudSts│ │ source: KpSource │  │ version: Int         │
-└───────────────┘ │ status: KpStatus │  │ uploaderId: ID       │
-                  └────────┬─────────┘  │ uploaderRole: Role   │
-                           │            └──────────────────────┘
-                           │                    ▲
-                           │                    │
-              ┌────────────┼────────────┐       │
-              │            │            │       │
-              ▼            ▼            ▼       │
-        ┌──────────┐ ┌──────────┐ ┌──────────┐ │
-        │ Teacher  │ │  Class   │ │  Event   │ │
-        ├──────────┤ ├──────────┤ │(abstract)│ │
-        │teacherId │ │classId   │ ├──────────┤ │
-        │name      │ │name      │ │eventId   │ │
-        │subject   │ │grade     │ │studentId │ │
-        │classIds  │ │year      │ │kpIds     │ │
-        └──────────┘ └──────────┘ │eventTime │ │
-                                  └─────┬────┘ │
-                                        │      │
-                                        ▼      │
-        ┌───────────────────────────────────────┘
-        │
-        ▼ (Event 多态子类，详见 2.2)
+│ classId: ID    │ │ description: Str │  │ subjectId: ID ───────┼──┐
+│ enrollYear: Int│ │ subjectId: ID ───┼──┤  status: DocStatus    │  │
+│ status: StudSts│ │ source: KpSource │  │ version: Int         │  │
+└───────────────┘ │ status: KpStatus │  │ uploaderId: ID       │  │
+                  └────────┬─────────┘  │ uploaderRole: Role   │  │
+                           │            └──────────────────────┘  │
+                           │                    ▲                 │
+              ┌────────────┼────────────┐       │                 │
+              │            │            │       │                 │
+              ▼            ▼            ▼       │                 │
+        ┌──────────┐ ┌──────────┐ ┌──────────┐ │                 │
+        │ Teacher  │ │  Class   │ │  Event   │ │                 │
+        ├──────────┤ ├──────────┤ │(abstract)│ │                 │
+        │teacherId │ │classId   │ ├──────────┤ │                 │
+        │name      │ │name      │ │eventId   │ │                 │
+        │subjectId │ │grade     │ │studentId │ │                 │
+        │classIds  │ │year      │ │kpIds     │ │                 │
+        └────┬─────┘ └──────────┘ │eventTime │ │                 │
+             │                    └─────┬────┘ │                 │
+             │                          │      │                 │
+             │                          ▼      │                 │
+             │   ┌─────────────────────────────┘                 │
+             │   │                                               │
+             │   ▼ (Event 多态子类，详见 2.2)                     │
+             │                                                   │
+             └───────────┐                                       │
+                         │                                       │
+                         │  FK 引用                               │
+                         ▼                                       ▼
+                  ┌──────────────────────────────────────────────────┐
+                  │              Subject                              │
+                  │         (图谱节点 · Neo4j 存储)                   │
+                  │         extends GraphNode                        │
+                  ├──────────────────────────────────────────────────┤
+                  │ subjectId: String                                │
+                  │ name: String           — 学科名称(数学/物理/化学)  │
+                  │ code: String           — 学科编码                │
+                  │ description: String    — 学科描述                │
+                  │ status: SubjectStatus  — 启用/停用               │
+                  │ sortOrder: Int         — 展示排序                │
+                  ├──────────────────────────────────────────────────┤
+                  │ + isActive(): Boolean                            │
+                  │ + enable(): Void / disable(): Void               │
+                  │ + getKnowledgePoints(): List<KnowledgePoint>     │
+                  │     // 图遍历: Subject ← BELONGS_TO ← KP        │
+                  │ + getStudentsBySubject(): List<Student>          │
+                  │     // 图遍历: Subject → KP → Mastery → Student  │
+                  │ + getDocuments(): List<Document>                 │
+                  │ + getTeachers(): List<Teacher>                   │
+                  │ + getWeaknessOverview(): SubjectWeaknessOverview  │
+                  │     // 聚合该学科下所有学生的掌握权重分布          │
+                  └──────────────────────────────────────────────────┘
 ```
+
+**Subject 作为图谱节点的设计意义**：Subject 存储在 Neo4j 中，与 KnowledgePoint 通过 BELONGS_TO 边关联，使得可以通过图遍历实现跨维度分析：
+- **查看某学科所有人的情况**：`Subject ← BELONGS_TO ← KnowledgePoint ← MasteryRelation ← Student`
+- **学科级薄弱概览**：沿 BELONGS_TO 边聚合所有知识点的掌握权重
+- **跨学科关联分析**：通过共享知识点发现学科间的桥接关系
 
 **NodeType 枚举**：
 
 ```
-«enumeration» NodeType
-├── STUDENT          — 学生节点
-├── KNOWLEDGE_POINT  — 知识点节点
+«enumeration» NodeType                  «enumeration» SubjectStatus
+├── STUDENT          — 学生节点          ├── ENABLED      — 启用（正常参与所有功能）
+├── KNOWLEDGE_POINT  — 知识点节点        └── DISABLED     — 停用（不参与新功能，历史数据保留）
 ├── DOCUMENT         — 文档节点
 ├── EVENT            — 事件节点（多态基类）
 ├── TEACHER          — 教师节点
 ├── CLASS            — 班级节点
 ├── EXAM_PAPER       — 试卷节点
-└── QUESTION         — 题目节点
+├── QUESTION         — 题目节点
+└── SUBJECT          — 学科节点
 ```
 
 ### 2.2 Event 多态体系
@@ -190,6 +223,20 @@ Event 是宽图谱中将**结构化数据行转化为图谱节点**的核心抽�
 │ KP ↔ KP (无向/双向)              │
 │ 引用/推导/包含/同知识点           │
 └──────────────────────────────────┘
+
+┌──────────────────────────────────┐
+│       BelongsToRelation           │
+├──────────────────────────────────┤
+│ subjectId: String                │
+│ kpId: String                     │
+│ assignedAt: DateTime             │
+├──────────────────────────────────┤
+│ KnowledgePoint → Subject         │
+│ 知识点属于某学科                  │
+│ 支持: 按学科聚合学生掌握情况      │
+│       学科级薄弱概览              │
+│       跨学科关联分析              │
+└──────────────────────────────────┘
 ```
 
 **关联枚举**：
@@ -199,8 +246,9 @@ Event 是宽图谱中将**结构化数据行转化为图谱节点**的核心抽�
 ├── MASTERY         — 掌握关系      ├── REFERENCE    — 引用
 ├── PREREQUISITE    — 前置依赖      ├── DERIVATION   — 推导
 ├── EXTRACTION      — 抽取关系      ├── CONTAINS     — 包含
-├── KNOWLEDGE_REL   — 知识关联      └── SAME_AS      — 同知识点
-└── EVENT_REL       — 事件关联
+├── KNOWLEDGE_REL   — 知识关联      ├── SAME_AS      — 同知识点
+├── EVENT_REL       — 事件关联      └── BELONGS_TO_SUBJECT — 属于学科
+└── BELONGS_TO      — 学科归属
 ```
 
 ### 2.4 Subgraph 与 WideGraph
@@ -369,7 +417,8 @@ M4 是系统技术核心，包含三大子模块的类设计：宽图谱融合�
 │ curveType: DecayCurve  │ │ eventType: EventType          │
 │ halfLifeDays: Int      │ │ delta: Float        (+Δ/-Δ)  │
 │ computeInterval: Cron  │ │ affectScope: AffectScope     │
-│ subjectFilter: ID?     │ │ gradingMapping: Map<         │
+│ subjectFilter: Subject?│ │ gradingMapping: Map<         │
+│  (引用 Subject 实体)    │ │   GradingResult, Float>      │
 ├────────────────────────┤ │   GradingResult, Float>      │
 │ 指数衰减:              │ ├──────────────────────────────┤
 │  w' = w × e^(-λt)     │ │ 正确作答:  +0.05             │
@@ -699,36 +748,92 @@ LLMContext
 
 ---
 
-## 六、M2 · 知识体系 — 分类树与前置依赖
+## 六、M2 · 知识体系 — 学科、分类树与前置依赖
 
-### 6.1 知识分类树 (Category Tree)
+### 6.1 学科与知识分类树 (Subject + Category Tree)
+
+知识分类树以 **Subject 图谱节点**为根节点，向下展开为多级分类。Subject 是图谱中的一等公民节点（存储在 Neo4j），通过 BELONGS_TO 边与知识点关联；KnowledgeCategory 是分类树的节点（存储在关系型数据库），负责组织知识点的层级结构。
 
 ```
+┌─────────────────────────────────────────────────────────────┐
+│                       Subject                                │
+│              (图谱节点 · Neo4j 存储)                          │
+├─────────────────────────────────────────────────────────────┤
+│ subjectId: String                                            │
+│ name: String           — 数学/物理/化学/...                   │
+│ code: String           — 学科编码                            │
+│ description: String                                          │
+│ status: SubjectStatus  — ENABLED / DISABLED                  │
+│ sortOrder: Int                                               │
+├─────────────────────────────────────────────────────────────┤
+│ + isActive(): Boolean                                        │
+│ + enable(): Void / disable(): Void                           │
+│ + getCategoryTree(): KnowledgeCategory  — 获取该学科的根分类节点│
+│ + getKnowledgePoints(): List<KnowledgePoint>                 │
+│ + getDocuments(): List<Document>                             │
+│ + getTeachers(): List<Teacher>                               │
+│ + getDecayRules(): List<TimeDecayRule>  — 该学科的衰减规则    │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ 1:N (一个学科下有多棵分类树)
+                       ▼
 ┌─────────────────────────────────────────────┐
 │          KnowledgeCategory                   │
+│          (分类树节点 · 组合模式)               │
 ├─────────────────────────────────────────────┤
 │ categoryId: String                          │
 │ name: String                                │
 │ level: CategoryLevel                        │
-│ parentId: String?                           │
-│ subjectId: String                           │
+│ subjectId: String      ── FK → Subject      │
+│ parentId: String?      (根节点为null)        │
 │ sortOrder: Int                              │
 │ children: List<KnowledgeCategory>           │
-│ linkedKpId: String?     (叶子节点关联知识点) │
+│ linkedKpId: String?    (叶子节点关联知识点)   │
 ├─────────────────────────────────────────────┤
 │ + isLeaf(): Boolean                         │
+│ + isRoot(): Boolean      (parentId == null) │
 │ + getPath(): List<KnowledgeCategory>        │
 │ + addChild(child: KnowledgeCategory): Void  │
 │ + moveTo(newParentId: ID): Void             │
 │ + hasCycle(): Boolean                       │
 └─────────────────────────────────────────────┘
 
+分类树层级结构（组合模式递归）:
+
+  Subject (数学)                    ← Subject 图谱节点 (Neo4j)
+    │
+    ▼
+  KnowledgeCategory (代数)          ← level = MODULE
+    │
+    ├── KnowledgeCategory (函数)     ← level = CHAPTER
+    │     │
+    │     ├── KnowledgeCategory (二次函数)  ← level = KNOWLEDGE_POINT
+    │     │     └── linkedKpId → KnowledgePoint 实体 (Neo4j)
+    │     │
+    │     └── KnowledgeCategory (一次函数)  ← level = KNOWLEDGE_POINT
+    │           └── linkedKpId → KnowledgePoint 实体
+    │
+    └── KnowledgeCategory (方程)     ← level = CHAPTER
+          └── ...
+
 «enumeration» CategoryLevel
-├── SUBJECT      — 学科（数学/物理/...）
-├── MODULE       — 一级模块（代数/几何/...）
-├── CHAPTER      — 二级章节（函数/方程/...）
+├── MODULE          — 一级模块（代数/几何/...）
+├── CHAPTER         — 二级章节（函数/方程/...）
 └── KNOWLEDGE_POINT — 具体知识点
+
+注: 原 SUBJECT 层级已提升为独立的 Subject 实体，
+    KnowledgeCategory 从 MODULE 层级开始。
 ```
+
+**Subject 与 KnowledgeCategory 的职责分离**：
+
+| 维度 | Subject | KnowledgeCategory |
+|------|---------|-------------------|
+| **存储位置** | Neo4j（图谱节点） | 关系型数据库 |
+| **图谱边** | BELONGS_TO（KP→Subject）、DOCUMENT_SUBJECT（Doc→Subject） | 无图谱边，通过 parentId 树形关联 |
+| **生命周期** | 长期稳定（几乎不增删） | 可频繁调整（拖拽/新增/删除） |
+| **被引用方式** | 作为外键被 15+ 个实体/接口引用 | 作为分类树节点被 M2 内部管理 |
+| **核心职责** | 全局分类维度、过滤条件 | 组织知识点的层级结构 |
+| **状态管理** | ENABLED/DISABLED | 无独立状态（随树结构变化） |
 
 ### 6.2 前置依赖与循环检测
 
@@ -873,15 +978,16 @@ AttributionReportVO (面向表示层的组装结果)
 │                     全局枚举定义                               │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  NodeType        — 图谱节点类型（7种）                        │
+│  NodeType        — 图谱节点类型（8种）                        │
 │  EdgeType        — 图谱边类型（6种）                          │
 │  EventType       — 事件类型（3种）                            │
 │  TaskType        — 任务类型（5种）                            │
 │  StudentStatus   — 学生状态（4种）                            │
+│  SubjectStatus   — 学科状态（2种: ENABLED/DISABLED）          │
 │  KpStatus        — 知识点状态（2种: ACTIVE/DEPRECATED）       │
 │  KpSource        — 知识点来源（3种: AUTO/MANUAL/CSV_IMPORT）  │
 │  DocStatus       — 文档状态（5种，见下）                       │
-│  CategoryLevel   — 分类层级（4种）                            │
+│  CategoryLevel   — 分类层级（3种，学科已提升为 Subject 实体）   │
 │  DecayCurve      — 衰减曲线（3种）                            │
 │  AssignType      — 作业类型（3种）                            │
 │  GradingResult   — 批改结果（4种）                            │
@@ -959,7 +1065,7 @@ AttributionReportVO (面向表示层的组装结果)
 | **观察者模式** | M4 WeightEngine → WeightChangeLog | 权重变更自动触发日志记录和通知，解耦变更与审计 |
 | **适配器模式** | L3 → L4 接口契约 | 领域层定义接口（IGraphRepository），基础设施层提供实现（Neo4jGraphRepository），技术可替换 |
 | **多态继承** | Event 基类 + 3 子类型 | 考试/作业/测验共享事件基础属性，各自扩展特定字段 |
-| **组合模式** | KnowledgeCategory 树形结构 | 分类树节点递归包含子节点，统一处理叶子和非叶子节点 |
+| **组合模式** | KnowledgeCategory 树形结构 + Subject 根 | 分类树以 Subject 为根，节点递归包含子节点，统一处理叶子和非叶子节点 |
 
 ---
 
@@ -977,4 +1083,5 @@ AttributionReportVO (面向表示层的组装结果)
 | IContextBuilderService | ContextBuilder, LLMContext | 构建器 |
 | IPrerequisiteService | PrerequisiteService, DependencyChain, CycleDetector | 图算法 |
 | IStudentService | Student (状态机) | 状态模式 |
-| IKnowledgeCategoryService | KnowledgeCategory (树) | 组合模式 |
+| IKnowledgeCategoryService | KnowledgeCategory (树) + Subject (根) | 组合模式 |
+| ISubjectService | Subject (图谱节点) | 图遍历 |
