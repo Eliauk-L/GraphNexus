@@ -1,0 +1,226 @@
+<mxfile host="Electron">
+  <diagram name="全局用例图v3合并" id="u02-global">
+    <mxGraphModel dx="1414" dy="859" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1150" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#2C3E50;strokeColor=#1a252f;fontSize=15;fontColor=#ffffff;fontStyle=1;arcSize=8;" value="GraphNexus 全局用例图 (v3.0 · 62原子用例合并为~30个 · 6个参与者 · 符合用例命名规范)" vertex="1">
+          <mxGeometry height="36" width="1300" x="150" y="5" as="geometry" />
+        </mxCell>
+        <mxCell id="sys-box" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#2980B9;strokeWidth=2;arcSize=8;" value="" vertex="1">
+          <mxGeometry height="1050" width="1250" x="180" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="sys-label" parent="1" style="text;fontSize=13;fontStyle=1;fontColor=#2980B9;align=left;" value="GraphNexus 系统" vertex="1">
+          <mxGeometry height="20" width="220" x="195" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="a1" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#D5F5E3;strokeColor=#27AE60;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="管理员&#xa;A1" vertex="1">
+          <mxGeometry height="60" width="35" x="25" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="教师&#xa;A2" vertex="1">
+          <mxGeometry height="60" width="35" x="25" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="学生&#xa;A3" vertex="1">
+          <mxGeometry height="60" width="35" x="25" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="a4" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#EBDEF0;strokeColor=#8E44AD;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="运维&#xa;A4" vertex="1">
+          <mxGeometry height="60" width="35" x="25" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="a5" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#FEF9E7;strokeColor=#F39C12;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="运营&#xa;A5" vertex="1">
+          <mxGeometry height="60" width="35" x="25" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="a1-a2" edge="1" parent="1" style="endArrow=block;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="42" y="140" as="sourcePoint" />
+            <mxPoint x="42" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m1-box" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=none;strokeColor=#27AE60;strokeWidth=1.5;dashed=1;dashPattern=6 4;arcSize=5;" value="" vertex="1">
+          <mxGeometry height="230" width="380" x="200" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="m1-label" parent="1" style="text;fontSize=10;fontStyle=1;fontColor=#27AE60;align=left;" value="数据入库与文档管理" vertex="1">
+          <mxGeometry height="18" width="160" x="210" y="68" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-doc" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#27AE60;strokeWidth=1.5;fontSize=9;arcSize=50;" value="教辅文档管理&#xa;UC-01,03" vertex="1">
+          <mxGeometry height="36" width="140" x="210" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-build" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#27AE60;strokeWidth=1.5;fontSize=9;arcSize=50;" value="查看图谱构建结果&#xa;UC-02" vertex="1">
+          <mxGeometry height="36" width="155" x="370" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-stu" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#27AE60;strokeWidth=1.5;fontSize=9;arcSize=50;" value="管理学生主数据&#xa;UC-04" vertex="1">
+          <mxGeometry height="36" width="150" x="210" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-exam" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#27AE60;strokeWidth=1.5;fontSize=9;arcSize=50;" value="导入考试成绩&#xa;UC-05" vertex="1">
+          <mxGeometry height="36" width="150" x="380" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-align" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#27AE60;strokeWidth=1.5;fontSize=9;arcSize=50;" value="实体对齐管理&#xa;UC-06,07" vertex="1">
+          <mxGeometry height="36" width="150" x="210" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-model" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#27AE60;strokeWidth=1.5;fontSize=9;arcSize=50;" value="试卷与得分模型定义&#xa;UC-17,18" vertex="1">
+          <mxGeometry height="36" width="170" x="380" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="l-a1-1" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#27AE60;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="m1-box" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="110" as="sourcePoint" />
+            <mxPoint x="210" y="113" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m2-box" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=none;strokeColor=#F39C12;strokeWidth=1.5;dashed=1;dashPattern=6 4;arcSize=5;" value="" vertex="1">
+          <mxGeometry height="210" width="380" x="200" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="m2-label" parent="1" style="text;fontSize=10;fontStyle=1;fontColor=#F39C12;align=left;" value="知识体系与策略配置" vertex="1">
+          <mxGeometry height="18" width="160" x="210" y="313" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-know" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#F39C12;strokeWidth=1.5;fontSize=9;arcSize=50;" value="知识体系节点管理&#xa;UC-14,16" vertex="1">
+          <mxGeometry height="36" width="160" x="210" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-dep" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#F39C12;strokeWidth=1.5;fontSize=9;arcSize=50;" value="管理前置依赖关系&#xa;UC-15" vertex="1">
+          <mxGeometry height="36" width="165" x="390" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-prune" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#F39C12;strokeWidth=1.5;fontSize=9;arcSize=50;" value="剪枝策略配置与对比&#xa;UC-08,09" vertex="1">
+          <mxGeometry height="36" width="170" x="210" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-weight" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#F39C12;strokeWidth=1.5;fontSize=9;arcSize=50;" value="权重规则配置与模拟&#xa;UC-10,11" vertex="1">
+          <mxGeometry height="36" width="170" x="400" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-rbac" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#E74C3C;strokeWidth=1.5;fontSize=9;arcSize=50;" value="用户与权限管理(RBAC)&#xa;UC-19,20" vertex="1">
+          <mxGeometry height="36" width="180" x="280" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="l-a1-7" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#27AE60;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="260" as="sourcePoint" />
+            <mxPoint x="210" y="358" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l-a1-8" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#27AE60;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="260" as="sourcePoint" />
+            <mxPoint x="390" y="358" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l-a1-9" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#27AE60;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="260" as="sourcePoint" />
+            <mxPoint x="210" y="408" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l-a1-10" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#27AE60;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="260" as="sourcePoint" />
+            <mxPoint x="400" y="408" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m3-box" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=none;strokeColor=#2980B9;strokeWidth=1.5;dashed=1;dashPattern=6 4;arcSize=5;" value="" vertex="1">
+          <mxGeometry height="260" width="400" x="610" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="m3-label" parent="1" style="text;fontSize=10;fontStyle=1;fontColor=#2980B9;align=left;" value="图谱查询与教学分析 (管理员+教师共享)" vertex="1">
+          <mxGeometry height="18" width="260" x="620" y="68" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-graph" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2980B9;strokeWidth=1.5;fontSize=9;arcSize=50;" value="图谱查询与可视化&#xa;UC-12,13,25,26" vertex="1">
+          <mxGeometry height="36" width="180" x="620" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-attr" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2980B9;strokeWidth=2;fontSize=9;fontStyle=1;arcSize=50;" value="薄弱点归因与追溯 ★&#xa;UC-21,22" vertex="1">
+          <mxGeometry height="36" width="170" x="830" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-class" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2980B9;strokeWidth=1.5;fontSize=9;arcSize=50;" value="班级薄弱概览与分析&#xa;UC-23,24" vertex="1">
+          <mxGeometry height="36" width="180" x="620" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-trend" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2980B9;strokeWidth=1.5;fontSize=9;arcSize=50;" value="成绩趋势分析&#xa;UC-27,28" vertex="1">
+          <mxGeometry height="36" width="170" x="830" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-cross" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2980B9;strokeWidth=1.5;fontSize=9;arcSize=50;" value="跨学科薄弱分析&#xa;UC-29,30" vertex="1">
+          <mxGeometry height="36" width="180" x="620" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-material" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2980B9;strokeWidth=1.5;fontSize=9;arcSize=50;" value="教辅知识浏览与对比&#xa;UC-31,32" vertex="1">
+          <mxGeometry height="36" width="170" x="830" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-suggest" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2980B9;strokeWidth=1.5;fontSize=9;arcSize=50;" value="教学建议与方案&#xa;UC-33,34" vertex="1">
+          <mxGeometry height="36" width="180" x="620" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-report" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2980B9;strokeWidth=1.5;fontSize=9;arcSize=50;" value="归因报告管理&#xa;UC-35,36" vertex="1">
+          <mxGeometry height="36" width="170" x="830" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="l-a2-1" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#2980B9;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="350" as="sourcePoint" />
+            <mxPoint x="620" y="113" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="l-a1-graph" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#27AE60;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="110" as="sourcePoint" />
+            <mxPoint x="710" y="113" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m4-box" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=none;strokeColor=#E67E22;strokeWidth=1.5;dashed=1;dashPattern=6 4;arcSize=5;" value="" vertex="1">
+          <mxGeometry height="160" width="400" x="610" y="345" as="geometry" />
+        </mxCell>
+        <mxCell id="m4-label" parent="1" style="text;fontSize=10;fontStyle=1;fontColor=#E67E22;align=left;" value="学生自助服务" vertex="1">
+          <mxGeometry height="18" width="120" x="620" y="348" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-self" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#E67E22;strokeWidth=1.5;fontSize=9;arcSize=50;" value="薄弱分析与班级对比&#xa;UC-37,38" vertex="1">
+          <mxGeometry height="36" width="180" x="620" y="375" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-path" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#E67E22;strokeWidth=1.5;fontSize=9;arcSize=50;" value="个性化复习路径&#xa;UC-39,40" vertex="1">
+          <mxGeometry height="36" width="170" x="830" y="375" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-prog" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#E67E22;strokeWidth=1.5;fontSize=9;arcSize=50;" value="学习进度追踪&#xa;UC-41,42" vertex="1">
+          <mxGeometry height="36" width="170" x="700" y="425" as="geometry" />
+        </mxCell>
+        <mxCell id="l-a3-1" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#E67E22;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="630" as="sourcePoint" />
+            <mxPoint x="620" y="393" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m5-box" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=none;strokeColor=#8E44AD;strokeWidth=1.5;dashed=1;dashPattern=6 4;arcSize=5;" value="" vertex="1">
+          <mxGeometry height="260" width="400" x="610" y="525" as="geometry" />
+        </mxCell>
+        <mxCell id="m5-label" parent="1" style="text;fontSize=10;fontStyle=1;fontColor=#8E44AD;align=left;" value="系统运维管理" vertex="1">
+          <mxGeometry height="18" width="120" x="620" y="528" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-health" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#8E44AD;strokeWidth=1.5;fontSize=9;arcSize=50;" value="系统健康监控&#xa;UC-43,44" vertex="1">
+          <mxGeometry height="36" width="170" x="620" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-alert" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#8E44AD;strokeWidth=1.5;fontSize=9;arcSize=50;" value="告警策略管理&#xa;UC-45,46" vertex="1">
+          <mxGeometry height="36" width="170" x="820" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-log" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#8E44AD;strokeWidth=1.5;fontSize=9;arcSize=50;" value="日志追踪与性能分析&#xa;UC-47,48,49" vertex="1">
+          <mxGeometry height="36" width="190" x="620" y="605" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-backup" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#8E44AD;strokeWidth=1.5;fontSize=9;arcSize=50;" value="数据备份与恢复&#xa;UC-50,51" vertex="1">
+          <mxGeometry height="36" width="160" x="840" y="605" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-task" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#8E44AD;strokeWidth=1.5;fontSize=9;arcSize=50;" value="定时任务管理&#xa;UC-52,53" vertex="1">
+          <mxGeometry height="36" width="170" x="620" y="655" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-llm-cfg" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#8E44AD;strokeWidth=1.5;fontSize=9;arcSize=50;" value="LLM配置管理&#xa;UC-54,55,56" vertex="1">
+          <mxGeometry height="36" width="170" x="820" y="655" as="geometry" />
+        </mxCell>
+        <mxCell id="l-a4-1" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#8E44AD;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="830" as="sourcePoint" />
+            <mxPoint x="620" y="573" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m6-box" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=none;strokeColor=#F39C12;strokeWidth=1.5;dashed=1;dashPattern=6 4;arcSize=5;" value="" vertex="1">
+          <mxGeometry height="130" width="400" x="610" y="805" as="geometry" />
+        </mxCell>
+        <mxCell id="m6-label" parent="1" style="text;fontSize=10;fontStyle=1;fontColor=#F39C12;align=left;" value="运营分析" vertex="1">
+          <mxGeometry height="18" width="80" x="620" y="808" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-usage" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#F39C12;strokeWidth=1.5;fontSize=9;arcSize=50;" value="使用量统计与分析&#xa;UC-57,58,59" vertex="1">
+          <mxGeometry height="36" width="180" x="620" y="835" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-doc-ana" parent="1" style="ellipse;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#F39C12;strokeWidth=1.5;fontSize=9;arcSize=50;" value="文档处理分析&#xa;UC-60,61,62" vertex="1">
+          <mxGeometry height="36" width="170" x="830" y="835" as="geometry" />
+        </mxCell>
+        <mxCell id="l-a5-1" edge="1" parent="1" style="endArrow=none;strokeWidth=1.2;strokeColor=#F39C12;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="990" as="sourcePoint" />
+            <mxPoint x="620" y="853" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
