@@ -1,1087 +1,1328 @@
-# GraphNexus 关键实体建模（类图）
+# GraphNexus 逻辑视图 — 类图设计
 
-> 基于图谱技术的 AI 上下文处理与精准问答系统 — 逻辑视图 · 步骤五
+> 版本：v2.0 | 日期：2026-06-10
 >
-> 版本：v1.1 | 创建日期：2026-06-05 | 修订日期：2026-06-05
->
-> 参考文档：[logical-view.md](logical-view.md)
+> 基于功能文档 v2.4-mvp 与用户故事 28 个 Story，匹配五层开发架构与物理部署拓扑。
+> v2.0 新增：知识图谱节点与边的抽象层设计，严格区分图存储（Neo4j 属性图）与关系存储（MySQL 表）。
 
 ---
 
-## 一、建模范围与原则
+## 一、设计思路
 
-本文档聚焦于**有设计决策的关键类**，不穷举所有实体。重点关注：
+GraphNexus 的数据分为两类存储：
 
-- 多态与继承体系（Event 多态、规则多态、分析器多态）
-- 核心领域模型（宽图谱节点与边的类结构）
-- 设计模式应用（策略模式、工厂模式、流水线模式、模板方法）
-- 跨模块协作接口
+| 存储 | 技术 | 内容 | UML 表示 |
+|:--|:--|:--|:--|
+| **图存储** | Neo4j | 宽图谱的节点（顶点）与边（关系） | `<<Node>>` / `<<Edge>>` 构造型 |
+| **关系存储** | MySQL | 配置、规则、日志、RBAC、统计等 | 常规 `<<Entity>>` 类 |
 
-# **不展开**：CRUD 类、DTO/VO 传输对象、前端组件类。
+本文档的核心设计原则：
+
+1. **图节点** 均继承自抽象基类 `GraphNode`，对应 Neo4j 中带 Label 的顶点
+2. **图边** 均继承自抽象基类 `GraphEdge`，对应 Neo4j 中带 Type 的有向关系
+3. **配置/日志/RBAC 类** 为常规 MySQL 实体，与图存储无继承关系
+4. 节点与边的属性要求"小而精确"，仅保留实现 28 个 Story 所必需的字段
 
 ---
 
-## 二、核心图谱领域模型（Wide Graph Domain Model）
+## 二、包结构总览
 
-宽图谱是系统的核心数据结构，以下类图定义了图谱中节点和边的类型体系。
-
-### 2.1 图谱节点基类与具体节点
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    «abstract» GraphNode                      │
-├─────────────────────────────────────────────────────────────┤
-│ - nodeId: String                                             │
-│ - nodeType: NodeType                                         │
-│ - createdAt: DateTime                                        │
-│ - updatedAt: DateTime                                        │
-│ - metadata: Map<String, Object>                              │
-├─────────────────────────────────────────────────────────────┤
-│ + getId(): String                                            │
-│ + getType(): NodeType                                        │
-│ + getNeighbors(hops: Int): List<GraphNode>                   │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ ▲
-            ┌──────────────┼┴──────────────────────┐
-            │              │                        │
-            ▼              ▼                        ▼
-┌───────────────┐ ┌──────────────────┐  ┌──────────────────────┐
-│   Student      │ │ KnowledgePoint   │  │      Document        │
-├───────────────┤ ├──────────────────┤  ├──────────────────────┤
-│ studentId: ID  │ │ kpId: ID         │  │ docId: ID            │
-│ name: String   │ │ name: String     │  │ fileName: String     │
-│ classId: ID    │ │ description: Str │  │ subjectId: ID ───────┼──┐
-│ enrollYear: Int│ │ subjectId: ID ───┼──┤  status: DocStatus    │  │
-│ status: StudSts│ │ source: KpSource │  │ version: Int         │  │
-└───────────────┘ │ status: KpStatus │  │ uploaderId: ID       │  │
-                  └────────┬─────────┘  │ uploaderRole: Role   │  │
-                           │            └──────────────────────┘  │
-                           │                    ▲                 │
-              ┌────────────┼────────────┐       │                 │
-              │            │            │       │                 │
-              ▼            ▼            ▼       │                 │
-        ┌──────────┐ ┌──────────┐ ┌──────────┐ │                 │
-        │ Teacher  │ │  Class   │ │  Event   │ │                 │
-        ├──────────┤ ├──────────┤ │(abstract)│ │                 │
-        │teacherId │ │classId   │ ├──────────┤ │                 │
-        │name      │ │name      │ │eventId   │ │                 │
-        │subjectId │ │grade     │ │studentId │ │                 │
-        │classIds  │ │year      │ │kpIds     │ │                 │
-        └────┬─────┘ └──────────┘ │eventTime │ │                 │
-             │                    └─────┬────┘ │                 │
-             │                          │      │                 │
-             │                          ▼      │                 │
-             │   ┌─────────────────────────────┘                 │
-             │   │                                               │
-             │   ▼ (Event 多态子类，详见 2.2)                     │
-             │                                                   │
-             └───────────┐                                       │
-                         │                                       │
-                         │  FK 引用                               │
-                         ▼                                       ▼
-                  ┌──────────────────────────────────────────────────┐
-                  │              Subject                              │
-                  │         (图谱节点 · Neo4j 存储)                   │
-                  │         extends GraphNode                        │
-                  ├──────────────────────────────────────────────────┤
-                  │ subjectId: String                                │
-                  │ name: String           — 学科名称(数学/物理/化学)  │
-                  │ code: String           — 学科编码                │
-                  │ description: String    — 学科描述                │
-                  │ status: SubjectStatus  — 启用/停用               │
-                  │ sortOrder: Int         — 展示排序                │
-                  ├──────────────────────────────────────────────────┤
-                  │ + isActive(): Boolean                            │
-                  │ + enable(): Void / disable(): Void               │
-                  │ + getKnowledgePoints(): List<KnowledgePoint>     │
-                  │     // 图遍历: Subject ← BELONGS_TO ← KP        │
-                  │ + getStudentsBySubject(): List<Student>          │
-                  │     // 图遍历: Subject → KP → Mastery → Student  │
-                  │ + getDocuments(): List<Document>                 │
-                  │ + getTeachers(): List<Teacher>                   │
-                  │ + getWeaknessOverview(): SubjectWeaknessOverview  │
-                  │     // 聚合该学科下所有学生的掌握权重分布          │
-                  └──────────────────────────────────────────────────┘
-```
-
-**Subject 作为图谱节点的设计意义**：Subject 存储在 Neo4j 中，与 KnowledgePoint 通过 BELONGS_TO 边关联，使得可以通过图遍历实现跨维度分析：
-- **查看某学科所有人的情况**：`Subject ← BELONGS_TO ← KnowledgePoint ← MasteryRelation ← Student`
-- **学科级薄弱概览**：沿 BELONGS_TO 边聚合所有知识点的掌握权重
-- **跨学科关联分析**：通过共享知识点发现学科间的桥接关系
-
-**NodeType 枚举**：
-
-```
-«enumeration» NodeType                  «enumeration» SubjectStatus
-├── STUDENT          — 学生节点          ├── ENABLED      — 启用（正常参与所有功能）
-├── KNOWLEDGE_POINT  — 知识点节点        └── DISABLED     — 停用（不参与新功能，历史数据保留）
-├── DOCUMENT         — 文档节点
-├── EVENT            — 事件节点（多态基类）
-├── TEACHER          — 教师节点
-├── CLASS            — 班级节点
-├── EXAM_PAPER       — 试卷节点
-├── QUESTION         — 题目节点
-└── SUBJECT          — 学科节点
-```
-
-### 2.2 Event 多态体系
-
-Event 是宽图谱中将**结构化数据行转化为图谱节点**的核心抽象。三种事件子类型共享基类属性，各自扩展特定字段。
-
-```
-                    ┌──────────────────────────┐
-                    │    «abstract» Event       │
-                    │    extends GraphNode      │
-                    ├──────────────────────────┤
-                    │ eventId: String           │
-                    │ studentId: String          │
-                    │ knowledgePointIds: List<ID>│
-                    │ eventTime: DateTime        │
-                    │ eventType: EventType       │
-                    │ score: Float               │
-                    │ maxScore: Float            │
-                    ├──────────────────────────┤
-                    │ + getScoreRatio(): Float   │
-                    │ + getEventType(): EventType│
-                    │ + toEventNode(): EventNode │
-                    └──────────┬───────────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              │                │                │
-              ▼                ▼                ▼
-┌──────────────────┐ ┌────────────────┐ ┌─────────────────┐
-│   ExamEvent       │ │AssignmentEvent │ │   QuizEvent     │
-├──────────────────┤ ├────────────────┤ ├─────────────────┤
-│ examPaperId: ID   │ │ assignType:    │ │ quizName: String│
-│ examName: String  │ │  AssignType    │ │ templateId: ID  │
-│ questionScores:   │ │ gradingResult: │ │ teacherId: ID   │
-│  List<QScore>     │ │  GradingResult │ │ classId: ID     │
-│ totalScore: Float │ │ errorCategory: │ │                 │
-│                   │ │  ErrorCategory │ │                 │
-├──────────────────┤ ├────────────────┤ ├─────────────────┤
-│ 来源: CSV 导入    │ │ 来源: CSV/手动 │ │ 来源: 教师录入   │
-│ 频率: 低(月考/期考)│ │ 频率: 中(周)   │ │ 频率: 高(日/课)  │
-└──────────────────┘ └────────────────┘ └─────────────────┘
-```
-
-**关联枚举**：
-
-```
-«enumeration» EventType          «enumeration» AssignType
-├── EXAM                         ├── DAILY_PRACTICE    — 日常练习
-├── ASSIGNMENT                   ├── SPECIAL_TRAINING  — 专项训练
-└── QUIZ                         └── CHAPTER_QUIZ      — 章节测验
-
-«enumeration» GradingResult      «enumeration» ErrorCategory
-├── CORRECT       — 正确          ├── CALCULATION_ERROR — 计算错误
-├── PARTIAL       — 部分正确      ├── CONCEPT_CONFUSION — 概念混淆
-├── WRONG         — 错误          ├── METHOD_MISSING   — 方法缺失
-└── NOT_SUBMITTED — 未提交        └── CARELESS         — 粗心
-```
-
-### 2.3 图谱关系边（Graph Edge）
-
-图谱中的边本身是**一等公民**，具有独立属性和行为。
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    «abstract» GraphEdge                      │
-├─────────────────────────────────────────────────────────────┤
-│ - edgeId: String                                             │
-│ - sourceNodeId: String                                       │
-│ - targetNodeId: String                                       │
-│ - edgeType: EdgeType                                         │
-│ - createdAt: DateTime                                        │
-│ - properties: Map<String, Object>                            │
-├─────────────────────────────────────────────────────────────┤
-│ + getSource(): String                                        │
-│ + getTarget(): String                                        │
-│ + getType(): EdgeType                                        │
-└────────────┬──────────┬──────────────┬──────────────────────┘
-             │          │              │
-             ▼          ▼              ▼
-┌────────────────┐ ┌────────────────┐ ┌───────────────────┐
-│MasteryRelation  │ │PrerequisiteRel │ │ExtractionRelation │
-├────────────────┤ ├────────────────┤ ├───────────────────┤
-│weight: Float   │ │depth: Int      │ │confidence: Float  │
-│ (0.0 ~ 1.0)    │ │(依赖链深度)     │ │extractionMethod:  │
-│lastUpdated: DT │ │                │ │ String            │
-│lastTrigger:    │ │                │ │docId: ID          │
-│ TriggerSource  │ │                │ │kpId: ID           │
-├────────────────┤ ├────────────────┤ └───────────────────┘
-│ Student → KP   │ │ KP → KP (有向) │
-│ 动态权重        │ │ 学习路径依赖    │ │ Document → KP     │
-└────────────────┘ └────────────────┘ │ 抽取来源标注       │
-                                     └───────────────────┘
-
-┌──────────────────────────────────┐
-│      KnowledgeRelation            │
-├──────────────────────────────────┤
-│ relationType: KnowledgeRelType   │
-│ strength: Float                  │
-├──────────────────────────────────┤
-│ KP ↔ KP (无向/双向)              │
-│ 引用/推导/包含/同知识点           │
-└──────────────────────────────────┘
-
-┌──────────────────────────────────┐
-│       BelongsToRelation           │
-├──────────────────────────────────┤
-│ subjectId: String                │
-│ kpId: String                     │
-│ assignedAt: DateTime             │
-├──────────────────────────────────┤
-│ KnowledgePoint → Subject         │
-│ 知识点属于某学科                  │
-│ 支持: 按学科聚合学生掌握情况      │
-│       学科级薄弱概览              │
-│       跨学科关联分析              │
-└──────────────────────────────────┘
-```
-
-**关联枚举**：
-
-```
-«enumeration» EdgeType             «enumeration» KnowledgeRelType
-├── MASTERY         — 掌握关系      ├── REFERENCE    — 引用
-├── PREREQUISITE    — 前置依赖      ├── DERIVATION   — 推导
-├── EXTRACTION      — 抽取关系      ├── CONTAINS     — 包含
-├── KNOWLEDGE_REL   — 知识关联      ├── SAME_AS      — 同知识点
-├── EVENT_REL       — 事件关联      └── BELONGS_TO_SUBJECT — 属于学科
-└── BELONGS_TO      — 学科归属
-```
-
-### 2.4 Subgraph 与 WideGraph
-
-```
-┌───────────────────────────────────┐     ┌───────────────────────────────────┐
-│           Subgraph                │     │           WideGraph               │
-├───────────────────────────────────┤     ├───────────────────────────────────┤
-│ nodes: Set<GraphNode>            │     │ allNodes: Map<ID, GraphNode>      │
-│ edges: Set<GraphEdge>            │     │ allEdges: Map<ID, GraphEdge>      │
-│ taskType: TaskType               │     │ graphVersion: Int                 │
-│ strategyVersion: String          │     │ lastFusionTime: DateTime          │
-│ generatedAt: DateTime            │     ├───────────────────────────────────┤
-│ tokenEstimate: Int               │     │ + addNode(node: GraphNode): Void  │
-├───────────────────────────────────┤     │ + addEdge(edge: GraphEdge): Void  │
-│ + getNodeCount(): Int            │     │ + removeNode(id: ID): Void        │
-│ + getEdgeCount(): Int            │     │ + getNode(id: ID): GraphNode      │
-│ + getNodesByType(t: NodeType):   │     │ + findSubgraph(startId, hops):    │
-│     List<GraphNode>              │     │     Subgraph                      │
-│ + getEdgesByType(t: EdgeType):   │     │ + computePageRank(topK):          │
-│     List<GraphEdge>              │     │     List<RankedEntity>            │
-│ + merge(other: Subgraph):        │     │ + getHealthMetrics():             │
-│     Subgraph                     │     │     HealthMetrics                 │
-└───────────────────────────────────┘     └───────────────────────────────────┘
-                                                    │
-                                                    │ 包含
-                                                    ▼
-                                              Subgraph (查询结果)
+```mermaid
+classDiagram
+namespace 图节点抽象层 {
+    class GraphNode
+    class StudentNode
+    class KnowledgePointNode
+    class KnowledgeCategoryNode
+    class DocumentNode
+    class EntityNode
+    class ExamNode
+    class QuestionNode
+    class EventNode
+}
+namespace 图边抽象层 {
+    class GraphEdge
+    class MasteryEdge
+    class PrerequisiteEdge
+    class BelongsToEdge
+    class ChildOfEdge
+    class ExtractsEdge
+    class ReferencesEdge
+    class AlignedToEdge
+    class HasEventEdge
+    class RelatesToEdge
+    class ContainsEdge
+    class TestsEdge
+    class ScoresOnEdge
+    class BelongsToExamEdge
+}
+namespace 用户与权限域 {
+    class User
+    class Role
+    class Permission
+    class UserRole
+    class RolePermission
+    class LoginLog
+    class AuditLog
+}
+namespace 文档处理域 {
+    class Document
+    class ParseTask
+    class ParseResult
+    class ExtractedEntity
+    class ExtractedRelation
+    class CsvImportTask
+    class CsvImportRecord
+}
+namespace 图谱业务配置域 {
+    class EntityAlignment
+    class AlignmentAudit
+    class PruningStrategy
+    class PruningStrategyVersion
+    class WeightRule
+    class WeightChangeLog
+    class ScoreAllocationRule
+    class ScheduledTask
+    class TaskExecution
+}
+namespace 图谱分析域 {
+    class SubGraph
+    class GraphMetric
+    class CommunityResult
+    class GraphSnapshot
+}
+namespace 智能查询域 {
+    class AttributionQuery
+    class AttributionReport
+    class AttributionEvidence
+    class TeachingSuggestion
+    class ReviewPath
+    class ReportExport
+    class ShareLink
+    class LlmConfig
+    class PromptTemplate
+    class LlmCallLog
+}
+namespace 运维运营域 {
+    class ServiceHealth
+    class AlertRule
+    class AlertEvent
+    class BackupTask
+    class BackupRecord
+    class UsageMetric
+    class DocumentProcessMetric
+}
 ```
 
 ---
 
-## 三、M4 · 图谱核心引擎 — 关键类设计
+## 三、知识图谱节点与边抽象层（核心）
 
-M4 是系统技术核心，包含三大子模块的类设计：宽图谱融合、剪枝引擎（策略模式）、权重引擎（规则多态）。
+> 本节是类图设计的核心：将 Neo4j 属性图模型抽象为 `GraphNode` / `GraphEdge` 继承树，所有图操作（构建、查询、剪枝、融合）均以此抽象层为契约。
 
-### 3.1 M4-b 剪枝引擎 — 策略模式 (Strategy Pattern)
+### 3.1 图节点继承体系
 
-剪枝引擎的核心设计：**剪枝策略是可配置、可版本化的策略对象**，不同任务类型使用不同策略实例。
+```mermaid
+classDiagram
+class GraphNode {
+    <<abstract>> <<Node>>
+    +String id
+    +Set~String~ labels
+    +Map~String,Object~ properties
+    +LocalDateTime createdAt
+    +LocalDateTime updatedAt
+    +getLabel() String
+    +getProperty(String key) Object
+    +setProperty(String key, Object val) void
+    +hasLabel(String label) boolean
+}
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       PruningEngine                          │
-├─────────────────────────────────────────────────────────────┤
-│ - strategyRepository: IStrategyRepository                   │
-│ - graphRepository: IGraphRepository                         │
-│ - contextBuilder: IContextBuilderService                    │
-├─────────────────────────────────────────────────────────────┤
-│ + prune(targetNodeId: ID, taskType: TaskType,               │
-│         strategyId?: ID): Subgraph                          │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ 1. 加载策略: strategyRepository.getStrategy()     │      │
-│   │ 2. 按跳数展开: expandByHops()                     │      │
-│   │ 3. 按邻居数截断: truncateByTopK()                 │      │
-│   │ 4. 按权重阈值过滤: filterByWeight()               │      │
-│   │ 5. 按关系类型过滤: filterByRelationType()         │      │
-│   │ 6. 组装子图: buildSubgraph()                      │      │
-│   └──────────────────────────────────────────────────┘      │
-│                                                              │
-│ + compareStrategy(targetId, stratA, stratB): CompareResult  │
-│ + simulatePrune(strategy, scope): SimulationResult           │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ 使用
-                       ▼
-        ┌──────────────────────────────────┐
-        │        PruningStrategy           │
-        ├──────────────────────────────────┤
-        │ strategyId: String               │
-        │ taskType: TaskType               │
-        │ maxHops: Int              深度    │
-        │ maxNeighborsPerHop: Int   广度    │
-        │ weightThreshold: Float    阈值    │
-        │ relationTypeWhitelist:           │
-        │   Set<EdgeType>           过滤    │
-        │ version: Int                     │
-        │ createdAt: DateTime              │
-        │ createdBy: String                │
-        ├──────────────────────────────────┤
-        │ + matchesTask(task: TaskType):   │
-        │     Boolean                      │
-        │ + diff(other: PruningStrategy):  │
-        │     StrategyDiff                 │
-        │ + clone(): PruningStrategy       │
-        └──────────────────────────────────┘
-                       │
-                       │ 版本管理
-                       ▼
-        ┌──────────────────────────────────┐
-        │       StrategyVersion            │
-        ├──────────────────────────────────┤
-        │ versionId: String                │
-        │ strategyId: String               │
-        │ version: Int                     │
-        │ snapshot: PruningStrategy        │
-        │ changedAt: DateTime              │
-        │ changedBy: String                │
-        │ changeDiff: StrategyDiff         │
-        └──────────────────────────────────┘
-```
+class StudentNode {
+    <<Node>> "label: Student"
+    +String studentNo
+    +String name
+    +String className
+    +String grade
+    +Integer enrollYear
+    +String status
+    +archive() void
+    +changeClass(String c) void
+}
 
-**TaskType 枚举**（驱动策略路由）：
+class KnowledgePointNode {
+    <<Node>> "label: KnowledgePoint"
+    +String name
+    +String normalizedName
+    +String description
+    +String subject
+    +String source
+    +String status
+    +Float pageRank
+    +Float degreeCentrality
+    +merge(KnowledgePointNode t) void
+    +deprecate() void
+}
 
-```
-«enumeration» TaskType
-├── ATTRIBUTION_ANALYSIS    — 归因分析（深追溯，3跳，保留前置依赖）
-├── REVIEW_RECOMMENDATION   — 复习推荐（聚焦薄弱，2跳，保留掌握关系）
-├── CLASS_OVERVIEW          — 班级概览（广覆盖，1跳，保留所有关系）
-├── WEAKNESS_DIAGNOSIS      — 薄弱溯源
-└── KNOWLEDGE_GAP           — 知识缺口诊断
-```
+class KnowledgeCategoryNode {
+    <<Node>> "label: KnowledgeCategory"
+    +String name
+    +String subject
+    +Integer level
+    +Integer sortOrder
+    +getSubTree() List~KnowledgeCategoryNode~
+    +checkIntegrity() IntegrityReport
+}
 
-### 3.2 M4-c 权重引擎 — 规则多态 (Polymorphic Rules)
+class DocumentNode {
+    <<Node>> "label: Document"
+    +String name
+    +String fileName
+    +String subject
+    +Long fileSize
+    +String minioPath
+    +String status
+    +String failReason
+    +Integer pageCount
+    +Integer entityCount
+    +Integer relationCount
+    +Float avgConfidence
+    +markFailed(String reason) void
+    +getCoverage() CoverageReport
+}
 
-权重引擎的核心设计：**权重更新规则是可多态扩展的规则对象**，时间衰减和行为事件触发使用不同的规则子类。
+class EntityNode {
+    <<Node>> "label: Entity"
+    +String name
+    +String entityType
+    +Float confidence
+    +Integer pageNumber
+    +String description
+    +String normalizedName
+    +Long alignedKpId
+    +isAligned() boolean
+}
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       WeightEngine                           │
-├─────────────────────────────────────────────────────────────┤
-│ - ruleRepository: IWeightRuleRepository                     │
-│ - graphRepository: IGraphRepository                         │
-│ - changeLogger: IWeightChangeLogger                         │
-├─────────────────────────────────────────────────────────────┤
-│ + adjustWeightByEvent(eventId: ID): WeightChangeResult      │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ 1. 读取事件数据                                    │      │
-│   │ 2. 查找匹配的 BehaviorWeightRule                  │      │
-│   │ 3. 计算权重调整 Δ                                 │      │
-│   │ 4. 更新 MasteryRelation.weight                   │      │
-│   │ 5. 记录 WeightChangeLog                          │      │
-│   └──────────────────────────────────────────────────┘      │
-│                                                              │
-│ + executeTimeDecay(scope: DecayScope): DecayResult          │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ 1. 加载 TimeDecayRule                            │      │
-│   │ 2. 查找受影响的 MasteryRelation                   │      │
-│   │ 3. 按衰减曲线计算新权重                            │      │
-│   │ 4. 批量更新 + 记录日志                             │      │
-│   └──────────────────────────────────────────────────┘      │
-│                                                              │
-│ + simulateRule(ruleId, scope): SimulationResult             │
-│ + manualOverride(studentId, kpId, weight, reason):          │
-│     MasteryRelation                                         │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ 使用
-                       ▼
-        ┌──────────────────────────────────────┐
-        │    «abstract» WeightUpdateRule       │
-        ├──────────────────────────────────────┤
-        │ ruleId: String                       │
-        │ ruleName: String                     │
-        │ scope: RuleScope                     │
-        │ enabled: Boolean                     │
-        │ createdAt: DateTime                  │
-        ├──────────────────────────────────────┤
-        │ + apply(relations: List<MasteryRel>, │
-        │   context: RuleContext):             │
-        │     List<WeightChange>               │
-        │ + simulate(scope): SimulationResult  │
-        └──────────┬───────────────┬───────────┘
-                   │               │
-                   ▼               ▼
-┌────────────────────────┐ ┌──────────────────────────────┐
-│   TimeDecayRule        │ │    BehaviorWeightRule         │
-├────────────────────────┤ ├──────────────────────────────┤
-│ curveType: DecayCurve  │ │ eventType: EventType          │
-│ halfLifeDays: Int      │ │ delta: Float        (+Δ/-Δ)  │
-│ computeInterval: Cron  │ │ affectScope: AffectScope     │
-│ subjectFilter: Subject?│ │ gradingMapping: Map<         │
-│  (引用 Subject 实体)    │ │   GradingResult, Float>      │
-├────────────────────────┤ │   GradingResult, Float>      │
-│ 指数衰减:              │ ├──────────────────────────────┤
-│  w' = w × e^(-λt)     │ │ 正确作答:  +0.05             │
-│                        │ │ 错误作答:  -0.08             │
-│ 线性衰减:              │ │ 部分正确:  -0.02             │
-│  w' = w - k×t         │ │ 未提交:    -0.03             │
-│                        │ │                              │
-│ 阶梯衰减:              │ │ 可选: 影响前置依赖链          │
-│  w' = step(w, t)      │ │ affectScope == CHAIN 时       │
-└────────────────────────┘ │ 沿前置依赖链传播权重变化      │
-                           └──────────────────────────────┘
+class ExamNode {
+    <<Node>> "label: Exam"
+    +String name
+    +String subject
+    +String grade
+    +LocalDate examDate
+    +String examType
+    +Integer totalScore
+    +String granularity
+    +getQuestions() List~QuestionNode~
+}
+
+class QuestionNode {
+    <<Node>> "label: Question"
+    +Integer sectionNumber
+    +Integer questionNumber
+    +Integer maxScore
+    +String questionType
+    +Integer sortOrder
+    +mapKnowledgePoints(List~Long~ kpIds) void
+}
+
+class EventNode {
+    <<Node>> "label: Event"
+    +String eventType
+    +Float rawScore
+    +Float allocatedScore
+    +LocalDateTime eventTime
+    +String sourceFile
+    +Integer sourceRow
+    +String description
+    +calculateAllocatedScore() float
+    +triggerWeightUpdate() void
+}
+
+GraphNode <|-- StudentNode
+GraphNode <|-- KnowledgePointNode
+GraphNode <|-- KnowledgeCategoryNode
+GraphNode <|-- DocumentNode
+GraphNode <|-- EntityNode
+GraphNode <|-- ExamNode
+GraphNode <|-- QuestionNode
+GraphNode <|-- EventNode
 ```
 
-**关联枚举**：
+### 3.2 图边继承体系
 
+```mermaid
+classDiagram
+class GraphEdge {
+    <<abstract>> <<Edge>>
+    +String id
+    +String type
+    +String sourceNodeId
+    +String targetNodeId
+    +Map~String,Object~ properties
+    +LocalDateTime createdAt
+    +getType() String
+    +getProperty(String key) Object
+    +setProperty(String key, Object val) void
+}
+
+class MasteryEdge {
+    <<Edge>> "type: MASTERS"
+    "Student → KnowledgePoint"
+    +Float weight
+    +Float confidence
+    +Integer eventCount
+    +LocalDateTime lastEventAt
+    +LocalDateTime lastUpdatedAt
+    +adjustWeight(float delta, String trigger) void
+    +applyDecay(DecayRule rule) void
+}
+
+class PrerequisiteEdge {
+    <<Edge>> "type: PREREQUISITE_OF"
+    "KnowledgePoint → KnowledgePoint"
+    +Float strength
+    +String description
+    +detectCycle() boolean
+}
+
+class BelongsToEdge {
+    <<Edge>> "type: BELONGS_TO"
+    "KnowledgePoint → KnowledgeCategory"
+}
+
+class ChildOfEdge {
+    <<Edge>> "type: CHILD_OF"
+    "KnowledgeCategory → KnowledgeCategory"
+    +Integer sortOrder
+}
+
+class ExtractsEdge {
+    <<Edge>> "type: EXTRACTS"
+    "Document → Entity"
+    +Float confidence
+}
+
+class ReferencesEdge {
+    <<Edge>> "type: REFERENCES/DERIVES/CONTAINS"
+    "Entity → Entity"
+    +String relationSubType
+    +Float confidence
+    +String context
+}
+
+class AlignedToEdge {
+    <<Edge>> "type: ALIGNED_TO"
+    "Entity → KnowledgePoint"
+    +Float confidence
+    +String alignmentMethod
+}
+
+class HasEventEdge {
+    <<Edge>> "type: HAS_EVENT"
+    "Student → Event"
+}
+
+class RelatesToEdge {
+    <<Edge>> "type: RELATES_TO"
+    "Event → KnowledgePoint"
+    +Float score
+    +Float maxScore
+    +Float weightDelta
+}
+
+class ContainsEdge {
+    <<Edge>> "type: CONTAINS"
+    "Exam → Question"
+    +Integer sortOrder
+}
+
+class TestsEdge {
+    <<Edge>> "type: TESTS"
+    "Question → KnowledgePoint"
+    +Float weightRatio
+}
+
+class ScoresOnEdge {
+    <<Edge>> "type: SCORES_ON"
+    "Event → Question"
+    +Float score
+    +Float maxScore
+}
+
+class BelongsToExamEdge {
+    <<Edge>> "type: BELONGS_TO_EXAM"
+    "Event → Exam"
+}
+
+GraphEdge <|-- MasteryEdge
+GraphEdge <|-- PrerequisiteEdge
+GraphEdge <|-- BelongsToEdge
+GraphEdge <|-- ChildOfEdge
+GraphEdge <|-- ExtractsEdge
+GraphEdge <|-- ReferencesEdge
+GraphEdge <|-- AlignedToEdge
+GraphEdge <|-- HasEventEdge
+GraphEdge <|-- RelatesToEdge
+GraphEdge <|-- ContainsEdge
+GraphEdge <|-- TestsEdge
+GraphEdge <|-- ScoresOnEdge
+GraphEdge <|-- BelongsToExamEdge
 ```
-«enumeration» DecayCurve           «enumeration» AffectScope
-├── EXPONENTIAL     — 指数衰减      ├── CURRENT_ONLY   — 仅当前知识点
-├── LINEAR          — 线性衰减      └── PREREQ_CHAIN   — 影响前置依赖链
-└── STEP            — 阶梯衰减
 
-«enumeration» TriggerSource        «enumeration» RuleScope
-├── TIME_DECAY      — 时间衰减      ├── GLOBAL         — 全局
-├── EXAM_EVENT      — 考试事件      ├── BY_SUBJECT     — 按学科
-├── ASSIGNMENT_EVENT— 作业事件      ├── BY_CLASS       — 按班级
-├── QUIZ_EVENT      — 测验事件      └── BY_STUDENT     — 按学生
-└── MANUAL_OVERRIDE — 手动修正
+### 3.3 宽图谱拓扑结构
+
+```mermaid
+classDiagram
+direction LR
+
+StudentNode --> MasteryEdge : source
+MasteryEdge --> KnowledgePointNode : target
+
+KnowledgePointNode --> PrerequisiteEdge : source
+PrerequisiteEdge --> KnowledgePointNode : target
+
+KnowledgePointNode --> BelongsToEdge : source
+BelongsToEdge --> KnowledgeCategoryNode : target
+
+KnowledgeCategoryNode --> ChildOfEdge : source
+ChildOfEdge --> KnowledgeCategoryNode : target
+
+DocumentNode --> ExtractsEdge : source
+ExtractsEdge --> EntityNode : target
+
+EntityNode --> ReferencesEdge : source
+ReferencesEdge --> EntityNode : target
+
+EntityNode --> AlignedToEdge : source
+AlignedToEdge --> KnowledgePointNode : target
+
+StudentNode --> HasEventEdge : source
+HasEventEdge --> EventNode : target
+
+EventNode --> RelatesToEdge : source
+RelatesToEdge --> KnowledgePointNode : target
+
+EventNode --> ScoresOnEdge : source
+ScoresOnEdge --> QuestionNode : target
+
+EventNode --> BelongsToExamEdge : source
+BelongsToExamEdge --> ExamNode : target
+
+ExamNode --> ContainsEdge : source
+ContainsEdge --> QuestionNode : target
+
+QuestionNode --> TestsEdge : source
+TestsEdge --> KnowledgePointNode : target
+
+class StudentNode {
+    <<Node>>
+    +String studentNo
+    +String name
+    +String className
+}
+
+class KnowledgePointNode {
+    <<Node>>
+    +String name
+    +String subject
+    +Float pageRank
+}
+
+class KnowledgeCategoryNode {
+    <<Node>>
+    +String name
+    +Integer level
+}
+
+class DocumentNode {
+    <<Node>>
+    +String name
+    +String subject
+}
+
+class EntityNode {
+    <<Node>>
+    +String name
+    +Float confidence
+}
+
+class ExamNode {
+    <<Node>>
+    +String name
+    +LocalDate examDate
+}
+
+class QuestionNode {
+    <<Node>>
+    +Integer maxScore
+}
+
+class EventNode {
+    <<Node>>
+    +String eventType
+    +Float rawScore
+}
+
+class MasteryEdge {
+    <<Edge>>
+    +Float weight
+    +Integer eventCount
+}
+
+class PrerequisiteEdge {
+    <<Edge>>
+    +Float strength
+}
+
+class RelatesToEdge {
+    <<Edge>>
+    +Float score
+    +Float weightDelta
+}
+
+class TestsEdge {
+    <<Edge>>
+    +Float weightRatio
+}
+
+class AlignedToEdge {
+    <<Edge>>
+    +Float confidence
+}
+
+class ReferencesEdge {
+    <<Edge>>
+    +String relationSubType
+}
 ```
 
-### 3.3 WeightChangeLog — 审计追溯
+### 3.4 Neo4j 属性图模型映射表
 
-```
-┌─────────────────────────────────────────┐
-│          WeightChangeLog                │
-├─────────────────────────────────────────┤
-│ logId: String                           │
-│ studentId: String                       │
-│ knowledgePointId: String                │
-│ previousWeight: Float                   │
-│ newWeight: Float                        │
-│ changeAmount: Float    (Δ值)            │
-│ triggerSource: TriggerSource            │
-│ triggerRefId: String   (规则ID/事件ID)   │
-│ operatorSource: OperatorSource          │
-│ changedAt: DateTime                     │
-│ traceId: String        (链路追踪)        │
-├─────────────────────────────────────────┤
-│ + getDelta(): Float                     │
-│ + isDecay(): Boolean                    │
-│ + isImprovement(): Boolean              │
-└─────────────────────────────────────────┘
+#### 节点映射
 
-«enumeration» OperatorSource
-├── SYSTEM_AUTO       — 系统自动（衰减/事件触发）
-└── MANUAL_CORRECTION — 管理员手动修正
+| 图节点类 | Neo4j Label | 主键属性 | 核心业务属性 |
+|:--|:--|:--|:--|
+| `StudentNode` | `:Student` | `studentNo` | `name, className, grade, enrollYear, status` |
+| `KnowledgePointNode` | `:KnowledgePoint` | `normalizedName` | `name, description, subject, source, status, pageRank, degreeCentrality` |
+| `KnowledgeCategoryNode` | `:KnowledgeCategory` | `name + subject` | `level, sortOrder` |
+| `DocumentNode` | `:Document` | `minioPath` | `name, fileName, subject, fileSize, status, pageCount` |
+| `EntityNode` | `:Entity` | `name + pageNumber + docId` | `entityType, confidence, description, normalizedName` |
+| `ExamNode` | `:Exam` | `name + subject + examDate` | `grade, examType, totalScore, granularity` |
+| `QuestionNode` | `:Question` | `examId + questionNumber` | `sectionNumber, maxScore, questionType, sortOrder` |
+| `EventNode` | `:Event` | `eventTime + sourceRow` | `eventType, rawScore, allocatedScore, sourceFile, description` |
+
+#### 边映射
+
+| 图边类 | Neo4j Type | 方向 | 核心属性 |
+|:--|:--|:--|:--|
+| `MasteryEdge` | `MASTERS` | `(Student)→(KnowledgePoint)` | `weight, confidence, eventCount, lastEventAt` |
+| `PrerequisiteEdge` | `PREREQUISITE_OF` | `(KnowledgePoint)→(KnowledgePoint)` | `strength, description` |
+| `BelongsToEdge` | `BELONGS_TO` | `(KnowledgePoint)→(KnowledgeCategory)` | — |
+| `ChildOfEdge` | `CHILD_OF` | `(KnowledgeCategory)→(KnowledgeCategory)` | `sortOrder` |
+| `ExtractsEdge` | `EXTRACTS` | `(Document)→(Entity)` | `confidence` |
+| `ReferencesEdge` | `REFERENCES` / `DERIVES` / `CONTAINS` | `(Entity)→(Entity)` | `relationSubType, confidence` |
+| `AlignedToEdge` | `ALIGNED_TO` | `(Entity)→(KnowledgePoint)` | `confidence, alignmentMethod` |
+| `HasEventEdge` | `HAS_EVENT` | `(Student)→(Event)` | — |
+| `RelatesToEdge` | `RELATES_TO` | `(Event)→(KnowledgePoint)` | `score, maxScore, weightDelta` |
+| `ContainsEdge` | `CONTAINS` | `(Exam)→(Question)` | `sortOrder` |
+| `TestsEdge` | `TESTS` | `(Question)→(KnowledgePoint)` | `weightRatio` |
+| `ScoresOnEdge` | `SCORES_ON` | `(Event)→(Question)` | `score, maxScore` |
+| `BelongsToExamEdge` | `BELONGS_TO_EXAM` | `(Event)→(Exam)` | — |
+
+---
+
+## 四、用户与权限域（MySQL）
+
+```mermaid
+classDiagram
+class User {
+    -Long id
+    -String username
+    -String passwordHash
+    -String realName
+    -String email
+    -String phone
+    -String status
+    -LocalDateTime createdAt
+    -LocalDateTime lastLoginAt
+    +createAccount(UserCreateDTO) User
+    +disableAccount() void
+    +unlockAccount() void
+    +resetPassword(String newPassword) void
+}
+
+class Role {
+    -Long id
+    -String name
+    -String code
+    -String description
+    -Boolean isPreset
+    -LocalDateTime createdAt
+    +updatePermissions(List~Long~ permIds) void
+    +getPermissionTree() List~Permission~
+}
+
+class Permission {
+    -Long id
+    -String name
+    -String code
+    -String resourceType
+    -String action
+    -Long parentId
+    -Integer sortOrder
+    +isReadOnly() boolean
+}
+
+class UserRole {
+    -Long id
+    -Long userId
+    -Long roleId
+    -LocalDateTime assignedAt
+    -String assignedBy
+    +assign(userId, roleId) void
+    +revoke() void
+}
+
+class RolePermission {
+    -Long id
+    -Long roleId
+    -Long permissionId
+    +grant() void
+    +revoke() void
+}
+
+class LoginLog {
+    -Long id
+    -Long userId
+    -String ipAddress
+    -String result
+    -String failReason
+    -LocalDateTime loginAt
+}
+
+class AuditLog {
+    -Long id
+    -Long operatorId
+    -String operationType
+    -String targetType
+    -Long targetId
+    -String detail
+    -String traceId
+    -LocalDateTime operatedAt
+}
+
+User "1" --> "*" UserRole : 拥有
+Role "1" --> "*" UserRole : 被分配
+Role "1" --> "*" RolePermission : 包含
+Permission "1" --> "*" RolePermission : 被授予
+Permission "1" --> "*" Permission : 父子层级
+User "1" --> "*" LoginLog : 产生
+User "1" --> "*" AuditLog : 触发
 ```
 
 ---
 
-## 四、M3 · 数据入库引擎 — 流水线模式 (Pipeline Pattern)
+## 五、文档处理域
 
-M3 的核心设计：两条入库流水线各自由多个**处理步骤**串联组成，每个步骤是一个可独立替换的处理器。
+```mermaid
+classDiagram
+class ParseTask {
+    -Long id
+    -Long documentId
+    -String stage
+    -String status
+    -LocalDateTime startedAt
+    -LocalDateTime completedAt
+    -Long durationMs
+    -String errorMessage
+    -Integer retryCount
+    +execute() void
+    +retry() void
+    +getProgress() ParseProgress
+}
 
-### 4.1 文档解析流水线 (PDF Pipeline)
+class ParseResult {
+    -Long id
+    -Long documentId
+    -Long parseTaskId
+    -Integer entityCount
+    -Integer relationCount
+    -JsonNode entityDistribution
+    -JsonNode relationDistribution
+    -JsonNode confidenceDistribution
+    -List~JsonNode~ lowConfEntities
+    -LocalDateTime createdAt
+    +generateSummary() ParseSummary
+}
 
+class ExtractedEntity {
+    -Long id
+    -Long documentId
+    -String name
+    -String entityType
+    -Float confidence
+    -Integer pageNumber
+    -String region
+    -String description
+    -String normalizedName
+    +toEntityNode() EntityNode
+    +match(ExtractedEntity other) float
+}
+
+class ExtractedRelation {
+    -Long id
+    -Long documentId
+    -Long sourceEntityId
+    -Long targetEntityId
+    -String relationType
+    -Float confidence
+    -String context
+    +toReferencesEdge() ReferencesEdge
+}
+
+class CsvImportTask {
+    -Long id
+    -String fileName
+    -String csvType
+    -Integer totalRows
+    -Integer successRows
+    -Integer failRows
+    -String status
+    -Long uploadedBy
+    -LocalDateTime createdAt
+    +validate() List~ValidationError~
+    +execute(String conflictStrategy) ImportResult
+}
+
+class CsvImportRecord {
+    -Long id
+    -Long importTaskId
+    -Integer rowNumber
+    -JsonNode rawData
+    -String status
+    -String errorReason
+    -Long studentId
+    -Long examId
+    +resolve() void
+    +skip() void
+}
+
+DocumentNode "1" --> "0..*" ParseTask : 触发
+ParseTask "1" --> "0..1" ParseResult : 产出
+DocumentNode "1" --> "*" ExtractedEntity : 抽取
+DocumentNode "1" --> "*" ExtractedRelation : 抽取
+CsvImportTask "1" --> "*" CsvImportRecord : 包含
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                  DocumentIngestionPipeline                   │
-├─────────────────────────────────────────────────────────────┤
-│ - steps: List<DocumentProcessStep>     (有序步骤链)          │
-│ - graphRepository: IGraphRepository                         │
-│ - notificationService: INotificationService                 │
-├─────────────────────────────────────────────────────────────┤
-│ + execute(document: Document): IngestionResult              │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ for step in steps:                               │      │
-│   │   context = step.process(context)                │      │
-│   │   if context.hasError(): break and report        │      │
-│   │ return buildResult(context)                      │      │
-│   └──────────────────────────────────────────────────┘      │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ 执行
-                       ▼
-┌─────────────────────────────────────────────────────────────┐
-│           «interface» DocumentProcessStep                    │
-├─────────────────────────────────────────────────────────────┤
-│ + process(context: DocumentContext): DocumentContext         │
-│ + getStepName(): String                                      │
-│ + getOrder(): Int                                            │
-└──────────┬──────────┬──────────────┬────────────────────────┘
-           │          │              │
-           ▼          ▼              ▼
-┌──────────────┐ ┌──────────┐ ┌────────────────┐
-│ LayoutAnalysis│ │NERStep   │ │REStep          │
-│   Step        │ ├──────────┤ ├────────────────┤
-├──────────────┤ │ 实体抽取  │ │ 关系抽取        │
-│ 版面分析      │ │ 概念      │ │ 引用/推导/     │
-│ 正文/标题/    │ │ 公式      │ │ 包含/前置依赖   │
-│ 表格/公式区域  │ │ 定理/定义 │ │                │
-└──────────────┘ └──────────┘ └────────────────┘
-                                    │
-                                    ▼
-                          ┌──────────────────┐
-                          │ GraphImportStep  │
-                          ├──────────────────┤
-                          │ 导入 Neo4j       │
-                          │ 创建节点和边      │
-                          │ 关联文档元数据    │
-                          └──────────────────┘
+
+> **注意：** `DocumentNode` 为图节点（Neo4j 存储），其属性定义见 §3.1；此处仅展示处理流水线关联。
+> `ExtractedEntity` / `ExtractedRelation` 为解析中间产物（MySQL），最终分别转化为 `EntityNode` / `ReferencesEdge` 导入 Neo4j。
+
+---
+
+## 六、图谱业务配置域（MySQL）
+
+> 本节包含实体对齐、剪枝策略、权重规则等图谱相关的配置与管理实体，均存储于 MySQL。
+
+### 6.1 实体对齐
+
+```mermaid
+classDiagram
+class EntityAlignment {
+    -Long id
+    -Long sourceEntityId
+    -Long targetEntityId
+    -Float similarityScore
+    -String confidence
+    -String status
+    -Long reviewedBy
+    -LocalDateTime reviewedAt
+    -JsonNode snapshotBefore
+    +confirmMerge() void
+    +reject() void
+    +manualCorrect(String newName) void
+    +rollback() void
+}
+
+class AlignmentAudit {
+    -Long id
+    -Long alignmentId
+    -String operationType
+    -Long operatedBy
+    -JsonNode snapshotBefore
+    -JsonNode snapshotAfter
+    -LocalDateTime operatedAt
+    +record(JsonNode event) void
+}
+
+EntityAlignment "1" --> "*" AlignmentAudit : 审计日志
 ```
 
-**DocumentContext**（流水线上下文，在步骤间传递）：
+### 6.2 剪枝策略与权重规则
 
-```
-┌─────────────────────────────────────────────┐
-│            DocumentContext                   │
-├─────────────────────────────────────────────┤
-│ document: Document                          │
-│ rawContent: byte[]          — PDF 原始内容   │
-│ layoutRegions: List<Region> — 版面分析结果   │
-│ extractedEntities: List<KP> — NER 抽取结果   │
-│ extractedRelations: List<KR>— RE 抽取结果    │
-│ confidenceScores: Map<ID, Float>            │
-│ errors: List<IngestionError>                │
-│ processingTime: Duration                    │
-├─────────────────────────────────────────────┤
-│ + hasError(): Boolean                       │
-│ + addError(error: IngestionError): Void     │
-│ + getLowConfidenceEntities(): List<KP>      │
-└─────────────────────────────────────────────┘
-```
+```mermaid
+classDiagram
+class PruningStrategy {
+    -Long id
+    -String name
+    -String taskType
+    -Integer maxHops
+    -Integer maxNeighborsPerHop
+    -Float weightThreshold
+    -List~String~ relationTypeFilter
+    -Boolean isActive
+    -LocalDateTime createdAt
+    -LocalDateTime updatedAt
+    +execute(Long rootKpId) SubGraph
+    +compareWith(PruningStrategy other) CompareResult
+    +saveVersion() PruningStrategyVersion
+    +rollbackTo(Long versionId) void
+}
 
-### 4.2 事件导入流水线 (Event Pipeline)
+class PruningStrategyVersion {
+    -Long id
+    -Long strategyId
+    -Integer versionNumber
+    -JsonNode paramsSnapshot
+    -String changeDescription
+    -LocalDateTime createdAt
+    +diff(PruningStrategyVersion other) DiffResult
+}
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   EventIngestionPipeline                     │
-├─────────────────────────────────────────────────────────────┤
-│ + importGradesCSV(csvFile, config): ImportResult            │
-│ + importAssignments(request): ImportResult                  │
-│ + importQuizResults(request): ImportResult                  │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ 步骤
-                       ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│ CSVValidate  │→│ StudentMatch │→│ KPMatch       │→│ EventCreate  │
-│   Step       │  │   Step       │  │   Step       │  │   Step       │
-├──────────────┤  ├──────────────┤  ├──────────────┤  ├──────────────┤
-│ 字段格式校验  │  │ 学号匹配M1   │  │ 知识点匹配M2 │  │ 生成事件节点  │
-│ 类型检查      │  │ 冲突策略:    │  │ 模糊匹配     │  │ 关联图谱     │
-│ 必填校验      │  │ · 自动创建   │  │ 未匹配标记   │  │ 触发权重更新  │
-│              │  │ · 跳过       │  │ "待确认"     │  │ M4.weight    │
-└──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
+class WeightRule {
+    -Long id
+    -String name
+    -String ruleType
+    -String decayCurve
+    -Float halfLifeDays
+    -String subject
+    -JsonNode eventAdjustments
+    -Boolean isActive
+    -LocalDateTime createdAt
+    +calculateDecay(float weight, int days) float
+    +getEventDelta(String eventType) float
+    +simulate(List~Long~ studentIds, int days) SimulationResult
+}
 
-ImportResult
-├── successCount: Int
-├── failureCount: Int
-├── skippedCount: Int
-├── errors: List<ImportError>
-│   ├── rowNumber: Int
-│   ├── fieldName: String
-│   └── errorMessage: String
-└── processingTime: Duration
+class WeightChangeLog {
+    -Long id
+    -Long masteryEdgeId
+    -Float weightBefore
+    -Float weightAfter
+    -String triggerType
+    -String triggerId
+    -String source
+    -LocalDateTime changedAt
+    +query(LocalDateTime since, LocalDateTime until) List~WeightChangeLog~
+}
+
+class ScoreAllocationRule {
+    -Long id
+    -String name
+    -String strategy
+    -String subject
+    -String examType
+    -Boolean isGlobal
+    -Boolean isActive
+    -LocalDateTime createdAt
+    +allocateScore(float rawScore, List~Long~ kpIds) Map~Long,Float~
+}
+
+class ScheduledTask {
+    -Long id
+    -String name
+    -String description
+    -String cronExpression
+    -String jobClass
+    -String status
+    -Long dependsOnTaskId
+    -LocalDateTime lastRunAt
+    -LocalDateTime nextRunAt
+    +trigger() TaskExecution
+    +pause() void
+    +resume() void
+    +getDag() TaskDag
+}
+
+class TaskExecution {
+    -Long id
+    -Long scheduledTaskId
+    -String status
+    -LocalDateTime startedAt
+    -LocalDateTime completedAt
+    -Long durationMs
+    -Integer processedCount
+    -String errorStack
+    -String diagnosisSuggestion
+    +getDetail() ExecutionDetail
+    +retry() void
+}
+
+PruningStrategy "1" --> "*" PruningStrategyVersion : 版本历史
+WeightRule "1" --> "*" WeightChangeLog : 触发变更
+ScheduledTask "1" --> "*" TaskExecution : 执行记录
+ScheduledTask "1" --> "0..1" ScheduledTask : 依赖
 ```
 
 ---
 
-## 五、M5 · AI 分析引擎 — 工厂 + 模板方法模式
+## 七、图谱分析域
 
-### 5.1 分析生成器体系 (Analysis Generator Hierarchy)
+```mermaid
+classDiagram
+class SubGraph {
+    -String id
+    -String rootNodeId
+    -Long pruningStrategyId
+    -Integer nodeCount
+    -Integer relationCount
+    -Integer tokenEstimate
+    -JsonNode nodes
+    -JsonNode edges
+    -LocalDateTime generatedAt
+    +toPromptContext() String
+    +getPath(String rootId, String leafId) List~String~
+    +compare(SubGraph other) CompareResult
+}
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│            «abstract» AnalysisGenerator                      │
-├─────────────────────────────────────────────────────────────┤
-│ # pruningEngine: PruningEngine                              │
-│ # contextBuilder: IContextBuilderService                    │
-│ # llmGateway: ILLMGatewayService                           │
-├─────────────────────────────────────────────────────────────┤
-│ + generate(request: AnalysisRequest): AnalysisResult        │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ Template Method:                                 │      │
-│   │ 1. subgraph = prune(request)           剪枝      │      │
-│   │ 2. context = buildContext(subgraph)    构建上下文  │      │
-│   │ 3. prompt = buildPrompt(context)       组装Prompt │      │
-│   │ 4. response = callLLM(prompt)          调用LLM   │      │
-│   │ 5. result = parseResponse(response)    解析结果   │      │
-│   │    ↑ 子类实现                                     │      │
-│   └──────────────────────────────────────────────────┘      │
-│                                                              │
-│ # abstract getTaskType(): TaskType                          │
-│ # abstract parseResponse(raw: String): AnalysisResult       │
-│ # abstract buildPrompt(context: LLMContext): PromptTemplate │
-└──────────┬───────────────────┬──────────────────────────────┘
-           │                   │
-           ▼                   ▼
-┌────────────────────┐ ┌─────────────────────────┐
-│AttributionGenerator│ │TeachingSuggestGenerator  │
-├────────────────────┤ ├─────────────────────────┤
-│ 归因分析器          │ │ 教学建议器               │
-│                    │ │                         │
-│ 输出: 归因报告      │ │ 输出: 教学建议           │
-│ · 根因列表          │ │ · 补救路径(分步)         │
-│ · 多维证据链        │ │ · 教辅资源匹配(页码/题号) │
-│ · 置信度标注        │ │ · 时间估算              │
-│ · 追溯路径          │ │                         │
-└────────────────────┘ │ 依赖: M2前置依赖链       │
-                       │       M3教辅资源检索     │
-                       └─────────────────────────┘
+class GraphMetric {
+    -Long id
+    -LocalDateTime calculatedAt
+    -Integer totalNodes
+    -Integer totalRelations
+    -Float avgDegree
+    -Integer componentCount
+    -List~Long~ isolatedNodeIds
+    -JsonNode densityHeatmap
+    -JsonNode communityDistribution
+    +detectCommunities() List~CommunityResult~
+    +findIsolatedNodes() List~Long~
+    +generateHealthReport() HealthReport
+}
 
-┌────────────────────┐
-│ReviewPathGenerator │
-├────────────────────┤
-│ 复习规划器          │
-│                    │
-│ 输出: 复习路径      │
-│ · 优先级排序        │
-│ · 时间预估          │
-│ · 资源推荐          │
-│                    │
-│ 依赖: M4 PageRank  │
-│       M2 依赖链     │
-└────────────────────┘
-```
+class CommunityResult {
+    -Long id
+    -String communityLabel
+    -String subject
+    -List~Long~ memberNodeIds
+    -Integer size
+    -Float modularity
+    +getBridgeNodes() List~Long~
+    +overlapWith(CommunityResult other) float
+}
 
-### 5.2 LLM 网关 — 配额与降级
+class GraphSnapshot {
+    -Long id
+    -String name
+    -Long studentId
+    -JsonNode graphState
+    -Integer nodeCount
+    -Integer relationCount
+    -LocalDateTime capturedAt
+    +restore() SubGraph
+    +compare(GraphSnapshot other) SnapshotDiff
+}
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      LLMGateway                              │
-├─────────────────────────────────────────────────────────────┤
-│ - modelRouter: ModelRouter                                  │
-│ - quotaManager: QuotaManager                                │
-│ - fallbackStrategy: FallbackStrategy                        │
-│ - callLogger: ILLMCallLogger                                │
-├─────────────────────────────────────────────────────────────┤
-│ + call(request: LLMCallRequest): LLMCallResult              │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ 1. model = modelRouter.route(taskType)           │      │
-│   │ 2. if quotaManager.isExceeded(model):            │      │
-│   │      model = fallbackStrategy.fallback(model)    │      │
-│   │ 3. prompt = templateEngine.render(template, vars)│      │
-│   │ 4. response = client.call(prompt)                │      │
-│   │ 5. callLogger.log(callRecord)                    │      │
-│   │ 6. return buildResult(response)                  │      │
-│   └──────────────────────────────────────────────────┘      │
-│                                                              │
-│ + switchModel(taskType, modelId): ModelConfig               │
-│ + getQuotaStatus(modelId): QuotaStatus                      │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ 使用
-                       ▼
-┌──────────────────────────────────┐
-│           LLMConfig              │
-├──────────────────────────────────┤
-│ modelId: String                  │
-│ modelName: String                │
-│ taskType: TaskType               │
-│ dailyQuota: Int                  │
-│ weeklyQuota: Int                 │
-│ monthlyQuota: Int                │
-│ tokenBudget: Int                 │
-│ fallbackModelId: String          │
-│ timeoutMs: Int                   │
-│ apiEndpoint: String              │
-├──────────────────────────────────┤
-│ + isQuotaExceeded(): Boolean     │
-│ + getFallback(): String          │
-└──────────────────────────────────┘
-
-┌──────────────────────────────────┐
-│          LLMCallLog              │
-├──────────────────────────────────┤
-│ callId: String                   │
-│ taskType: TaskType               │
-│ modelUsed: String                │
-│ promptTemplateVersion: Int       │
-│ inputTokens: Int                 │
-│ outputTokens: Int                │
-│ latencyMs: Int                   │
-│ result: CallResult               │
-│ calledAt: DateTime               │
-│ traceId: String                  │
-├──────────────────────────────────┤
-│ + getCostEstimate(): Float       │
-│ + isSuccessful(): Boolean        │
-└──────────────────────────────────┘
-
-«enumeration» CallResult
-├── SUCCESS
-├── TIMEOUT
-├── RATE_LIMITED
-├── QUOTA_EXCEEDED
-└── API_ERROR
-```
-
-### 5.3 上下文构建器 (Context Builder)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    ContextBuilder                             │
-├─────────────────────────────────────────────────────────────┤
-│ - serializers: Map<NodeType, NodeSerializer>                │
-│ - tokenCounter: TokenCounter                                │
-├─────────────────────────────────────────────────────────────┤
-│ + buildContext(subgraph: Subgraph, taskType: TaskType,      │
-│                extraInfo?: ContextExtra): LLMContext         │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ 1. serialize(subgraph)    子图 → 文本/JSON       │      │
-│   │ 2. fuse(extraInfo)       融合教辅引用+历史趋势    │      │
-│   │ 3. trim(tokenBudget)     Token 预算裁剪          │      │
-│   │ 4. format(taskType)      按任务类型格式化         │      │
-│   └──────────────────────────────────────────────────┘      │
-│                                                              │
-│ + estimateTokenCount(subgraph, taskType): Int               │
-└─────────────────────────────────────────────────────────────┘
-
-LLMContext
-├── serializedGraph: String    — 子图序列化文本
-├── studentProfile: String     — 学生基本信息
-├── knowledgeContext: String   — 知识点上下文
-├── historicalTrend: String    — 历史趋势数据
-├── teachingResourceRefs: List — 教辅引用(页码/题号)
-├── totalTokens: Int           — 总 Token 数
-└── taskType: TaskType         — 任务类型
+SubGraph "1" --> "1" PruningStrategy : 由策略生成
+GraphMetric "1" --> "*" CommunityResult : 包含
 ```
 
 ---
 
-## 六、M2 · 知识体系 — 学科、分类树与前置依赖
+## 八、智能查询域
 
-### 6.1 学科与知识分类树 (Subject + Category Tree)
+```mermaid
+classDiagram
+class AttributionQuery {
+    -Long id
+    -Long userId
+    -Long studentId
+    -Long knowledgePointId
+    -String taskType
+    -String naturalLanguageInput
+    -Long pruningStrategyId
+    -Long subGraphId
+    -String status
+    -LocalDateTime createdAt
+    +execute() AttributionReport
+    +followUp(Long rootCauseId) AttributionReport
+    +getTracePath() List~KnowledgePointNode~
+}
 
-知识分类树以 **Subject 图谱节点**为根节点，向下展开为多级分类。Subject 是图谱中的一等公民节点（存储在 Neo4j），通过 BELONGS_TO 边与知识点关联；KnowledgeCategory 是分类树的节点（存储在关系型数据库），负责组织知识点的层级结构。
+class AttributionReport {
+    -Long id
+    -Long queryId
+    -String rootCauseSummary
+    -List~JsonNode~ rootCauses
+    -Integer totalTokenUsed
+    -Long llmCallId
+    -LocalDateTime generatedAt
+    +toExportable(String format) byte[]
+    +getEvidenceChain(String causeId) List~AttributionEvidence~
+}
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       Subject                                │
-│              (图谱节点 · Neo4j 存储)                          │
-├─────────────────────────────────────────────────────────────┤
-│ subjectId: String                                            │
-│ name: String           — 数学/物理/化学/...                   │
-│ code: String           — 学科编码                            │
-│ description: String                                          │
-│ status: SubjectStatus  — ENABLED / DISABLED                  │
-│ sortOrder: Int                                               │
-├─────────────────────────────────────────────────────────────┤
-│ + isActive(): Boolean                                        │
-│ + enable(): Void / disable(): Void                           │
-│ + getCategoryTree(): KnowledgeCategory  — 获取该学科的根分类节点│
-│ + getKnowledgePoints(): List<KnowledgePoint>                 │
-│ + getDocuments(): List<Document>                             │
-│ + getTeachers(): List<Teacher>                               │
-│ + getDecayRules(): List<TimeDecayRule>  — 该学科的衰减规则    │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ 1:N (一个学科下有多棵分类树)
-                       ▼
-┌─────────────────────────────────────────────┐
-│          KnowledgeCategory                   │
-│          (分类树节点 · 组合模式)               │
-├─────────────────────────────────────────────┤
-│ categoryId: String                          │
-│ name: String                                │
-│ level: CategoryLevel                        │
-│ subjectId: String      ── FK → Subject      │
-│ parentId: String?      (根节点为null)        │
-│ sortOrder: Int                              │
-│ children: List<KnowledgeCategory>           │
-│ linkedKpId: String?    (叶子节点关联知识点)   │
-├─────────────────────────────────────────────┤
-│ + isLeaf(): Boolean                         │
-│ + isRoot(): Boolean      (parentId == null) │
-│ + getPath(): List<KnowledgeCategory>        │
-│ + addChild(child: KnowledgeCategory): Void  │
-│ + moveTo(newParentId: ID): Void             │
-│ + hasCycle(): Boolean                       │
-└─────────────────────────────────────────────┘
+class AttributionEvidence {
+    -Long id
+    -Long reportId
+    -String evidenceType
+    -String description
+    -Float confidence
+    -String sourceCitation
+    -JsonNode supportingData
+    +verify() boolean
+}
 
-分类树层级结构（组合模式递归）:
+class TeachingSuggestion {
+    -Long id
+    -Long reportId
+    -Long studentId
+    -String severity
+    -Integer stepCount
+    -List~JsonNode~ steps
+    -List~JsonNode~ resources
+    -Integer estimatedMinutes
+    -LocalDateTime createdAt
+    +generatePlan() JsonNode
+    +export(String format) byte[]
+    +trackEffect() JsonNode
+}
 
-  Subject (数学)                    ← Subject 图谱节点 (Neo4j)
-    │
-    ▼
-  KnowledgeCategory (代数)          ← level = MODULE
-    │
-    ├── KnowledgeCategory (函数)     ← level = CHAPTER
-    │     │
-    │     ├── KnowledgeCategory (二次函数)  ← level = KNOWLEDGE_POINT
-    │     │     └── linkedKpId → KnowledgePoint 实体 (Neo4j)
-    │     │
-    │     └── KnowledgeCategory (一次函数)  ← level = KNOWLEDGE_POINT
-    │           └── linkedKpId → KnowledgePoint 实体
-    │
-    └── KnowledgeCategory (方程)     ← level = CHAPTER
-          └── ...
+class ReviewPath {
+    -Long id
+    -Long studentId
+    -List~JsonNode~ items
+    -Integer totalEstimatedMinutes
+    -LocalDateTime createdAt
+    +prioritize() void
+    +truncate(int availableMin) void
+    +markReviewed(Long itemId) void
+    +calculateEffect() JsonNode
+}
 
-«enumeration» CategoryLevel
-├── MODULE          — 一级模块（代数/几何/...）
-├── CHAPTER         — 二级章节（函数/方程/...）
-└── KNOWLEDGE_POINT — 具体知识点
+class ReportExport {
+    -Long id
+    -Long reportId
+    -String format
+    -List~String~ selectedSections
+    -String status
+    -String minioPath
+    -LocalDateTime createdAt
+    +generate() void
+    +batchExport(List~Long~ reportIds) byte[]
+}
 
-注: 原 SUBJECT 层级已提升为独立的 Subject 实体，
-    KnowledgeCategory 从 MODULE 层级开始。
-```
+class ShareLink {
+    -Long id
+    -Long reportId
+    -String token
+    -String scope
+    -String password
+    -LocalDateTime expiresAt
+    -Integer viewCount
+    -LocalDateTime createdAt
+    +generate() String
+    +validate(String token) boolean
+    +recordView(Long userId) void
+}
 
-**Subject 与 KnowledgeCategory 的职责分离**：
+class LlmConfig {
+    -Long id
+    -String modelName
+    -String apiEndpoint
+    -String apiKey
+    -Integer maxTokens
+    -Float temperature
+    -String assignedTask
+    -Boolean isActive
+    -Integer dailyQuota
+    -Integer dailyUsed
+    +switchModel(String m) void
+    +checkQuota() boolean
+    +degrade() void
+}
 
-| 维度 | Subject | KnowledgeCategory |
-|------|---------|-------------------|
-| **存储位置** | Neo4j（图谱节点） | 关系型数据库 |
-| **图谱边** | BELONGS_TO（KP→Subject）、DOCUMENT_SUBJECT（Doc→Subject） | 无图谱边，通过 parentId 树形关联 |
-| **生命周期** | 长期稳定（几乎不增删） | 可频繁调整（拖拽/新增/删除） |
-| **被引用方式** | 作为外键被 15+ 个实体/接口引用 | 作为分类树节点被 M2 内部管理 |
-| **核心职责** | 全局分类维度、过滤条件 | 组织知识点的层级结构 |
-| **状态管理** | ENABLED/DISABLED | 无独立状态（随树结构变化） |
+class PromptTemplate {
+    -Long id
+    -String taskType
+    -String name
+    -String content
+    -List~String~ variableSlots
+    -Integer version
+    -Boolean isActive
+    +render(Map~String,String~ vars) String
+    +preview(Map~String,String~ vars) String
+    +rollbackTo(Integer ver) void
+}
 
-### 6.2 前置依赖与循环检测
+class LlmCallLog {
+    -Long id
+    -String taskType
+    -String modelName
+    -Long promptTemplateId
+    -Integer inputTokens
+    -Integer outputTokens
+    -Long latencyMs
+    -String status
+    -String errorMessage
+    -String traceId
+    -JsonNode requestSnapshot
+    -LocalDateTime calledAt
+    +replay() void
+}
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                 PrerequisiteService                           │
-├─────────────────────────────────────────────────────────────┤
-│ - graphRepo: IGraphRepository                               │
-│ - cycleDetector: CycleDetector                              │
-├─────────────────────────────────────────────────────────────┤
-│ + addPrerequisite(kpId, prereqKpId): PrerequisiteRelation   │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ 1. cycleDetector.wouldCreateCycle(kpId, prereq)  │      │
-│   │ 2. if cycle → reject with cycle path             │      │
-│   │ 3. else → create edge                            │      │
-│   └──────────────────────────────────────────────────┘      │
-│                                                              │
-│ + getPrerequisites(kpId, depth?): List<KnowledgePoint>      │
-│ + getDependents(kpId): List<KnowledgePoint>                 │
-│ + getDependencyChain(kpId): DependencyChain                 │
-│ + detectCycles(): List<CyclePath>                           │
-└─────────────────────────────────────────────────────────────┘
-
-DependencyChain
-├── rootKpId: String
-├── nodes: List<KnowledgePoint>
-├── edges: List<PrerequisiteRelation>
-├── maxDepth: Int
-└── leafNodes: List<KnowledgePoint>   — 无前置依赖的根知识点
-
-CyclePath
-├── path: List<String>    — 循环路径中的知识点ID序列
-└── detectedAt: DateTime
-```
-
----
-
-## 七、M1 · 主数据 — 状态机模式 (State Pattern)
-
-### 7.1 学生状态生命周期
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       Student                                │
-├─────────────────────────────────────────────────────────────┤
-│ studentId: String                                            │
-│ name: String                                                 │
-│ classId: String                                              │
-│ enrollYear: Int                                              │
-│ status: StudentStatus                                        │
-│ archivedAt: DateTime?                                        │
-├─────────────────────────────────────────────────────────────┤
-│ + isActive(): Boolean        — 是否参与权重计算               │
-│ + archive(): Void            — 归档（毕业/转学）              │
-│ + transferTo(newClassId): Void                               │
-│ + canParticipateInAnalysis(): Boolean                        │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ return status == ACTIVE                          │      │
-│   │ // 休学/转学/毕业 → 不参与权重计算和归因分析       │      │
-│   └──────────────────────────────────────────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-
-                    ┌──────────┐
-                    │  ACTIVE   │ ← 初始状态（入学）
-                    │  在读     │
-                    └────┬─────┘
-                         │
-              ┌──────────┼──────────┐
-              │          │          │
-              ▼          ▼          ▼
-        ┌──────────┐ ┌────────┐ ┌──────────┐
-        │SUSPENDED │ │TRANSFER│ │ GRADUATED│
-        │  休学     │ │  转学   │ │  毕业    │
-        └────┬─────┘ └───┬────┘ └──────────┘
-             │           │          ↑
-             │           │          │
-             └───────────┴──────────┘
-                 (均可转为归档状态)
-
-        归档后：数据保留，不再参与权重计算
-
-«enumeration» StudentStatus
-├── ACTIVE       — 在读（参与所有计算）
-├── SUSPENDED    — 休学（不参与计算，保留数据）
-├── TRANSFERRED  — 转学（归档）
-└── GRADUATED    — 毕业（归档）
+AttributionQuery "1" --> "0..1" AttributionReport : 生成
+AttributionReport "1" --> "*" AttributionEvidence : 包含证据
+AttributionReport "1" --> "0..1" TeachingSuggestion : 衍生
+AttributionReport "1" --> "*" ReportExport : 导出
+ReportExport "1" --> "0..*" ShareLink : 生成分享
+LlmConfig "1" --> "*" PromptTemplate : 关联模板
+LlmConfig "1" --> "*" LlmCallLog : 产生日志
+PromptTemplate "1" --> "*" LlmCallLog : 被使用
 ```
 
 ---
 
-## 八、M6 · 应用层 — 用例编排类
+## 九、运维运营域
 
-应用层不包含核心算法，其类设计重点是**编排逻辑**和**结果组装**。
+```mermaid
+classDiagram
+class ServiceHealth {
+    -Long id
+    -String serviceName
+    -String status
+    -Integer connectionCount
+    -Integer maxConnections
+    -Float p50Latency
+    -Float p99Latency
+    -Integer queueLength
+    -LocalDateTime lastCheckAt
+    +check() String
+    +getHistory(int days) List~JsonNode~
+    +getDependencyTopology() JsonNode
+}
 
-### 8.1 归因查询编排
+class AlertRule {
+    -Long id
+    -String name
+    -String serviceName
+    -String level
+    -String metricType
+    -Float threshold
+    -Integer durationSeconds
+    -Integer cooldownMinutes
+    -List~String~ notifyChannels
+    -Boolean isActive
+    +evaluate(Float metricValue) boolean
+    +suppress(AlertRule other) boolean
+    +escalate() void
+}
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│              AttributionQueryService                          │
-│              (L2 应用层 · 用例编排)                            │
-├─────────────────────────────────────────────────────────────┤
-│ - authService: IAuthorizationService     (M1)               │
-│ - pruningEngine: PruningEngine           (M4)               │
-│ - analysisGenerator: AnalysisGenerator   (M5)               │
-│ - studentService: IStudentService        (M1)               │
-│ - kpService: IKnowledgePointService      (M2)               │
-├─────────────────────────────────────────────────────────────┤
-│ + queryAttribution(query: AttributionQuery):                │
-│     AttributionReportVO                                     │
-│   ┌──────────────────────────────────────────────────┐      │
-│   │ 1. student = studentService.resolve(query)       │      │
-│   │ 2. authService.checkPermission(user, student,    │      │
-│   │                                  Action.READ)    │      │
-│   │ 3. taskType = routeIntent(query)                 │      │
-│   │ 4. subgraph = pruningEngine.prune(student.id,    │      │
-│   │                                   taskType)      │      │
-│   │ 5. report = analysisGenerator.generate(request)  │      │
-│   │ 6. vo = assembleVO(report, subgraph)             │      │
-│   │ 7. return vo                                     │      │
-│   └──────────────────────────────────────────────────┘      │
-│                                                              │
-│ + autoComplete(input: String): List<Suggestion>             │
-│ + getDrillDown(attributionId, kpId): AttributionReportVO    │
-└─────────────────────────────────────────────────────────────┘
+class AlertEvent {
+    -Long id
+    -Long alertRuleId
+    -String level
+    -String message
+    -Float currentValue
+    -Float threshold
+    -String status
+    -Long acknowledgedBy
+    -LocalDateTime triggeredAt
+    -LocalDateTime resolvedAt
+    +acknowledge(Long userId) void
+    +resolve(String resolution) void
+}
 
-AttributionReportVO (面向表示层的组装结果)
-├── report: AttributionReport         — 归因报告
-├── visualizationData: SubgraphVO     — 可视化子图数据
-├── drillDownCandidates: List<KP>     — 可下钻的知识点列表
-├── trendData: TrendData              — 趋势曲线数据
-└── relatedResources: List<Resource>  — 相关教辅资源
-```
+class BackupTask {
+    -Long id
+    -String type
+    -String cronExpression
+    -Integer retentionCount
+    -Boolean isActive
+    -LocalDateTime nextRunAt
+    +execute() BackupRecord
+    +validate() boolean
+}
 
----
+class BackupRecord {
+    -Long id
+    -Long backupTaskId
+    -String type
+    -Long fileSize
+    -String minioPath
+    -String checksum
+    -Integer nodeCount
+    -Integer relationCount
+    -String status
+    -LocalDateTime startedAt
+    -LocalDateTime completedAt
+    +verify() boolean
+    +restore(String targetDb) JsonNode
+}
 
-## 九、关键枚举与值对象汇总
+class UsageMetric {
+    -Long id
+    -LocalDate date
+    -String dimension
+    -String dimensionValue
+    -Integer dau
+    -Integer wau
+    -Integer mau
+    -Integer queryCount
+    -Integer exportCount
+    -Integer pdfViewCount
+    -Float growthRate
+    +aggregate(LocalDate since, LocalDate until) List~UsageMetric~
+    +compare(String p1, String p2) CompareResult
+}
 
-### 9.1 全局枚举
+class DocumentProcessMetric {
+    -Long id
+    -LocalDate date
+    -Integer totalPdfCount
+    -Integer parsedPdfCount
+    -Float parseSuccessRate
+    -Integer totalPages
+    -Integer totalEntities
+    -Integer totalRelations
+    -Integer csvRowCount
+    -Integer coveredStudentCount
+    -Float avgParseDuration
+    +aggregate(LocalDate since, LocalDate until) List~DocumentProcessMetric~
+    +getKnowledgeGaps() List~JsonNode~
+    +findZombieDocuments() List~Long~
+}
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     全局枚举定义                               │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  NodeType        — 图谱节点类型（8种）                        │
-│  EdgeType        — 图谱边类型（6种）                          │
-│  EventType       — 事件类型（3种）                            │
-│  TaskType        — 任务类型（5种）                            │
-│  StudentStatus   — 学生状态（4种）                            │
-│  SubjectStatus   — 学科状态（2种: ENABLED/DISABLED）          │
-│  KpStatus        — 知识点状态（2种: ACTIVE/DEPRECATED）       │
-│  KpSource        — 知识点来源（3种: AUTO/MANUAL/CSV_IMPORT）  │
-│  DocStatus       — 文档状态（5种，见下）                       │
-│  CategoryLevel   — 分类层级（3种，学科已提升为 Subject 实体）   │
-│  DecayCurve      — 衰减曲线（3种）                            │
-│  AssignType      — 作业类型（3种）                            │
-│  GradingResult   — 批改结果（4种）                            │
-│  ErrorCategory   — 错题原因（4种）                            │
-│  KnowledgeRelType— 知识关联类型（4种）                        │
-│  CallResult      — LLM调用结果（5种）                         │
-│  TriggerSource   — 权重触发来源（5种）                        │
-│  OperatorSource  — 操作来源（2种）                            │
-│  AffectScope     — 影响范围（2种）                            │
-│  RuleScope       — 规则范围（4种）                            │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 9.2 文档处理状态
-
-```
-                    ┌──────────┐
-                    │ UPLOADED  │ ← 上传完成
-                    │  已上传    │
-                    └────┬─────┘
-                         │ 开始处理
-                         ▼
-                    ┌──────────┐
-                    │PROCESSING│ ← 流水线执行中
-                    │  处理中   │
-                    └────┬─────┘
-                    ┌────┴─────┐
-                    │          │
-                    ▼          ▼
-              ┌──────────┐ ┌──────────┐
-              │COMPLETED │ │ FAILED   │
-              │  已完成   │ │  失败    │
-              └──────────┘ └────┬─────┘
-                                │ 重新上传
-                                ▼
-                           ┌──────────┐
-                           │RE_UPLOAD │
-                           │  重新处理 │
-                           └──────────┘
-
-«enumeration» DocStatus
-├── UPLOADED       — 已上传，待处理
-├── PROCESSING     — 处理中（流水线执行）
-├── COMPLETED      — 处理完成
-├── FAILED         — 处理失败（扫描版PDF/加密PDF等）
-└── RE_UPLOADING   — 重新上传处理中
-```
-
-### 9.3 实体对齐状态
-
-```
-«enumeration» AlignmentConfidence
-├── HIGH    (> 0.9)  — 高置信度，建议自动合并
-├── MEDIUM  (0.6~0.9)— 中置信度，需人工确认
-└── LOW     (< 0.6)  — 低置信度，仅提示
-
-«enumeration» AlignmentStatus
-├── PENDING    — 待审核
-├── MERGED     — 已合并
-└── REJECTED   — 已驳回（加入白名单）
+ServiceHealth "1" --> "*" AlertRule : 关联规则
+AlertRule "1" --> "*" AlertEvent : 触发
+BackupTask "1" --> "*" BackupRecord : 产生
 ```
 
 ---
 
-## 十、设计模式总结
+## 十、跨域关系总览
 
-| 模式 | 应用位置 | 解决的问题 |
-|------|---------|-----------|
-| **策略模式** | M4-b PruningEngine + PruningStrategy | 不同任务类型使用不同剪枝参数，策略可配置、可版本化、可 A/B 对比 |
-| **模板方法** | M5 AnalysisGenerator 抽象基类 | 归因/教学建议/复习路径三种分析共享"剪枝→上下文→LLM→解析"流程，子类只实现差异步骤 |
-| **流水线模式** | M3 DocumentIngestionPipeline | PDF 解析多步骤串联，每步可独立替换，失败可定位到具体步骤 |
-| **状态模式** | M1 Student + Document 状态流转 | 实体生命周期有明确状态转换规则，非法转换需拒绝 |
-| **工厂模式** | M5 ModelRouter | 按 TaskType 路由到不同 LLM 模型，新增任务类型只需扩展路由表 |
-| **观察者模式** | M4 WeightEngine → WeightChangeLog | 权重变更自动触发日志记录和通知，解耦变更与审计 |
-| **适配器模式** | L3 → L4 接口契约 | 领域层定义接口（IGraphRepository），基础设施层提供实现（Neo4jGraphRepository），技术可替换 |
-| **多态继承** | Event 基类 + 3 子类型 | 考试/作业/测验共享事件基础属性，各自扩展特定字段 |
-| **组合模式** | KnowledgeCategory 树形结构 + Subject 根 | 分类树以 Subject 为根，节点递归包含子节点，统一处理叶子和非叶子节点 |
+```mermaid
+classDiagram
+%% ── 图节点 ↔ 图边（图存储层） ──
+StudentNode "1" --> "*" MasteryEdge : "← MASTERS"
+MasteryEdge "*" --> "1" KnowledgePointNode : "→ target"
+StudentNode "1" --> "*" HasEventEdge : "← HAS_EVENT"
+HasEventEdge "*" --> "1" EventNode : "→ target"
+KnowledgePointNode "1" --> "*" PrerequisiteEdge : "← PREREQUISITE_OF"
+PrerequisiteEdge "*" --> "1" KnowledgePointNode : "→ target"
+KnowledgePointNode "*" --> "1" KnowledgeCategoryNode : "BELONGS_TO →"
+KnowledgeCategoryNode "1" --> "*" KnowledgeCategoryNode : "CHILD_OF →"
+DocumentNode "1" --> "*" ExtractsEdge : "← EXTRACTS"
+ExtractsEdge "*" --> "1" EntityNode : "→ target"
+EntityNode "1" --> "*" AlignedToEdge : "← ALIGNED_TO"
+AlignedToEdge "*" --> "1" KnowledgePointNode : "→ target"
+EntityNode "1" --> "*" ReferencesEdge : "← REFERENCES"
+ReferencesEdge "*" --> "1" EntityNode : "→ target"
+ExamNode "1" --> "*" ContainsEdge : "← CONTAINS"
+ContainsEdge "*" --> "1" QuestionNode : "→ target"
+QuestionNode "1" --> "*" TestsEdge : "← TESTS"
+TestsEdge "*" --> "1" KnowledgePointNode : "→ target"
+EventNode "1" --> "*" RelatesToEdge : "← RELATES_TO"
+RelatesToEdge "*" --> "1" KnowledgePointNode : "→ target"
+EventNode "1" --> "*" ScoresOnEdge : "← SCORES_ON"
+ScoresOnEdge "*" --> "1" QuestionNode : "→ target"
+EventNode "1" --> "*" BelongsToExamEdge : "← BELONGS_TO_EXAM"
+BelongsToExamEdge "*" --> "1" ExamNode : "→ target"
+
+%% ── 文档处理 → 图存储 ──
+DocumentNode "1" --> "*" ExtractedEntity : "解析产生"
+ExtractedEntity "*" --> "1" EntityNode : "转化为"
+
+%% ── 业务配置 → 图存储 ──
+EntityAlignment "*" --> "1" EntityNode : "对齐源/目标"
+PruningStrategy "1" --> "*" SubGraph : "生成"
+WeightChangeLog "*" --> "1" MasteryEdge : "变更"
+ScoreAllocationRule "1" --> "*" EventNode : "分配"
+
+%% ── 查询域 → 图存储 ──
+AttributionQuery "*" --> "1" StudentNode : "查询目标"
+AttributionQuery "*" --> "1" PruningStrategy : "使用策略"
+AttributionEvidence "*" --> "1" MasteryEdge : "证据来源"
+AttributionEvidence "*" --> "1" EventNode : "证据来源"
+SubGraph "1" --> "1" AttributionReport : "上下文输入"
+
+%% ── 用户域 → 业务域 ──
+User "1" --> "*" EntityAlignment : 审核
+User "1" --> "*" PruningStrategy : 配置
+User "1" --> "*" WeightRule : 配置
+User "1" --> "*" AttributionQuery : 发起
+User "1" --> "*" ReportExport : 导出
+```
 
 ---
 
-## 十一、类图与接口的对应关系
+## 十一、枚举与值对象
 
-| 接口（Section 3 定义） | 核心实现类（本文档） | 设计模式 |
+| 枚举 | 取值 | 所属域 |
 |:--|:--|:--|
-| IPruningService | PruningEngine, PruningStrategy, StrategyVersion | 策略模式 |
-| IWeightService | WeightEngine, TimeDecayRule, BehaviorWeightRule, WeightChangeLog | 规则多态 |
-| IGraphFusionService | WideGraph, Subgraph, GraphNode/GraphEdge 体系 | 领域模型 |
-| IDocumentIngestionService | DocumentIngestionPipeline, DocumentProcessStep, DocumentContext | 流水线模式 |
-| IEventIngestionService | EventIngestionPipeline, Event 多态体系 | 流水线 + 多态 |
-| IAnalysisGeneratorService | AnalysisGenerator, AttributionGenerator, TeachingSuggestGenerator, ReviewPathGenerator | 模板方法 |
-| ILLMGatewayService | LLMGateway, LLMConfig, LLMCallLog, ModelRouter | 工厂 + 降级策略 |
-| IContextBuilderService | ContextBuilder, LLMContext | 构建器 |
-| IPrerequisiteService | PrerequisiteService, DependencyChain, CycleDetector | 图算法 |
-| IStudentService | Student (状态机) | 状态模式 |
-| IKnowledgeCategoryService | KnowledgeCategory (树) + Subject (根) | 组合模式 |
-| ISubjectService | Subject (图谱节点) | 图遍历 |
+| `NodeLabel` | Student / KnowledgePoint / KnowledgeCategory / Document / Entity / Exam / Question / Event | 图节点 |
+| `EdgeType` | MASTERS / PREREQUISITE_OF / BELONGS_TO / CHILD_OF / EXTRACTS / REFERENCES / DERIVES / CONTAINS / ALIGNED_TO / HAS_EVENT / RELATES_TO / TESTS / SCORES_ON / BELONGS_TO_EXAM | 图边 |
+| `UserStatus` | ACTIVE / DISABLED / LOCKED / ARCHIVED | 用户 |
+| `DocStatus` | UPLOADED / PARSING / PARSED / FAILED | 文档 |
+| `TaskType` | ATTRIBUTION / REVIEW_RECOMMEND / CLASS_OVERVIEW | 剪枝策略 |
+| `EntityType` | CONCEPT / FORMULA / THEOREM / DEFINITION | 抽取实体 |
+| `StudentStatus` | ACTIVE / SUSPENDED / TRANSFERRED / GRADUATED | 学生 |
+| `KpStatus` | ACTIVE / DEPRECATED / MERGED | 知识点 |
+| `DecayCurve` | EXPONENTIAL / LINEAR / STEP | 权重衰减 |
+| `AlignmentConfidence` | HIGH / MEDIUM / LOW | 实体对齐 |
+| `ScoreGranularity` | TOTAL_ONLY / PER_QUESTION / PER_KNOWLEDGE_POINT | 得分粒度 |
+| `ScoreAllocationStrategy` | AVERAGE / WEIGHTED / FULL | 得分分配 |
+| `Severity` | MILD / MODERATE / SEVERE | 薄弱程度 |
+| `ExportFormat` | PDF / HTML / MARKDOWN | 报告导出 |
+| `ShareScope` | SCHOOL_TEACHERS / SPECIFIC_PARENT / PUBLIC | 分享范围 |
+| `AlertLevel` | P0_CRITICAL / P1_WARNING / P2_INFO | 告警级别 |
+| `BackupType` | FULL / INCREMENTAL | 备份类型 |
+| `CallStatus` | SUCCESS / FAILED / TIMEOUT | LLM 调用 |
+
+---
+
+## 十二、统计摘要
+
+| 包 | 类数量 | 核心类型 | 存储 |
+|:--|:--:|:--|:--|
+| 图节点抽象层 | 9 (1抽象+8实体) | GraphNode → 8 × Node | **Neo4j** |
+| 图边抽象层 | 14 (1抽象+13实体) | GraphEdge → 13 × Edge | **Neo4j** |
+| 用户与权限域 | 7 | User / Role / Permission | MySQL |
+| 文档处理域 | 7 | DocumentNode(图) + ParseTask/CsvImport(MySQL) | Neo4j + MySQL |
+| 图谱业务配置域 | 9 | EntityAlignment / PruningStrategy / WeightRule / ScheduledTask | MySQL |
+| 图谱分析域 | 4 | SubGraph / GraphMetric / CommunityResult / GraphSnapshot | MySQL + Redis |
+| 智能查询域 | 11 | AttributionQuery / Report / LlmConfig / PromptTemplate | MySQL + Redis |
+| 运维运营域 | 7 | ServiceHealth / AlertRule / BackupTask / UsageMetric | MySQL |
+| **合计** | **68** | | Neo4j: 22 <<Node>>/<<Edge>>, MySQL: 44 |
+
+---
+
+## 十三、与开发架构图的映射
+
+| 开发架构层 | 对应类 |
+|:--|:--|
+| **网关层（认证/鉴权）** | `User` / `Role` / `Permission` / `UserRole` / `RolePermission` |
+| **应用层-文档处理** | `DocumentNode`(图) + `ParseTask` / `ParseResult` / `ExtractedEntity` / `CsvImportTask` |
+| **应用层-图处理** | 全部 `GraphNode`/`GraphEdge` 子类 + `WeightRule` / `WeightChangeLog` / `ScheduledTask` |
+| **应用层-图分析** | `PruningStrategy` / `EntityAlignment` / `SubGraph` / `GraphMetric` / `CommunityResult` |
+| **应用层-智能查询** | `AttributionQuery` / `AttributionReport` / `TeachingSuggestion` / `ReviewPath` / `ReportExport` |
+| **应用层-基础数据** | `User`/`Role`/`Permission` + 运维运营域全部 |
+| **应用层-LLM 网关** | `LlmConfig` / `PromptTemplate` / `LlmCallLog` |
+| **基础设施层** | 类图中不体现（Neo4j / MySQL / Redis / MinIO / RabbitMQ 为外部组件） |
+| **横向切面** | `AuditLog` / `LoginLog` / `LlmCallLog` / `WeightChangeLog` / `AlertEvent` / `BackupRecord` |
+
+---
+
+## 十四、与物理部署图的兼容性
+
+| 部署组件 | 类图映射 | 说明 |
+|:--|:--|:--|
+| **Neo4j :7687** | 全部 `GraphNode`/`GraphEdge` 子类 | Spring Data Neo4j 映射，Cypher 查询 |
+| **MySQL :3306** | 全部配置/日志/RBAC/统计类 | JPA/Hibernate 持久化 |
+| **MinIO :9000** | `DocumentNode.minioPath` / `BackupRecord.minioPath` / `ReportExport.minioPath` | 对象存储路径 |
+| **Redis :6379** | `LlmConfig.dailyUsed` / `SubGraph` 缓存 / Session | 配额计数 + 热点缓存 |
+| **RabbitMQ :5672** | `ParseTask` / `WeightChangeLog` / `TaskExecution` 异步消费 | 领域事件驱动 |
+| **外部 LLM API** | `LlmConfig.apiEndpoint` / `LlmCallLog` | HTTPS 出站调用 |
+| **Nginx :80** | 无类图映射 | 反向代理，不参与业务逻辑建模 |
+
+---
+
+> 下一步：可基于此节点/边抽象层进行 Cypher 查询模板设计、剪枝算法伪代码、或全链路时序图（PDF 上传→实体抽取→图节点/边导入→宽图谱融合→归因查询）。

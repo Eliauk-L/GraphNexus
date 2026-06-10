@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="GraphNexus" modified="2025-06-10T00:00:00.000Z" agent="Claude" version="21.0.0">
+  <diagram id="c10-cross-domain-relations" name="Cross-Domain Relations">
+    <mxGraphModel dx="900" dy="450" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="跨域关系总览 — GraphNexus 8大域依赖关系" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="400" y="10" width="600" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== Domain 1: 图节点域 (Neo4j) ===== -->
+        <mxCell id="d1-box" value="图节点域 (Neo4j)" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=11;fontStyle=1;arcSize=5;verticalAlign=top;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="20" y="60" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="d1-item1" value="StudentNode · KnowledgePointNode" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="28" y="92" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d1-item2" value="DocumentNode · EntityNode" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="28" y="112" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d1-item3" value="ExamNode · QuestionNode · EventNode" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="28" y="132" width="184" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== Domain 2: 图边域 (Neo4j) ===== -->
+        <mxCell id="d2-box" value="图边域 (Neo4j)" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=11;fontStyle=1;arcSize=5;verticalAlign=top;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="240" y="60" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="d2-item1" value="MasteryEdge · PrerequisiteEdge" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="248" y="92" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d2-item2" value="AlignedToEdge · ReferencesEdge" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="248" y="112" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d2-item3" value="TestsEdge · RelatesToEdge (+13种)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="248" y="132" width="184" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- Dashed edge between Neo4j domains (图节点域 ↔ 图边域) -->
+        <mxCell id="edge-neo4j" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2980B9;strokeWidth=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="d1-box" target="d2-box">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== Domain 3: 用户权限域 (MySQL) ===== -->
+        <mxCell id="d3-box" value="用户权限域 (MySQL)" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=11;fontStyle=1;arcSize=5;verticalAlign=top;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="20" y="300" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="d3-item1" value="User · Role · Permission" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="28" y="332" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d3-item2" value="UserRole · RolePermission" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="28" y="352" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d3-item3" value="LoginLog · AuditLog" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="28" y="372" width="184" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== Domain 4: 文档处理域 (MySQL) ===== -->
+        <mxCell id="d4-box" value="文档处理域 (MySQL)" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=11;fontStyle=1;arcSize=5;verticalAlign=top;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="240" y="300" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="d4-item1" value="ParseTask · ParseResult" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="248" y="332" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d4-item2" value="ExtractedEntity · ExtractedRelation" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="248" y="352" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d4-item3" value="CsvImportTask · CsvImportRecord" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="248" y="372" width="184" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== Domain 5: 图业务配置域 (MySQL) ===== -->
+        <mxCell id="d5-box" value="图业务配置域 (MySQL)" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=11;fontStyle=1;arcSize=5;verticalAlign=top;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="460" y="60" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="d5-item1" value="EntityAlignment · AlignmentAudit" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="468" y="92" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d5-item2" value="PruningStrategy · WeightRule" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="468" y="112" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d5-item3" value="ScoreAllocationRule · ScheduledTask" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="468" y="132" width="184" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== Domain 6: 图分析域 (MySQL) ===== -->
+        <mxCell id="d6-box" value="图分析域 (MySQL)" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=11;fontStyle=1;arcSize=5;verticalAlign=top;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="460" y="300" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="d6-item1" value="SubGraph · GraphMetric" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="468" y="332" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d6-item2" value="CommunityResult" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="468" y="352" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d6-item3" value="GraphSnapshot" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="468" y="372" width="184" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== Domain 7: 智能查询域 (MySQL) ===== -->
+        <mxCell id="d7-box" value="智能查询域 (MySQL)" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=11;fontStyle=1;arcSize=5;verticalAlign=top;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="680" y="60" width="200" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="d7-item1" value="AttributionQuery · AttributionReport" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="688" y="92" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d7-item2" value="TeachingSuggestion · ReviewPath" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="688" y="112" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d7-item3" value="LlmConfig · PromptTemplate · LlmCallLog" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="688" y="132" width="184" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== Domain 8: 运维运营域 (MySQL) ===== -->
+        <mxCell id="d8-box" value="运维运营域 (MySQL)" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=11;fontStyle=1;arcSize=5;verticalAlign=top;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="680" y="300" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="d8-item1" value="ServiceHealth · AlertRule" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="688" y="332" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d8-item2" value="AlertEvent · BackupTask" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="688" y="352" width="184" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="d8-item3" value="UsageMetric · DocumentProcessMetric" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="688" y="372" width="184" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== Association Lines ===== -->
+
+        <!-- 文档处理域 → 图节点域: "解析导入" -->
+        <mxCell id="assoc-4-1" value="解析导入" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E74C3C;strokeWidth=1.5;fontSize=9;fontColor=#C0392B;fontStyle=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="d4-box" target="d1-box">
+          <mxGeometry x="-0.2" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="340" y="280"/>
+              <mxPoint x="120" y="280"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 图业务配置域 → 图边域: "权重调整" -->
+        <mxCell id="assoc-5-2" value="权重调整" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E74C3C;strokeWidth=1.5;fontSize=9;fontColor=#C0392B;fontStyle=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="d5-box" target="d2-box">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- 图业务配置域 → 图节点域: "实体对齐" -->
+        <mxCell id="assoc-5-1" value="实体对齐" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E74C3C;strokeWidth=1.5;fontSize=9;fontColor=#C0392B;fontStyle=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="d5-box" target="d1-box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="440" y="195"/>
+              <mxPoint x="300" y="105"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 智能查询域 → 图分析域: "子图分析" -->
+        <mxCell id="assoc-7-6" value="子图分析" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E74C3C;strokeWidth=1.5;fontSize=9;fontColor=#C0392B;fontStyle=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="d7-box" target="d6-box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="660" y="210"/>
+              <mxPoint x="660" y="345"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 智能查询域 → 用户权限域: "权限校验" -->
+        <mxCell id="assoc-7-3" value="权限校验" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E74C3C;strokeWidth=1.5;fontSize=9;fontColor=#C0392B;fontStyle=1;exitX=0;exitY=0.25;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="d7-box" target="d3-box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="660" y="110"/>
+              <mxPoint x="660" y="50"/>
+              <mxPoint x="160" y="50"/>
+              <mxPoint x="160" y="345"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 图分析域 → 图节点域: "图指标计算" -->
+        <mxCell id="assoc-6-1" value="图指标计算" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E74C3C;strokeWidth=1.5;fontSize=9;fontColor=#C0392B;fontStyle=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="d6-box" target="d1-box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="440" y="390"/>
+              <mxPoint x="300" y="195"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 智能查询域 → 图业务配置域: "剪枝策略" -->
+        <mxCell id="assoc-7-5" value="剪枝策略" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E74C3C;strokeWidth=1.5;fontSize=9;fontColor=#C0392B;fontStyle=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="d7-box" target="d5-box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="660" y="160"/>
+              <mxPoint x="660" y="150"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 运维运营域 → 文档处理域: "文档处理指标" -->
+        <mxCell id="assoc-8-4" value="文档处理指标" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E74C3C;strokeWidth=1.5;fontSize=9;fontColor=#C0392B;fontStyle=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="d8-box" target="d4-box">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="520" y="390"/>
+              <mxPoint x="520" y="435"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

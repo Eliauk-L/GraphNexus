@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-06-10T00:00:00.000Z" agent="claude" version="24.0.0">
+  <diagram name="Operations Domain" id="c09-operations">
+    <mxGraphModel dx="1200" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="Operations Domain Class Diagram" style="text;fontSize=15;fontStyle=1;fontColor=#2C3E50;align=center;" vertex="1" parent="1">
+          <mxGeometry x="620" y="10" width="560" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== ServiceHealth (Domain/Green) ========== -->
+        <mxCell id="servicehealth" value="ServiceHealth" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;html=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="60" width="310" height="214" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-a1" value="- Long id" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="30" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-a2" value="- String serviceName" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="46" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-a3" value="- String status" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="62" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-a4" value="- Integer connectionCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="78" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-a5" value="- Integer maxConnections" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="94" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-a6" value="- Float p50Latency" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="110" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-a7" value="- Float p99Latency" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="126" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-a8" value="- Integer queueLength" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="142" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-a9" value="- LocalDateTime lastCheckAt" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="158" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-sep" value="" style="line;strokeColor=#82b366;fillColor=none;" vertex="1" parent="servicehealth">
+          <mxGeometry y="176" width="310" height="2" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-m1" value="+ check() : String" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="178" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-m2" value="+ getHistory(days) : List&lt;JsonNode&gt;" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="194" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="sh-m3" value="+ getDependencyTopology() : JsonNode" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="servicehealth">
+          <mxGeometry y="210" width="310" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== AlertRule (Domain/Green) ========== -->
+        <mxCell id="alertrule" value="AlertRule" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;html=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="60" width="280" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a1" value="- Long id" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="30" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a2" value="- String name" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="46" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a3" value="- String serviceName" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="62" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a4" value="- String level" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="78" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a5" value="- String metricType" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="94" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a6" value="- Float threshold" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="110" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a7" value="- Integer durationSeconds" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="126" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a8" value="- Integer cooldownMinutes" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="142" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a9" value="- List&lt;String&gt; notifyChannels" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="158" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-a10" value="- Boolean isActive" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="174" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-sep" value="" style="line;strokeColor=#82b366;fillColor=none;" vertex="1" parent="alertrule">
+          <mxGeometry y="192" width="280" height="2" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-m1" value="+ evaluate(metricValue) : boolean" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="194" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-m2" value="+ suppress(other) : boolean" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="210" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="alr-m3" value="+ escalate()" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertrule">
+          <mxGeometry y="226" width="280" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== AlertEvent (Domain/Green) ========== -->
+        <mxCell id="alertevent" value="AlertEvent" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;html=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="360" width="280" height="214" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a1" value="- Long id" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="30" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a2" value="- Long alertRuleId" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="46" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a3" value="- String level" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="62" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a4" value="- String message" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="78" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a5" value="- Float currentValue" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="94" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a6" value="- Float threshold" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="110" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a7" value="- String status" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="126" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a8" value="- Long acknowledgedBy" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="142" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a9" value="- LocalDateTime triggeredAt" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="158" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-a10" value="- LocalDateTime resolvedAt" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="174" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-sep" value="" style="line;strokeColor=#82b366;fillColor=none;" vertex="1" parent="alertevent">
+          <mxGeometry y="192" width="280" height="2" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-m1" value="+ acknowledge(userId)" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="194" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="ale-m2" value="+ resolve(resolution)" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="alertevent">
+          <mxGeometry y="210" width="280" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== BackupTask (Domain/Green) ========== -->
+        <mxCell id="backuptask" value="BackupTask" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;html=1;" vertex="1" parent="1">
+          <mxGeometry x="860" y="60" width="280" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="bt-a1" value="- Long id" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuptask">
+          <mxGeometry y="30" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="bt-a2" value="- String type" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuptask">
+          <mxGeometry y="46" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="bt-a3" value="- String cronExpression" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuptask">
+          <mxGeometry y="62" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="bt-a4" value="- Integer retentionCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuptask">
+          <mxGeometry y="78" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="bt-a5" value="- Boolean isActive" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuptask">
+          <mxGeometry y="94" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="bt-a6" value="- LocalDateTime nextRunAt" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuptask">
+          <mxGeometry y="110" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="bt-sep" value="" style="line;strokeColor=#82b366;fillColor=none;" vertex="1" parent="backuptask">
+          <mxGeometry y="128" width="280" height="2" as="geometry"/>
+        </mxCell>
+        <mxCell id="bt-m1" value="+ execute() : BackupRecord" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuptask">
+          <mxGeometry y="130" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="bt-m2" value="+ validate() : boolean" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuptask">
+          <mxGeometry y="146" width="280" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== BackupRecord (Domain/Green) ========== -->
+        <mxCell id="backuprecord" value="BackupRecord" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;html=1;" vertex="1" parent="1">
+          <mxGeometry x="860" y="280" width="280" height="246" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a1" value="- Long id" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="30" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a2" value="- Long backupTaskId" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="46" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a3" value="- String type" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="62" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a4" value="- Long fileSize" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="78" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a5" value="- String minioPath" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="94" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a6" value="- String checksum" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="110" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a7" value="- Integer nodeCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="126" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a8" value="- Integer relationCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="142" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a9" value="- String status" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="158" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a10" value="- LocalDateTime startedAt" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="174" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-a11" value="- LocalDateTime completedAt" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="190" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-sep" value="" style="line;strokeColor=#82b366;fillColor=none;" vertex="1" parent="backuprecord">
+          <mxGeometry y="208" width="280" height="2" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-m1" value="+ verify() : boolean" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="210" width="280" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="br-m2" value="+ restore(targetDb) : JsonNode" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="backuprecord">
+          <mxGeometry y="226" width="280" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== UsageMetric (Domain/Green) ========== -->
+        <mxCell id="usagemetric" value="UsageMetric" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;html=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="370" width="300" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a1" value="- Long id" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="30" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a2" value="- LocalDate date" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="46" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a3" value="- String dimension" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="62" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a4" value="- String dimensionValue" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="78" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a5" value="- Integer dau" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="94" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a6" value="- Integer wau" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="110" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a7" value="- Integer mau" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="126" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a8" value="- Integer queryCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="142" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a9" value="- Integer exportCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="158" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a10" value="- Integer pdfViewCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="174" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-a11" value="- Float growthRate" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="190" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-sep" value="" style="line;strokeColor=#82b366;fillColor=none;" vertex="1" parent="usagemetric">
+          <mxGeometry y="208" width="300" height="2" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-m1" value="+ aggregate(since, until) : List&lt;UsageMetric&gt;" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="210" width="300" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="um-m2" value="+ compare(p1, p2) : CompareResult" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="usagemetric">
+          <mxGeometry y="226" width="300" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== DocumentProcessMetric (Domain/Green) ========== -->
+        <mxCell id="documentprocessmetric" value="DocumentProcessMetric" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="60" width="310" height="246" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a1" value="- Long id" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="30" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a2" value="- LocalDate date" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="46" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a3" value="- Integer totalPdfCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="62" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a4" value="- Integer parsedPdfCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="78" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a5" value="- Float parseSuccessRate" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="94" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a6" value="- Integer totalPages" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="110" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a7" value="- Integer totalEntities" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="126" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a8" value="- Integer totalRelations" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="142" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a9" value="- Integer csvRowCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="158" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a10" value="- Integer coveredStudentCount" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="174" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-a11" value="- Float avgParseDuration" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="190" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-sep" value="" style="line;strokeColor=#82b366;fillColor=none;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="208" width="310" height="2" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-m1" value="+ aggregate(since, until) : List&lt;DPM&gt;" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="210" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-m2" value="+ getKnowledgeGaps() : List&lt;JsonNode&gt;" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="226" width="310" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="dpm-m3" value="+ findZombieDocuments() : List&lt;Long&gt;" style="text;fontFamily=monospace;fontSize=9;align=left;spacingLeft=6;" vertex="1" parent="documentprocessmetric">
+          <mxGeometry y="242" width="310" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== Relationships ========== -->
+
+        <!-- ServiceHealth 1→* AlertRule -->
+        <mxCell id="edge-sh-alr" value="" style="endArrow=open;endSize=10;strokeWidth=1.5;strokeColor=#333333;fontSize=9;" edge="1" parent="1" source="servicehealth" target="alertrule">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge-sh-alr-l1" value="1" style="text;fontSize=9;fontColor=#333333;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="120" width="18" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge-sh-alr-multi" value="*" style="text;fontSize=9;fontColor=#333333;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="410" y="120" width="18" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- AlertRule 1→* AlertEvent -->
+        <mxCell id="edge-alr-ale" value="" style="endArrow=open;endSize=10;strokeWidth=1.5;strokeColor=#333333;fontSize=9;" edge="1" parent="1" source="alertrule" target="alertevent">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge-alr-ale-l1" value="1" style="text;fontSize=9;fontColor=#333333;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="430" y="310" width="18" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge-alr-ale-multi" value="*" style="text;fontSize=9;fontColor=#333333;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="430" y="395" width="18" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- BackupTask 1→* BackupRecord -->
+        <mxCell id="edge-bt-br" value="" style="endArrow=open;endSize=10;strokeWidth=1.5;strokeColor=#333333;fontSize=9;" edge="1" parent="1" source="backuptask" target="backuprecord">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge-bt-br-l1" value="1" style="text;fontSize=9;fontColor=#333333;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="230" width="18" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge-bt-br-multi" value="*" style="text;fontSize=9;fontColor=#333333;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="840" y="315" width="18" height="16" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

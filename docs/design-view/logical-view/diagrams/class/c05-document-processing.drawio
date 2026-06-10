@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-06-10T00:00:00.000Z" agent="drawio" version="24.0.0">
+  <diagram name="Document Processing Domain" id="c05-document-processing">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="&lt;b&gt;Document Processing Domain — 6 MySQL Entities + 1 Neo4j Reference&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="10" width="1200" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== ParseTask ==================== -->
+        <mxCell id="sw-parsetask" value="&lt;b&gt;ParseTask&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="30" y="60" width="280" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-parsetask-attrs" value="- Long id&lt;br&gt;- Long documentId&lt;br&gt;- String stage&lt;br&gt;- String status&lt;br&gt;- LocalDateTime startedAt&lt;br&gt;- LocalDateTime completedAt&lt;br&gt;- Long durationMs&lt;br&gt;- String errorMessage&lt;br&gt;- Integer retryCount" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-parsetask">
+          <mxGeometry x="0" y="26" width="280" height="106" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-parsetask-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-parsetask">
+          <mxGeometry x="0" y="132" width="280" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-parsetask-methods" value="+ execute()&lt;br&gt;+ retry()&lt;br&gt;+ getProgress()" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-parsetask">
+          <mxGeometry x="0" y="140" width="280" height="42" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== ParseResult ==================== -->
+        <mxCell id="sw-parseresult" value="&lt;b&gt;ParseResult&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="420" y="60" width="300" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-parseresult-attrs" value="- Long id&lt;br&gt;- Long documentId&lt;br&gt;- Long parseTaskId&lt;br&gt;- Integer entityCount&lt;br&gt;- Integer relationCount&lt;br&gt;- JsonNode entityDistribution&lt;br&gt;- JsonNode relationDistribution&lt;br&gt;- JsonNode confidenceDistribution&lt;br&gt;- List~JsonNode~ lowConfEntities&lt;br&gt;- LocalDateTime createdAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-parseresult">
+          <mxGeometry x="0" y="26" width="300" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-parseresult-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-parseresult">
+          <mxGeometry x="0" y="144" width="300" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-parseresult-methods" value="+ generateSummary()" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-parseresult">
+          <mxGeometry x="0" y="152" width="300" height="24" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== ExtractedEntity ==================== -->
+        <mxCell id="sw-extentity" value="&lt;b&gt;ExtractedEntity&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="30" y="360" width="280" height="210" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-extentity-attrs" value="- Long id&lt;br&gt;- Long documentId&lt;br&gt;- String name&lt;br&gt;- String entityType&lt;br&gt;- Float confidence&lt;br&gt;- Integer pageNumber&lt;br&gt;- String region&lt;br&gt;- String description&lt;br&gt;- String normalizedName" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-extentity">
+          <mxGeometry x="0" y="26" width="280" height="106" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-extentity-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-extentity">
+          <mxGeometry x="0" y="132" width="280" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-extentity-methods" value="+ toEntityNode(): EntityNode&lt;br&gt;+ match(other): float" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-extentity">
+          <mxGeometry x="0" y="140" width="280" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== ExtractedRelation ==================== -->
+        <mxCell id="sw-extrelation" value="&lt;b&gt;ExtractedRelation&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="420" y="360" width="290" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-extrelation-attrs" value="- Long id&lt;br&gt;- Long documentId&lt;br&gt;- Long sourceEntityId&lt;br&gt;- Long targetEntityId&lt;br&gt;- String relationType&lt;br&gt;- Float confidence&lt;br&gt;- String context" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-extrelation">
+          <mxGeometry x="0" y="26" width="290" height="86" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-extrelation-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-extrelation">
+          <mxGeometry x="0" y="112" width="290" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-extrelation-methods" value="+ toReferencesEdge(): ReferencesEdge" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-extrelation">
+          <mxGeometry x="0" y="120" width="290" height="24" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== CsvImportTask ==================== -->
+        <mxCell id="sw-csvtask" value="&lt;b&gt;CsvImportTask&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="820" y="60" width="280" height="210" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-csvtask-attrs" value="- Long id&lt;br&gt;- String fileName&lt;br&gt;- String csvType&lt;br&gt;- Integer totalRows&lt;br&gt;- Integer successRows&lt;br&gt;- Integer failRows&lt;br&gt;- String status&lt;br&gt;- Long uploadedBy&lt;br&gt;- LocalDateTime createdAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-csvtask">
+          <mxGeometry x="0" y="26" width="280" height="106" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-csvtask-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-csvtask">
+          <mxGeometry x="0" y="132" width="280" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-csvtask-methods" value="+ validate()&lt;br&gt;+ execute(conflictStrategy): ImportResult" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-csvtask">
+          <mxGeometry x="0" y="140" width="280" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== CsvImportRecord ==================== -->
+        <mxCell id="sw-csvrecord" value="&lt;b&gt;CsvImportRecord&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="820" y="350" width="280" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-csvrecord-attrs" value="- Long id&lt;br&gt;- Long importTaskId&lt;br&gt;- Integer rowNumber&lt;br&gt;- JsonNode rawData&lt;br&gt;- String status&lt;br&gt;- String errorReason&lt;br&gt;- Long studentId&lt;br&gt;- Long examId" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-csvrecord">
+          <mxGeometry x="0" y="26" width="280" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-csvrecord-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-csvrecord">
+          <mxGeometry x="0" y="122" width="280" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-csvrecord-methods" value="+ resolve()&lt;br&gt;+ skip()" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-csvrecord">
+          <mxGeometry x="0" y="130" width="280" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== DocumentNode (Neo4j REFERENCE) ==================== -->
+        <mxCell id="sw-docnode" value="&lt;b&gt;&lt;&lt;Neo4j&gt;&gt;&lt;br&gt;DocumentNode&lt;/b&gt;" style="swimlane;html=1;startSize=32;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;swimlaneFillColor=#e1d5e7;" vertex="1" parent="1">
+          <mxGeometry x="30" y="640" width="250" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-docnode-attrs" value="+ String name&lt;br&gt;+ String subject&lt;br&gt;+ String status" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-docnode">
+          <mxGeometry x="0" y="32" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-docnode-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#9673a6;" vertex="1" parent="sw-docnode">
+          <mxGeometry x="0" y="72" width="250" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-docnode-methods" value="" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-docnode">
+          <mxGeometry x="0" y="80" width="250" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== RELATIONSHIPS ==================== -->
+
+        <mxCell id="rel-doc-parsetask" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="sw-parsetask" target="sw-docnode">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="170" y="60" as="sourcePoint"/>
+            <mxPoint x="155" y="640" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-doc-parsetask-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-doc-parsetask">
+          <mxGeometry x="0.15" y="1" relative="1" as="geometry">
+            <mxPoint x="0" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-doc-parsetask-star" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-doc-parsetask">
+          <mxGeometry x="0.85" y="0" relative="1" as="geometry">
+            <mxPoint x="0" y="6" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="rel-task-result" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sw-parsetask" target="sw-parseresult">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl-task-result-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-task-result">
+          <mxGeometry x="-0.15" y="0.45" relative="1" as="geometry">
+            <mxPoint x="-4" y="-7" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-task-result-01" value="0..1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-task-result">
+          <mxGeometry x="0.85" y="0.45" relative="1" as="geometry">
+            <mxPoint x="4" y="-7" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="rel-doc-extentity" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="sw-docnode" target="sw-extentity">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="155" y="790"/>
+              <mxPoint x="-10" y="465"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-doc-extentity-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-doc-extentity">
+          <mxGeometry x="0.2" y="1" relative="1" as="geometry">
+            <mxPoint x="-2" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-doc-extentity-star" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-doc-extentity">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="2" y="6" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="rel-doc-extrelation" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="sw-docnode" target="sw-extrelation">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="155" y="790"/>
+              <mxPoint x="390" y="450"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-doc-extrelation-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-doc-extrelation">
+          <mxGeometry x="0.2" y="1" relative="1" as="geometry">
+            <mxPoint x="-2" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-doc-extrelation-star" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-doc-extrelation">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry">
+            <mxPoint x="2" y="6" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="rel-csvtask-record" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="sw-csvtask" target="sw-csvrecord">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl-csvtask-record-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-csvtask-record">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint x="-10" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-csvtask-record-star" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-csvtask-record">
+          <mxGeometry x="0.9" y="0" relative="1" as="geometry">
+            <mxPoint x="8" y="6" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ==================== SECTIONS ==================== -->
+
+        <!-- Section: Document Parsing -->
+        <mxCell id="section-parse" value="&lt;b&gt;Document Parsing Pipeline&lt;/b&gt;" style="text;html=1;strokeColor=#82b366;fillColor=#f0f0f0;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;dashed=1;dashPattern=4 2;" vertex="1" parent="1">
+          <mxGeometry x="20" y="310" width="700" height="24" as="geometry"/>
+        </mxCell>
+
+        <!-- Section: CSV Import -->
+        <mxCell id="section-csv" value="&lt;b&gt;CSV Import Pipeline&lt;/b&gt;" style="text;html=1;strokeColor=#82b366;fillColor=#f0f0f0;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;dashed=1;dashPattern=4 2;" vertex="1" parent="1">
+          <mxGeometry x="820" y="310" width="280" height="24" as="geometry"/>
+        </mxCell>
+
+        <!-- Section: Neo4j Reference -->
+        <mxCell id="section-neo4j" value="&lt;b&gt;Neo4j Graph (Reference)&lt;/b&gt;" style="text;html=1;strokeColor=#9673a6;fillColor=#f0f0f0;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;dashed=1;dashPattern=4 2;" vertex="1" parent="1">
+          <mxGeometry x="20" y="610" width="300" height="24" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== LEGEND ==================== -->
+        <mxCell id="legend-box" value="&lt;b&gt;Legend&lt;/b&gt;" style="swimlane;html=1;startSize=22;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="60" width="350" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-domain" value="&lt;b&gt;MySQL Domain Entity&lt;/b&gt; — fillColor=#d5e8d4 strokeColor=#82b366" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="legend-box">
+          <mxGeometry x="10" y="24" width="330" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-neo4j" value="&lt;b&gt;Neo4j Graph Node&lt;/b&gt; — fillColor=#e1d5e7 strokeColor=#9673a6" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="legend-box">
+          <mxGeometry x="10" y="48" width="330" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-rel" value="&lt;b&gt;─────&lt;/b&gt; Relationship (1 -- * / 1 -- 0..1)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="legend-box">
+          <mxGeometry x="10" y="72" width="330" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-sep1" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#c0c0c0;" vertex="1" parent="legend-box">
+          <mxGeometry x="0" y="96" width="350" height="6" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-count" value="&lt;b&gt;Entity Count&lt;/b&gt;&lt;br&gt;6 MySQL Entities + 1 Neo4j Reference&lt;br&gt;&lt;br&gt;&lt;b&gt;ParseTask&lt;/b&gt; — orchestrates document parsing&lt;br&gt;&lt;b&gt;ParseResult&lt;/b&gt; — stores extraction stats &amp;amp; quality&lt;br&gt;&lt;b&gt;ExtractedEntity&lt;/b&gt; — NLP-extracted named entities&lt;br&gt;&lt;b&gt;ExtractedRelation&lt;/b&gt; — NLP-extracted relations&lt;br&gt;&lt;b&gt;CsvImportTask&lt;/b&gt; — bulk CSV upload job&lt;br&gt;&lt;b&gt;CsvImportRecord&lt;/b&gt; — per-row import detail&lt;br&gt;&lt;b&gt;DocumentNode&lt;/b&gt; — Neo4j graph node (ref only)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=9;" vertex="1" parent="legend-box">
+          <mxGeometry x="10" y="106" width="330" height="146" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

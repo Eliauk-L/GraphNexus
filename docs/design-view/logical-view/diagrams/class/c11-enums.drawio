@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="GraphNexus" modified="2025-06-10T00:00:00.000Z" agent="Claude" version="21.0.0">
+  <diagram id="c11-enums" name="Enums and Value Objects">
+    <mxGraphModel dx="900" dy="475" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="枚举与值对象 — GraphNexus" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="500" y="10" width="400" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================================ -->
+        <!-- Column 1 (x=20) -->
+        <!-- ============================================================================ -->
+
+        <!-- Enum 1: NodeLabel -->
+        <mxCell id="e1-swim" value="«enumeration» NodeLabel" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="60" width="410" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1-v1" value="STUDENT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e1-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1-v2" value="KNOWLEDGE_POINT, KNOWLEDGE_CATEGORY" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e1-swim">
+          <mxGeometry x="5" y="50" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1-v3" value="DOCUMENT, ENTITY, EXAM, QUESTION, EVENT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e1-swim">
+          <mxGeometry x="5" y="70" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 2: EdgeType -->
+        <mxCell id="e2-swim" value="«enumeration» EdgeType" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="200" width="410" height="155" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2-v1" value="MASTERS, PREREQUISITE_OF, BELONGS_TO" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e2-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2-v2" value="CHILD_OF, EXTRACTS, REFERENCES, DERIVES" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e2-swim">
+          <mxGeometry x="5" y="50" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2-v3" value="CONTAINS, ALIGNED_TO, HAS_EVENT, RELATES_TO" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e2-swim">
+          <mxGeometry x="5" y="70" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2-v4" value="TESTS, SCORES_ON, BELONGS_TO_EXAM" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e2-swim">
+          <mxGeometry x="5" y="90" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 3: EntityType -->
+        <mxCell id="e3-swim" value="«enumeration» EntityType" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="375" width="410" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3-v1" value="PERSON, ORG, LOCATION" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e3-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3-v2" value="CONCEPT, FORMULA, DEFINITION" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e3-swim">
+          <mxGeometry x="5" y="50" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 4: AlignmentConfidence -->
+        <mxCell id="e4-swim" value="«enumeration» AlignmentConfidence" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="495" width="410" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4-v1" value="HIGH, MEDIUM, LOW" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e4-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================================ -->
+        <!-- Column 2 (x=460) -->
+        <!-- ============================================================================ -->
+
+        <!-- Enum 5: AlignmentStatus -->
+        <mxCell id="e5-swim" value="«enumeration» AlignmentStatus" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="460" y="60" width="410" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5-v1" value="PENDING, CONFIRMED" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e5-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5-v2" value="REJECTED, MANUAL_CORRECTED" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e5-swim">
+          <mxGeometry x="5" y="50" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 6: UserStatus -->
+        <mxCell id="e6-swim" value="«enumeration» UserStatus" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="460" y="180" width="410" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6-v1" value="ACTIVE, DISABLED, LOCKED" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e6-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 7: DocumentStatus -->
+        <mxCell id="e7-swim" value="«enumeration» DocumentStatus" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="460" y="280" width="410" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7-v1" value="UPLOADED, PROCESSING" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e7-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7-v2" value="COMPLETED" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e7-swim">
+          <mxGeometry x="5" y="50" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7-v3" value="COMPLETED_WITH_WARNING, FAILED" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e7-swim">
+          <mxGeometry x="5" y="70" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 8: ParseStage -->
+        <mxCell id="e8-swim" value="«enumeration» ParseStage" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="460" y="420" width="410" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8-v1" value="LAYOUT_ANALYSIS, NER_EXTRACTION" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e8-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8-v2" value="RE_EXTRACTION" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e8-swim">
+          <mxGeometry x="5" y="50" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8-v3" value="GRAPH_IMPORT, ALIGNMENT_CHECK" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e8-swim">
+          <mxGeometry x="5" y="70" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================================ -->
+        <!-- Column 3 (x=900) -->
+        <!-- ============================================================================ -->
+
+        <!-- Enum 9: TaskType (QueryTaskType) -->
+        <mxCell id="e9-swim" value="«enumeration» TaskType (QueryTaskType)" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="900" y="60" width="410" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9-v1" value="ROOT_CAUSE_ATTRIBUTION" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e9-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9-v2" value="KNOWLEDGE_GAP_DETECTION" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e9-swim">
+          <mxGeometry x="5" y="50" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9-v3" value="LEARNING_PATH_GENERATION, TEACHING_STRATEGY_ADVICE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=8;fontColor=#333333;" vertex="1" parent="e9-swim">
+          <mxGeometry x="5" y="70" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 10: ScheduleStatus -->
+        <mxCell id="e10-swim" value="«enumeration» ScheduleStatus" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="900" y="200" width="410" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10-v1" value="ACTIVE, PAUSED, FAILED, MAINTENANCE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e10-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 11: AlertLevel -->
+        <mxCell id="e11-swim" value="«enumeration» AlertLevel" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="900" y="300" width="410" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="e11-v1" value="INFO, WARNING, CRITICAL" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e11-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 12: ScoreAllocationStrategy -->
+        <mxCell id="e12-swim" value="«enumeration» ScoreAllocationStrategy" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="900" y="400" width="410" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12-v1" value="AVERAGE, WEIGHTED, ALL_IN" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e12-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================================ -->
+        <!-- Column 4 (x=1340) -->
+        <!-- ============================================================================ -->
+
+        <!-- Enum 13: ScoreConflictStrategy -->
+        <mxCell id="e13-swim" value="«enumeration» ScoreConflictStrategy" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="60" width="410" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="e13-v1" value="SKIP, REPLACE, NEWEST, HIGHEST" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e13-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 14: EventGranularity -->
+        <mxCell id="e14-swim" value="«enumeration» EventGranularity" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="160" width="410" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="e14-v1" value="SECTION" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e14-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e14-v2" value="QUESTION, KNOWLEDGE_POINT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e14-swim">
+          <mxGeometry x="5" y="50" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 15: ExportFormat -->
+        <mxCell id="e15-swim" value="«enumeration» ExportFormat" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="280" width="410" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="e15-v1" value="PDF, DOCX, CSV, JSON" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e15-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Enum 16: ShareScope -->
+        <mxCell id="e16-swim" value="«enumeration» ShareScope" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;swimlaneLine=0;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="380" width="410" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="e16-v1" value="TEACHER_ONLY" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e16-swim">
+          <mxGeometry x="5" y="30" width="400" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="e16-v2" value="CLASS_TEACHERS, ALL_TEACHERS, PUBLIC" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#333333;" vertex="1" parent="e16-swim">
+          <mxGeometry x="5" y="50" width="400" height="18" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

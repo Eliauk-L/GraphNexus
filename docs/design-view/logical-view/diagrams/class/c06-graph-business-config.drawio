@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-06-10T00:00:00.000Z" agent="drawio" version="24.0.0">
+  <diagram name="Graph Business Configuration Domain" id="c06-graph-business-config">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="&lt;b&gt;Graph Business Configuration Domain — Entity Alignment + Pruning / Weight / Schedule&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="8" width="1400" height="28" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== SECTION 6.1 HEADER ==================== -->
+        <mxCell id="section61" value="&lt;b&gt;Section 6.1 — Entity Alignment&lt;/b&gt;" style="text;html=1;strokeColor=#9673a6;fillColor=#e1d5e7;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="45" width="700" height="24" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== EntityAlignment ==================== -->
+        <mxCell id="sw-alignment" value="&lt;b&gt;EntityAlignment&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="320" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-alignment-attrs" value="- Long id&lt;br&gt;- Long sourceEntityId&lt;br&gt;- Long targetEntityId&lt;br&gt;- Float similarityScore&lt;br&gt;- String confidence&lt;br&gt;- String status&lt;br&gt;- Long reviewedBy&lt;br&gt;- LocalDateTime reviewedAt&lt;br&gt;- JsonNode snapshotBefore" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-alignment">
+          <mxGeometry x="0" y="26" width="320" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-alignment-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-alignment">
+          <mxGeometry x="0" y="134" width="320" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-alignment-methods" value="+ confirmMerge()&lt;br&gt;+ reject()&lt;br&gt;+ manualCorrect(newName)&lt;br&gt;+ rollback()" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-alignment">
+          <mxGeometry x="0" y="142" width="320" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== AlignmentAudit ==================== -->
+        <mxCell id="sw-audit" value="&lt;b&gt;AlignmentAudit&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="430" y="80" width="300" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-audit-attrs" value="- Long id&lt;br&gt;- Long alignmentId&lt;br&gt;- String operationType&lt;br&gt;- Long operatedBy&lt;br&gt;- JsonNode snapshotBefore&lt;br&gt;- JsonNode snapshotAfter&lt;br&gt;- LocalDateTime operatedAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-audit">
+          <mxGeometry x="0" y="26" width="300" height="86" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-audit-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-audit">
+          <mxGeometry x="0" y="112" width="300" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-audit-methods" value="+ record(event)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-audit">
+          <mxGeometry x="0" y="120" width="300" height="24" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel-align-audit" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sw-alignment" target="sw-audit">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl-align-audit-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-align-audit">
+          <mxGeometry x="-0.15" y="0.45" relative="1" as="geometry">
+            <mxPoint x="-6" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-align-audit-star" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-align-audit">
+          <mxGeometry x="0.85" y="0.45" relative="1" as="geometry">
+            <mxPoint x="10" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ==================== SECTION 6.2 HEADER ==================== -->
+        <mxCell id="section62" value="&lt;b&gt;Section 6.2 — Pruning / Weight Rules / Score Allocation / Scheduled Tasks&lt;/b&gt;" style="text;html=1;strokeColor=#82b366;fillColor=#d5e8d4;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="340" width="1930" height="24" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== PruningStrategy ==================== -->
+        <mxCell id="sw-pruning" value="&lt;b&gt;PruningStrategy&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="30" y="380" width="340" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-pruning-attrs" value="- Long id&lt;br&gt;- String name&lt;br&gt;- String taskType&lt;br&gt;- Integer maxHops&lt;br&gt;- Integer maxNeighborsPerHop&lt;br&gt;- Float weightThreshold&lt;br&gt;- List~String~ relationTypeFilter&lt;br&gt;- Boolean isActive&lt;br&gt;- LocalDateTime createdAt&lt;br&gt;- LocalDateTime updatedAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-pruning">
+          <mxGeometry x="0" y="26" width="340" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-pruning-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-pruning">
+          <mxGeometry x="0" y="144" width="340" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-pruning-methods" value="+ execute(rootKpId): SubGraph&lt;br&gt;+ compareWith(other): CompareResult&lt;br&gt;+ saveVersion(): PruningStrategyVersion&lt;br&gt;+ rollbackTo(versionId)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-pruning">
+          <mxGeometry x="0" y="152" width="340" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== PruningStrategyVersion ==================== -->
+        <mxCell id="sw-pruningver" value="&lt;b&gt;PruningStrategyVersion&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;swimlaneFillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="450" y="380" width="280" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-pruningver-attrs" value="- Long id&lt;br&gt;- Long strategyId&lt;br&gt;- Integer versionNumber&lt;br&gt;- JsonNode paramsSnapshot&lt;br&gt;- String changeDescription&lt;br&gt;- LocalDateTime createdAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-pruningver">
+          <mxGeometry x="0" y="26" width="280" height="74" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-pruningver-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#d6b656;" vertex="1" parent="sw-pruningver">
+          <mxGeometry x="0" y="100" width="280" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-pruningver-methods" value="+ diff(other): DiffResult" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-pruningver">
+          <mxGeometry x="0" y="108" width="280" height="24" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel-pruning-ver" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sw-pruning" target="sw-pruningver">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl-pruning-ver-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-pruning-ver">
+          <mxGeometry x="-0.15" y="0.45" relative="1" as="geometry">
+            <mxPoint x="-6" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-pruning-ver-star" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-pruning-ver">
+          <mxGeometry x="0.85" y="0.45" relative="1" as="geometry">
+            <mxPoint x="10" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ==================== WeightRule ==================== -->
+        <mxCell id="sw-weightrule" value="&lt;b&gt;WeightRule&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="30" y="680" width="300" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-weightrule-attrs" value="- Long id&lt;br&gt;- String name&lt;br&gt;- String ruleType&lt;br&gt;- String decayCurve&lt;br&gt;- Float halfLifeDays&lt;br&gt;- String subject&lt;br&gt;- JsonNode eventAdjustments&lt;br&gt;- Boolean isActive&lt;br&gt;- LocalDateTime createdAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-weightrule">
+          <mxGeometry x="0" y="26" width="300" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-weightrule-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-weightrule">
+          <mxGeometry x="0" y="134" width="300" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-weightrule-methods" value="+ calculateDecay(weight, days): float&lt;br&gt;+ getEventDelta(eventType): float&lt;br&gt;+ simulate(studentIds, days): SimResult" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-weightrule">
+          <mxGeometry x="0" y="142" width="300" height="42" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== WeightChangeLog ==================== -->
+        <mxCell id="sw-wcl" value="&lt;b&gt;WeightChangeLog&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="410" y="680" width="280" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-wcl-attrs" value="- Long id&lt;br&gt;- Long masteryEdgeId&lt;br&gt;- Float weightBefore&lt;br&gt;- Float weightAfter&lt;br&gt;- String triggerType&lt;br&gt;- String triggerId&lt;br&gt;- String source&lt;br&gt;- LocalDateTime changedAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-wcl">
+          <mxGeometry x="0" y="26" width="280" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-wcl-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-wcl">
+          <mxGeometry x="0" y="122" width="280" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-wcl-methods" value="+ query(since, until): List~WCL~" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-wcl">
+          <mxGeometry x="0" y="130" width="280" height="22" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel-wr-wcl" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sw-weightrule" target="sw-wcl">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl-wr-wcl-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-wr-wcl">
+          <mxGeometry x="-0.15" y="0.45" relative="1" as="geometry">
+            <mxPoint x="-6" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-wr-wcl-star" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-wr-wcl">
+          <mxGeometry x="0.85" y="0.45" relative="1" as="geometry">
+            <mxPoint x="10" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ==================== ScoreAllocationRule ==================== -->
+        <mxCell id="sw-score" value="&lt;b&gt;ScoreAllocationRule&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="810" y="380" width="290" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-score-attrs" value="- Long id&lt;br&gt;- String name&lt;br&gt;- String strategy&lt;br&gt;- String subject&lt;br&gt;- String examType&lt;br&gt;- Boolean isGlobal&lt;br&gt;- Boolean isActive&lt;br&gt;- LocalDateTime createdAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-score">
+          <mxGeometry x="0" y="26" width="290" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-score-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-score">
+          <mxGeometry x="0" y="122" width="290" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-score-methods" value="+ allocateScore(rawScore, kpIds): Map" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-score">
+          <mxGeometry x="0" y="130" width="290" height="22" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== ScheduledTask ==================== -->
+        <mxCell id="sw-schedtask" value="&lt;b&gt;ScheduledTask&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="380" width="300" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-schedtask-attrs" value="- Long id&lt;br&gt;- String name&lt;br&gt;- String description&lt;br&gt;- String cronExpression&lt;br&gt;- String jobClass&lt;br&gt;- String status&lt;br&gt;- Long dependsOnTaskId&lt;br&gt;- LocalDateTime lastRunAt&lt;br&gt;- LocalDateTime nextRunAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-schedtask">
+          <mxGeometry x="0" y="26" width="300" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-schedtask-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-schedtask">
+          <mxGeometry x="0" y="134" width="300" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-schedtask-methods" value="+ trigger(): TaskExecution&lt;br&gt;+ pause()&lt;br&gt;+ resume()&lt;br&gt;+ getDag()" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-schedtask">
+          <mxGeometry x="0" y="142" width="300" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- ==================== TaskExecution ==================== -->
+        <mxCell id="sw-taskexec" value="&lt;b&gt;TaskExecution&lt;/b&gt;" style="swimlane;html=1;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;swimlaneFillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="380" width="300" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-taskexec-attrs" value="- Long id&lt;br&gt;- Long scheduledTaskId&lt;br&gt;- String status&lt;br&gt;- LocalDateTime startedAt&lt;br&gt;- LocalDateTime completedAt&lt;br&gt;- Long durationMs&lt;br&gt;- Integer processedCount&lt;br&gt;- String errorStack&lt;br&gt;- String diagnosisSuggestion" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-taskexec">
+          <mxGeometry x="0" y="26" width="300" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-taskexec-sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="sw-taskexec">
+          <mxGeometry x="0" y="134" width="300" height="8" as="geometry"/>
+        </mxCell>
+        <mxCell id="sw-taskexec-methods" value="+ getDetail()&lt;br&gt;+ retry()" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fontSize=9;spacingLeft=4;" vertex="1" parent="sw-taskexec">
+          <mxGeometry x="0" y="142" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel-sched-exec" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sw-schedtask" target="sw-taskexec">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl-sched-exec-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-sched-exec">
+          <mxGeometry x="-0.15" y="0.45" relative="1" as="geometry">
+            <mxPoint x="-6" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-sched-exec-star" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-sched-exec">
+          <mxGeometry x="0.85" y="0.45" relative="1" as="geometry">
+            <mxPoint x="10" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="rel-sched-self" value="" style="endArrow=none;html=1;dashed=0;strokeColor=#82b366;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="sw-schedtask" target="sw-schedtask">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1350" y="370"/>
+              <mxPoint x="1200" y="370"/>
+              <mxPoint x="1350" y="370"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-sched-self-1" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-sched-self">
+          <mxGeometry x="0.15" y="2" relative="1" as="geometry">
+            <mxPoint x="-10" y="-10" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-sched-self-01" value="0..1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=9;fontStyle=1;strokeColor=none;" vertex="1" connectable="0" parent="rel-sched-self">
+          <mxGeometry x="0.8" y="1" relative="1" as="geometry">
+            <mxPoint x="14" y="-10" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lbl-sched-self-dep" value="dependsOn" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=8;fontColor=#666666;strokeColor=none;" vertex="1" connectable="0" parent="rel-sched-self">
+          <mxGeometry x="0.5" y="0" relative="1" as="geometry">
+            <mxPoint x="-18" y="-12" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ==================== LEGEND ==================== -->
+        <mxCell id="legend-box" value="&lt;b&gt;Legend&lt;/b&gt;" style="swimlane;html=1;startSize=22;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="810" y="660" width="400" height="270" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-domain" value="&lt;b&gt;Domain Entity&lt;/b&gt; — fillColor=#d5e8d4 strokeColor=#82b366" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="legend-box">
+          <mxGeometry x="10" y="24" width="380" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-version" value="&lt;b&gt;Version / Dependent Entity&lt;/b&gt; — fillColor=#fff2cc strokeColor=#d6b656" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="legend-box">
+          <mxGeometry x="10" y="48" width="380" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-rel" value="&lt;b&gt;─────&lt;/b&gt; Relationship (1 -- * / 1 -- 0..1)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="legend-box">
+          <mxGeometry x="10" y="72" width="380" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-sep1" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#c0c0c0;" vertex="1" parent="legend-box">
+          <mxGeometry x="0" y="96" width="400" height="6" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-count" value="&lt;b&gt;8 Domain Entities&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;b&gt;6.1 Entity Alignment:&lt;/b&gt;&lt;br&gt;  EntityAlignment, AlignmentAudit&lt;br&gt;&lt;br&gt;&lt;b&gt;6.2 Pruning / Weight / Schedule:&lt;/b&gt;&lt;br&gt;  PruningStrategy, PruningStrategyVersion,&lt;br&gt;  WeightRule, WeightChangeLog,&lt;br&gt;  ScoreAllocationRule,&lt;br&gt;  ScheduledTask, TaskExecution" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=9;" vertex="1" parent="legend-box">
+          <mxGeometry x="10" y="106" width="380" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-storage" value="&lt;b&gt;Storage: MySQL (all entities)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=1;" vertex="1" parent="legend-box">
+          <mxGeometry x="10" y="234" width="380" height="20" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
