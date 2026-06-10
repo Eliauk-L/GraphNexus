@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="南北向部署拓扑" id="ns-deploy">
-    <mxGraphModel dx="884" dy="537" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="950" pageHeight="1050" math="0" shadow="0">
+    <mxGraphModel dx="873" dy="570" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="950" pageHeight="1050" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -71,7 +71,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="nginx" parent="1" style="shape=cube;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#333333;strokeWidth=1.5;fontSize=10;size=12;align=center;" value="&lt;&lt;device&gt;&gt;&#xa;Nginx :80" vertex="1">
+        <mxCell id="nginx" parent="1" style="shape=cube;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#333333;strokeWidth=1.5;fontSize=10;size=12;align=center;" value="&lt;&lt;device&gt;&gt;&#xa;Nginx :8080" vertex="1">
           <mxGeometry height="70" width="180" x="360" y="120" as="geometry" />
         </mxCell>
         <mxCell id="gn1" parent="1" style="shape=cube;whiteSpace=wrap;fillColor=#D5F5E3;strokeColor=#333333;strokeWidth=1.5;fontSize=10;size=12;align=center;" value="&lt;&lt;server&gt;&gt;&#xa;GraphNexus 实例 1 :8081" vertex="1">
