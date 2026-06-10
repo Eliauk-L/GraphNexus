@@ -1,14 +1,14 @@
 <mxfile host="Electron">
   <diagram name="全局用例图v3合并" id="u02-global">
-    <mxGraphModel dx="1414" dy="859" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1150" math="0" shadow="0">
+    <mxGraphModel dx="1414" dy="859" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#2C3E50;strokeColor=#1a252f;fontSize=15;fontColor=#ffffff;fontStyle=1;arcSize=8;" value="GraphNexus 全局用例图 (v3.0 · 62原子用例合并为~30个 · 6个参与者 · 符合用例命名规范)" vertex="1">
+        <mxCell id="title" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#2C3E50;strokeColor=#1a252f;fontSize=15;fontColor=#ffffff;fontStyle=1;arcSize=8;" value="GraphNexus 全局用例图 (v3.1 · 62原子用例合并为30个 · 5参与者 · 含include/extend关系)" vertex="1">
           <mxGeometry height="36" width="1300" x="150" y="5" as="geometry" />
         </mxCell>
         <mxCell id="sys-box" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#2980B9;strokeWidth=2;arcSize=8;" value="" vertex="1">
-          <mxGeometry height="1050" width="1250" x="180" y="50" as="geometry" />
+          <mxGeometry height="1080" width="1250" x="180" y="50" as="geometry" />
         </mxCell>
         <mxCell id="sys-label" parent="1" style="text;fontSize=13;fontStyle=1;fontColor=#2980B9;align=left;" value="GraphNexus 系统" vertex="1">
           <mxGeometry height="20" width="220" x="195" y="55" as="geometry" />
@@ -22,13 +22,13 @@
         <mxCell id="a3" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="学生&#xa;A3" vertex="1">
           <mxGeometry height="60" width="35" x="25" y="600" as="geometry" />
         </mxCell>
-        <mxCell id="a4" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#EBDEF0;strokeColor=#8E44AD;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="运维&#xa;A4" vertex="1">
+        <mxCell id="a4" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#EBDEF0;strokeColor=#8E44AD;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="运维人员&#xa;A4" vertex="1">
           <mxGeometry height="60" width="35" x="25" y="800" as="geometry" />
         </mxCell>
-        <mxCell id="a5" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#FEF9E7;strokeColor=#F39C12;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="运营&#xa;A5" vertex="1">
+        <mxCell id="a5" parent="1" style="shape=umlActor;whiteSpace=wrap;fillColor=#FEF9E7;strokeColor=#F39C12;strokeWidth=1.5;fontSize=9;fontStyle=1;verticalLabelPosition=bottom;verticalAlign=top;" value="运营人员&#xa;A5" vertex="1">
           <mxGeometry height="60" width="35" x="25" y="960" as="geometry" />
         </mxCell>
-        <mxCell id="a1-a2" edge="1" parent="1" style="endArrow=block;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;" value="">
+        <mxCell id="a1-a2" edge="1" parent="1" style="endArrow=block;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;fontSize=8;" value="泛化">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="42" y="140" as="sourcePoint" />
             <mxPoint x="42" y="320" as="targetPoint" />
@@ -218,6 +218,75 @@
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="60" y="990" as="sourcePoint" />
             <mxPoint x="620" y="853" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-incl-05-10" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#E67E22;fontSize=8;dashed=1;edgeStyle=orthogonalEdgeStyle;" value="«include»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="455" y="181" as="sourcePoint" />
+            <mxPoint x="485" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-ext-21-33" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#2980B9;fontSize=8;dashed=1;" value="«extend»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="915" y="131" as="sourcePoint" />
+            <mxPoint x="800" y="245" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-ext-21-35" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#2980B9;fontSize=8;dashed=1;" value="«extend»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1000" y="113" as="sourcePoint" />
+            <mxPoint x="1000" y="245" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-ext-23-21" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#2980B9;fontSize=8;dashed=1;" value="«extend»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="800" y="163" as="sourcePoint" />
+            <mxPoint x="830" y="113" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-ext-37-39" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#E67E22;fontSize=8;dashed=1;" value="«extend»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="800" y="393" as="sourcePoint" />
+            <mxPoint x="830" y="393" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-ext-52-53" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#8E44AD;fontSize=8;dashed=1;" value="«extend»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="790" y="673" as="sourcePoint" />
+            <mxPoint x="830" y="673" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-ext-57-58" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#F39C12;fontSize=8;dashed=1;" value="«extend»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="800" y="853" as="sourcePoint" />
+            <mxPoint x="830" y="853" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-incl-43-45" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#8E44AD;fontSize=8;dashed=1;" value="«include»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="790" y="573" as="sourcePoint" />
+            <mxPoint x="820" y="573" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend-rel" parent="1" style="text;fontSize=8;fontColor=#888888;align=left;" value="─── «include» 必然调用   - - - «extend» 可选增强   ◁ 泛化(A1→A2)" vertex="1">
+          <mxGeometry height="16" width="500" x="600" y="1115" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-incl-01-02" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#27AE60;fontSize=8;dashed=1;" value="«include»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="113" as="sourcePoint" />
+            <mxPoint x="370" y="113" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-incl-06-14" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#27AE60;fontSize=8;dashed=1;edgeStyle=orthogonalEdgeStyle;" value="«include»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="285" y="231" as="sourcePoint" />
+            <mxPoint x="290" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-incl-19-20" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.2;strokeColor=#E74C3C;fontSize=8;dashed=1;" value="«include»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="458" as="sourcePoint" />
+            <mxPoint x="400" y="458" as="targetPoint" />
           </mxGeometry>
         </mxCell>
       </root>
