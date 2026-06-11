@@ -1,0 +1,259 @@
+# =============================================================================
+# GraphNexus — Podman Compose 基础设施服务编排
+# =============================================================================
+# 版本: v1.1
+# 日期: 2026-06-11
+# 用途: 本地开发 / MVP 单机部署（适配 2 GiB Podman Machine）
+# 启动: podman compose up -d
+# 停止: podman compose down
+# 清理: podman compose down -v
+#
+# 若需更大内存，调整 Podman Machine：
+#   podman machine stop
+#   podman machine set --memory 4096 --cpus 6
+#   podman machine start
+# =============================================================================
+
+version: "3.9"
+
+# ---------------------------------------------------------------------------
+# 网络
+# ---------------------------------------------------------------------------
+networks:
+  graphnexus-net:
+    name: graphnexus-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+    labels:
+      com.graphnexus.env: "mvp"
+
+# ---------------------------------------------------------------------------
+# 数据卷
+# ---------------------------------------------------------------------------
+volumes:
+  neo4j-data:
+    labels:
+      com.graphnexus.service: "neo4j"
+  neo4j-logs:
+    labels:
+      com.graphnexus.service: "neo4j"
+  neo4j-config:
+    labels:
+      com.graphnexus.service: "neo4j"
+  neo4j-plugins:
+    labels:
+      com.graphnexus.service: "neo4j"
+  mysql-data:
+    labels:
+      com.graphnexus.service: "mysql"
+  redis-data:
+    labels:
+      com.graphnexus.service: "redis"
+  rabbitmq-data:
+    labels:
+      com.graphnexus.service: "rabbitmq"
+  minio-data:
+    labels:
+      com.graphnexus.service: "minio"
+  nginx-logs:
+    labels:
+      com.graphnexus.service: "nginx"
+
+# ---------------------------------------------------------------------------
+# 服务定义
+# ---------------------------------------------------------------------------
+services:
+
+  # =========================================================================
+  # 1. Neo4j — 图数据库
+  # =========================================================================
+  neo4j:
+    image: docker.io/neo4j:5.26-community
+    container_name: graphnexus-neo4j
+    restart: unless-stopped
+    hostname: neo4j
+    networks:
+      - graphnexus-net
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - neo4j-config:/config
+      - neo4j-plugins:/plugins
+    environment:
+      - NEO4J_AUTH=neo4j/graphnexus123
+      - NEO4J_server_threads_worker\_count=2
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p graphnexus123 'RETURN 1' || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 8
+      start_period: 90s
+    labels:
+      com.graphnexus.role: "graph-database"
+
+  # =========================================================================
+  # 2. MySQL — 关系数据库
+  # =========================================================================
+  mysql:
+    image: docker.io/mysql:8.0
+    container_name: graphnexus-mysql
+    restart: unless-stopped
+    hostname: mysql
+    networks:
+      - graphnexus-net
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./deployment/init-sql:/docker-entrypoint-initdb.d:Z,ro
+    environment:
+      - MYSQL_ROOT_PASSWORD=graphnexus123
+      - MYSQL_DATABASE=graphnexus
+      - MYSQL_USER=graphnexus
+      - MYSQL_PASSWORD=graphnexus123
+      - LANG=C.UTF-8
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-time-zone=+08:00
+      --max_connections=30
+      --performance_schema=OFF
+      --slow_query_log=1
+      --slow_query_log_file=/var/lib/mysql/slow.log
+      --long_query_time=2
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u graphnexus -p graphnexus123"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    labels:
+      com.graphnexus.role: "relational-database"
+
+  # =========================================================================
+  # 3. Redis — 缓存
+  # =========================================================================
+  redis:
+    image: docker.io/redis:7-alpine
+    container_name: graphnexus-redis
+    restart: unless-stopped
+    hostname: redis
+    networks:
+      - graphnexus-net
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+      - ./deployment/redis/redis.conf:/usr/local/etc/redis/redis.conf:Z,ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    environment:
+      - REDIS_PASSWORD=graphnexus123
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a graphnexus123 ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    sysctls:
+      - net.core.somaxconn=1024
+    labels:
+      com.graphnexus.role: "cache"
+
+  # =========================================================================
+  # 4. RabbitMQ — 消息队列
+  # =========================================================================
+  rabbitmq:
+    image: docker.io/rabbitmq:3.13-management-alpine
+    container_name: graphnexus-rabbitmq
+    restart: unless-stopped
+    hostname: rabbitmq
+    networks:
+      - graphnexus-net
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./deployment/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:Z,ro
+      - ./deployment/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:Z,ro
+    environment:
+      - RABBITMQ_DEFAULT_USER=graphnexus
+      - RABBITMQ_DEFAULT_PASS=graphnexus123
+      - RABBITMQ_DEFAULT_VHOST=graphnexus
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics check_port_connectivity"]
+      interval: 20s
+      timeout: 10s
+      retries: 6
+      start_period: 60s
+    labels:
+      com.graphnexus.role: "message-queue"
+
+  # =========================================================================
+  # 5. MinIO — 对象存储
+  # =========================================================================
+  minio:
+    image: docker.io/minio/minio:latest
+    container_name: graphnexus-minio
+    restart: unless-stopped
+    hostname: minio
+    networks:
+      - graphnexus-net
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+      - MINIO_BROWSER=on
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+    command: >
+      server /data
+      --console-address ":9001"
+      --address ":9000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    labels:
+      com.graphnexus.role: "object-storage"
+
+  # =========================================================================
+  # 6. Nginx — 反向代理
+  # =========================================================================
+  # nginx:
+  #   image: docker.io/nginx:stable-alpine
+  #   container_name: graphnexus-nginx
+  #   restart: unless-stopped
+  #   hostname: nginx
+  #   networks:
+  #     - graphnexus-net
+  #   ports:
+  #     - "8080:80"
+  #   volumes:
+  #     - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf:Z,ro
+  #     - ./deployment/nginx/conf.d:/etc/nginx/conf.d:Z,ro
+  #     - nginx-logs:/var/log/nginx
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -sf http://localhost:80/health || exit 1"]
+  #     interval: 15s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   depends_on:
+  #     - neo4j
+  #     - mysql
+  #     - redis
+  #     - rabbitmq
+  #     - minio
+  #   labels:
+  #     com.graphnexus.role: "reverse-proxy"

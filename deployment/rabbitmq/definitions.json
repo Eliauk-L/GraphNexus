@@ -1,0 +1,251 @@
+{
+  "users": [
+    {
+      "name": "graphnexus",
+      "password_hash": "tcn9Qi64Xb8ewogxyCok68agGF4Wr9ZOkK6JJ5CtBCLUE3gD",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": "administrator"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "graphnexus",
+      "vhost": "graphnexus",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "graphnexus"
+    }
+  ],
+  "queues": [
+    {
+      "name": "doc.ingestion",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": "doc.ingestion.dlq",
+        "x-message-ttl": 604800000
+      }
+    },
+    {
+      "name": "event.ingestion",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": "event.ingestion.dlq",
+        "x-message-ttl": 604800000
+      }
+    },
+    {
+      "name": "weight.decay",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": "weight.decay.dlq",
+        "x-message-ttl": 86400000
+      }
+    },
+    {
+      "name": "notification",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": "notification.dlq",
+        "x-message-ttl": 172800000
+      }
+    },
+    {
+      "name": "llm.callback",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": "llm.callback.dlq",
+        "x-message-ttl": 3600000
+      }
+    },
+    {
+      "name": "doc.ingestion.dlq",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "event.ingestion.dlq",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "weight.decay.dlq",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "notification.dlq",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "llm.callback.dlq",
+      "vhost": "graphnexus",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "doc.ingestion",
+      "vhost": "graphnexus",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false
+    },
+    {
+      "name": "event.ingestion",
+      "vhost": "graphnexus",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false
+    },
+    {
+      "name": "weight.decay",
+      "vhost": "graphnexus",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false
+    },
+    {
+      "name": "notification",
+      "vhost": "graphnexus",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false
+    },
+    {
+      "name": "llm.callback",
+      "vhost": "graphnexus",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false
+    },
+    {
+      "name": "dlx",
+      "vhost": "graphnexus",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false
+    }
+  ],
+  "bindings": [
+    {
+      "source": "doc.ingestion",
+      "vhost": "graphnexus",
+      "destination": "doc.ingestion",
+      "destination_type": "queue",
+      "routing_key": "doc.ingestion"
+    },
+    {
+      "source": "event.ingestion",
+      "vhost": "graphnexus",
+      "destination": "event.ingestion",
+      "destination_type": "queue",
+      "routing_key": "event.ingestion"
+    },
+    {
+      "source": "weight.decay",
+      "vhost": "graphnexus",
+      "destination": "weight.decay",
+      "destination_type": "queue",
+      "routing_key": "weight.decay.#"
+    },
+    {
+      "source": "notification",
+      "vhost": "graphnexus",
+      "destination": "notification",
+      "destination_type": "queue",
+      "routing_key": ""
+    },
+    {
+      "source": "llm.callback",
+      "vhost": "graphnexus",
+      "destination": "llm.callback",
+      "destination_type": "queue",
+      "routing_key": "llm.callback"
+    },
+    {
+      "source": "dlx",
+      "vhost": "graphnexus",
+      "destination": "doc.ingestion.dlq",
+      "destination_type": "queue",
+      "routing_key": "doc.ingestion.dlq"
+    },
+    {
+      "source": "dlx",
+      "vhost": "graphnexus",
+      "destination": "event.ingestion.dlq",
+      "destination_type": "queue",
+      "routing_key": "event.ingestion.dlq"
+    },
+    {
+      "source": "dlx",
+      "vhost": "graphnexus",
+      "destination": "weight.decay.dlq",
+      "destination_type": "queue",
+      "routing_key": "weight.decay.dlq"
+    },
+    {
+      "source": "dlx",
+      "vhost": "graphnexus",
+      "destination": "notification.dlq",
+      "destination_type": "queue",
+      "routing_key": "notification.dlq"
+    },
+    {
+      "source": "dlx",
+      "vhost": "graphnexus",
+      "destination": "llm.callback.dlq",
+      "destination_type": "queue",
+      "routing_key": "llm.callback.dlq"
+    }
+  ],
+  "policies": [
+    {
+      "name": "ha-policy",
+      "vhost": "graphnexus",
+      "pattern": ".*",
+      "apply-to": "queues",
+      "definition": {
+        "ha-mode": "all",
+        "ha-sync-mode": "automatic",
+        "delivery-limit": 3
+      }
+    }
+  ]
+}
