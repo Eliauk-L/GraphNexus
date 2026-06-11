@@ -14,6 +14,34 @@ spring:
     ansi:
       enabled: always
 
+  # =========================================================================
+  # 排除自动配置 —— 无基础设施时仍可启动
+  # 新增基础设施后需逐个取消对应 exclude（见 DESIGN.md D1）
+  # =========================================================================
+  autoconfigure:
+    exclude:
+      # Neo4j
+      - org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jRepositoriesAutoConfiguration
+      # MySQL / JPA / Hibernate
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration
+      # Redis
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      # RabbitMQ
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      # Security（本次不配置安全规则，所有端点开放）
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
+      # 基础设施健康检查（已在 management.health 中逐一禁用，此处 double check）
+      - org.springframework.boot.actuate.autoconfigure.neo4j.Neo4jHealthContributorAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.redis.RedisHealthContributorAutoConfiguration
+
 # Actuator
 management:
   endpoints:
