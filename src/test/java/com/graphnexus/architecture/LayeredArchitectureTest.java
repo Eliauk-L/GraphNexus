@@ -15,7 +15,7 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
  *
  * <p>规则来源：docs/项目规范.md §1.4.2、§2.3</p>
  *
- * @author GraphNexus
+ * @author Jay
  * @date 2026/06/11
  */
 @AnalyzeClasses(

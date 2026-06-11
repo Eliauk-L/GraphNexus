@@ -15,7 +15,7 @@ import java.util.List;
  * @param pageNum  当前页码（从 1 开始）
  * @param pageSize 每页大小
  * @param <T>      数据项类型
- * @author GraphNexus
+ * @author Jay
  * @date 2026/06/11
  */
 public record PageResult<T>(

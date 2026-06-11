@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  *   <li>{@link Exception} → 500 Internal Server Error（兜底，隐藏内部细节）</li>
  * </ul>
  *
- * @author GraphNexus
+ * @author Jay
  * @date 2026/06/11
  */
 @RestControllerAdvice

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * @param userTip      用户提示信息
  * @param traceId      全链路追踪 ID
  * @param timestamp    错误发生时间
- * @author GraphNexus
+ * @author Jay
  * @date 2026/06/11
  */
 public record ErrorResponse(

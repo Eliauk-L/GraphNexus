@@ -14,7 +14,7 @@ import com.graphnexus.common.exception.ErrorResponse;
  * @param traceId   全链路追踪 ID
  * @param timestamp 响应时间戳（毫秒）
  * @param <T>       业务数据类型
- * @author GraphNexus
+ * @author Jay
  * @date 2026/06/11
  */
 public record ApiResponse<T>(

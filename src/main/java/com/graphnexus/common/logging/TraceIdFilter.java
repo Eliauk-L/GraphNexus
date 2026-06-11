@@ -25,7 +25,7 @@ import java.util.UUID;
  *   <li>请求处理完成后在 {@code finally} 中清理 MDC，避免线程池复用污染</li>
  * </ul></p>
  *
- * @author GraphNexus
+ * @author Jay
  * @date 2026/06/11
  */
 @Slf4j

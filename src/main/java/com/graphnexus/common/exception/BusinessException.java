@@ -13,7 +13,7 @@ package com.graphnexus.common.exception;
  * throw new BusinessException(ErrorCode.B0001, "图谱构建失败", "请检查 PDF 文件是否完整");
  * }</pre></p>
  *
- * @author GraphNexus
+ * @author Jay
  * @date 2026/06/11
  */
 public class BusinessException extends RuntimeException {

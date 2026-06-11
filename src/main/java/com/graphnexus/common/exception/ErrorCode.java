@@ -8,7 +8,7 @@ import org.springframework.http.HttpStatus;
  * <p>编码规则：5 位字符串 = 来源（A/B/C）+ 4 位数字。
  * A = 用户端错误，B = 系统错误，C = 第三方错误。</p>
  *
- * @author GraphNexus
+ * @author Jay
  * @date 2026/06/11
  */
 public enum ErrorCode {
