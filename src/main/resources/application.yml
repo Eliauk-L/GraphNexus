@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: graphnexus
+
+  # Profile 覆盖：开发环境见 application-dev.yml
+  profiles:
+    active: dev
+
+  # Logging
+  output:
+    ansi:
+      enabled: always
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    neo4j:
+      enabled: false
+    db:
+      enabled: false
+    redis:
+      enabled: false
+    rabbit:
+      enabled: false
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    com.graphnexus: INFO
+    org.springframework.web: INFO
+    org.springframework.data.neo4j: WARN
+    org.springframework.data.redis: WARN

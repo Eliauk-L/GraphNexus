@@ -1,0 +1,98 @@
+# =============================================================================
+# GraphNexus 开发环境配置
+# =============================================================================
+# 用途: 本地开发，连接 podman-compose 启动的容器
+# 启动: ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+# =============================================================================
+
+spring:
+  # ---------------------------------------------------------------------------
+  # Neo4j 图数据库
+  # ---------------------------------------------------------------------------
+  neo4j:
+    uri: bolt://localhost:7687
+    authentication:
+      username: neo4j
+      password: graphnexus123
+    pool:
+      max-connection-pool-size: 20
+
+  # ---------------------------------------------------------------------------
+  # MySQL 关系数据库
+  # ---------------------------------------------------------------------------
+  datasource:
+    url: jdbc:mysql://localhost:3306/graphnexus?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: graphnexus
+    password: graphnexus123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # ---------------------------------------------------------------------------
+  # Redis 缓存
+  # ---------------------------------------------------------------------------
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: graphnexus123
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ 消息队列
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: graphnexus
+    password: graphnexus123
+    virtual-host: graphnexus
+
+  # ---------------------------------------------------------------------------
+  # MinIO 对象存储
+  # ---------------------------------------------------------------------------
+  # MinIO 无 Spring Boot 自动配置，使用 MinioClient 手动管理
+
+# ---------------------------------------------------------------------------
+# MinIO 自定义配置
+# ---------------------------------------------------------------------------
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin123
+  bucket: graphnexus-dev
+
+# ---------------------------------------------------------------------------
+# Claude API (预留)
+# ---------------------------------------------------------------------------
+claude:
+  api-key: ${CLAUDE_API_KEY:}
+  base-url: https://api.anthropic.com
+  model: claude-sonnet-4-20250514
+  max-tokens: 4096
+  temperature: 0.3
+  request-timeout: 60s
+
+# ---------------------------------------------------------------------------
+# 日志
+# ---------------------------------------------------------------------------
+logging:
+  level:
+    com.graphnexus: DEBUG
+    com.graphnexus.infra: INFO
