@@ -21,6 +21,9 @@ public class BusinessException extends RuntimeException {
     /** 错误码 */
     private final String errorCode;
 
+    /** 对应的 HTTP 状态码 */
+    private final int httpStatus;
+
     /** 开发者可读的简要描述（面向日志/排查） */
     private final String errorMessage;
 
@@ -35,6 +38,7 @@ public class BusinessException extends RuntimeException {
     public BusinessException(ErrorCode errorCode) {
         super(errorCode.getDefaultUserTip());
         this.errorCode = errorCode.getErrorCode();
+        this.httpStatus = errorCode.getHttpStatusCode();
         this.errorMessage = errorCode.getDefaultUserTip();
         this.userTip = errorCode.getDefaultUserTip();
     }
@@ -48,6 +52,7 @@ public class BusinessException extends RuntimeException {
     public BusinessException(ErrorCode errorCode, String errorMessage) {
         super(errorMessage);
         this.errorCode = errorCode.getErrorCode();
+        this.httpStatus = errorCode.getHttpStatusCode();
         this.errorMessage = errorMessage;
         this.userTip = errorCode.getDefaultUserTip();
     }
@@ -62,12 +67,17 @@ public class BusinessException extends RuntimeException {
     public BusinessException(ErrorCode errorCode, String errorMessage, String userTip) {
         super(errorMessage);
         this.errorCode = errorCode.getErrorCode();
+        this.httpStatus = errorCode.getHttpStatusCode();
         this.errorMessage = errorMessage;
         this.userTip = userTip;
     }
 
     public String getErrorCode() {
         return errorCode;
+    }
+
+    public int getHttpStatus() {
+        return httpStatus;
     }
 
     public String getErrorMessage() {
