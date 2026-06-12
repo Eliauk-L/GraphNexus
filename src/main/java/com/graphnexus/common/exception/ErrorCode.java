@@ -24,6 +24,18 @@ public enum ErrorCode {
     /** 无权限访问 */
     A0003("A0003", HttpStatus.FORBIDDEN, "您没有权限执行此操作"),
 
+    /** 文件类型不支持 */
+    A0004("A0004", HttpStatus.BAD_REQUEST, "仅支持 PDF 格式文件"),
+
+    /** 文件大小超限 */
+    A0005("A0005", HttpStatus.PAYLOAD_TOO_LARGE, "文件大小不能超过 50MB"),
+
+    /** 文档不存在 */
+    A0006("A0006", HttpStatus.NOT_FOUND, "文档记录不存在或已被删除"),
+
+    /** 文档内容重复 */
+    A0007("A0007", HttpStatus.CONFLICT, "该学科下已存在相同内容的文档"),
+
     // ======================== B · 系统错误 ========================
 
     /** 系统内部错误（兜底） */
