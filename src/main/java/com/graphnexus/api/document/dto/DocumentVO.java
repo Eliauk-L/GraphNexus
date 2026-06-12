@@ -43,7 +43,7 @@ public class DocumentVO {
                 .fileSize(bo.getFileSize())
                 .minioPath(bo.getMinioPath())
                 .pageCount(bo.getPageCount())
-                .status(bo.getStatus() != null ? bo.getStatus().name() : null)
+                .status(bo.getStatus())
                 .createTime(bo.getCreateTime())
                 .updateTime(bo.getUpdateTime())
                 .build();

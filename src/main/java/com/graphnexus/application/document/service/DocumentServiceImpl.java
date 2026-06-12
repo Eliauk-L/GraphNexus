@@ -226,7 +226,7 @@ public class DocumentServiceImpl implements DocumentService {
                 .pageCount(doc.getPageCount())
                 .textContent(doc.getTextContent())
                 .metadataJson(doc.getMetadataJson())
-                .status(doc.getStatus())
+                .status(doc.getStatus() != null ? doc.getStatus().name() : null)
                 .failReason(doc.getFailReason())
                 .uploadedBy(doc.getUploadedBy())
                 .createTime(doc.getCreateTime())

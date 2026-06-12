@@ -83,7 +83,7 @@ class DocumentServiceTest {
         assertNotNull(result);
         assertEquals("test.pdf", result.getName());
         assertEquals("MATH", result.getSubject());
-        assertEquals(DocumentStatus.UPLOADED, result.getStatus());
+        assertEquals("UPLOADED", result.getStatus());
         verify(fileStorageService).uploadFile(any(InputStream.class), anyString(), eq("application/pdf"));
         verify(documentRepository).save(any(DocumentDO.class));
     }

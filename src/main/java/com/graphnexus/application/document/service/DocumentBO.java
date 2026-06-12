@@ -1,6 +1,5 @@
 package com.graphnexus.application.document.service;
 
-import com.graphnexus.infrastructure.mysql.document.DocumentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,7 +28,7 @@ public class DocumentBO {
     private Integer pageCount;
     private String textContent;
     private String metadataJson;
-    private DocumentStatus status;
+    private String status;
     private String failReason;
     private Long uploadedBy;
     private LocalDateTime createTime;
