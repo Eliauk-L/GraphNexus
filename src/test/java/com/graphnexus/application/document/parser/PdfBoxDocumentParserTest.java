@@ -1,5 +1,6 @@
-package com.graphnexus.application.document.service;
+package com.graphnexus.application.document.parser;
 
+import com.graphnexus.application.document.model.ParseResult;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;

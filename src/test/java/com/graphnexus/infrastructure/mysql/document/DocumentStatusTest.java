@@ -1,6 +1,5 @@
-package com.graphnexus.application.document.service;
+package com.graphnexus.infrastructure.mysql.document;
 
-import com.graphnexus.infrastructure.mysql.document.DocumentStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
