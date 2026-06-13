@@ -1,5 +1,10 @@
-package com.graphnexus.application.document.service;
+package com.graphnexus.application.document.service.impl;
 
+import com.graphnexus.application.document.model.DocumentBO;
+import com.graphnexus.application.document.model.ParseResult;
+import com.graphnexus.application.document.model.UpdateDocumentBO;
+import com.graphnexus.application.document.parser.DocumentParser;
+import com.graphnexus.application.document.service.DocumentService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.document.DocumentDO;

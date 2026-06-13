@@ -1,5 +1,8 @@
 package com.graphnexus.application.document.service;
 
+import com.graphnexus.application.document.model.DocumentBO;
+import com.graphnexus.application.document.model.ParseResult;
+import com.graphnexus.application.document.model.UpdateDocumentBO;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 

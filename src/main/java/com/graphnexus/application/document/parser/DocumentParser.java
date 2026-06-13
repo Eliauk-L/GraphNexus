@@ -1,4 +1,6 @@
-package com.graphnexus.application.document.service;
+package com.graphnexus.application.document.parser;
+
+import com.graphnexus.application.document.model.ParseResult;
 
 /**
  * 可扩展的文档解析接口（策略模式）。

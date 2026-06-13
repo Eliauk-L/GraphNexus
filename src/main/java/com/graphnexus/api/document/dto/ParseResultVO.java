@@ -1,6 +1,6 @@
 package com.graphnexus.api.document.dto;
 
-import com.graphnexus.application.document.service.ParseResult;
+import com.graphnexus.application.document.model.ParseResult;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

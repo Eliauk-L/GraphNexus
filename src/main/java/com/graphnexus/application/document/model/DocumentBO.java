@@ -1,4 +1,4 @@
-package com.graphnexus.application.document.service;
+package com.graphnexus.application.document.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

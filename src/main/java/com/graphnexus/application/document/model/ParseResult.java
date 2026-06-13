@@ -1,4 +1,4 @@
-package com.graphnexus.application.document.service;
+package com.graphnexus.application.document.model;
 
 import java.util.Collections;
 import java.util.Map;

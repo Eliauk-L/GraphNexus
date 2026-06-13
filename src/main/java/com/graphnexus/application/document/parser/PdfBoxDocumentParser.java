@@ -1,5 +1,6 @@
-package com.graphnexus.application.document.service;
+package com.graphnexus.application.document.parser;
 
+import com.graphnexus.application.document.model.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
