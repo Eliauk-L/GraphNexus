@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql;
+package com.graphnexus.infrastructure.mysql.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;

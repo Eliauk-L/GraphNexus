@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.storage;
+package com.graphnexus.infrastructure.storage.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

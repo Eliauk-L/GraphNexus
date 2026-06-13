@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.storage;
+package com.graphnexus.infrastructure.storage.config;
 
 import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
