@@ -20,18 +20,18 @@ public interface DocumentRepository extends JpaRepository<DocumentDO, Long> {
     /**
      * 查询未删除的文档（分页）。
      */
-    @Query("SELECT d FROM DocumentDO d WHERE d.isDeleted = 0")
+    @Query("SELECT d FROM DocumentDO d WHERE d.isDeleted = 0 AND d.status <> 'DELETING'")
     Page<DocumentDO> findByIsDeletedFalse(Pageable pageable);
 
     /**
      * 按 ID 查询未删除的文档。
      */
-    @Query("SELECT d FROM DocumentDO d WHERE d.id = :id AND d.isDeleted = 0")
+    @Query("SELECT d FROM DocumentDO d WHERE d.id = :id AND d.isDeleted = 0 AND d.status <> 'DELETING'")
     Optional<DocumentDO> findByIdAndIsDeletedFalse(Long id);
 
     /**
      * 按内容指纹 + 学科查找未删除的文档 ID（用于去重检查）。
      */
-    @Query("SELECT d.id FROM DocumentDO d WHERE d.documentNo = :documentNo AND d.subject = :subject AND d.isDeleted = 0")
+    @Query("SELECT d.id FROM DocumentDO d WHERE d.documentNo = :documentNo AND d.subject = :subject AND d.isDeleted = 0 AND d.status <> 'DELETING'")
     Optional<Long> findIdByDocumentNoAndSubjectAndIsDeletedFalse(String documentNo, String subject);
 }

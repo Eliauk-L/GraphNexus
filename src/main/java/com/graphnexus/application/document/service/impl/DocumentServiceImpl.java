@@ -207,15 +207,20 @@ public class DocumentServiceImpl implements DocumentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
 
-        // 逻辑删除
-        doc.markDeleted();
-        documentRepository.save(doc);
+        // ① 进入 DELETING 中间状态，标记删除意图并持久化
+        doc.setStatus(DocumentStatus.DELETING);
+        documentRepository.saveAndFlush(doc);
+        log.info("文档进入 DELETING 状态: id={}", id);
 
-        // MinIO 物理删除
+        // ② MinIO 物理删除
         fileStorageService.deleteFile(doc.getMinioPath());
 
-        // Neo4j 图谱删除
+        // ③ Neo4j 图谱删除
         graphNodeRepository.deleteByDocumentId(String.valueOf(id));
+
+        // ④ 全部组件清理完成，逻辑删除
+        doc.markDeleted();
+        documentRepository.save(doc);
 
         log.info("文档已删除: id={}, minioPath={}", doc.getId(), doc.getMinioPath());
     }

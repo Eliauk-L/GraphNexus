@@ -9,6 +9,8 @@ package com.graphnexus.infrastructure.mysql.document;
  *   PROCESSING → COMPLETED | FAILED
  *   COMPLETED → PROCESSING（重新解析）
  *   FAILED    → PROCESSING（重试）
+ *   UPLOADED | COMPLETED | FAILED → DELETING（请求删除）
+ *   DELETING  → 所有组件清除后逻辑删除（is_deleted = 1）
  * </pre>
  *
  * @author Jay
@@ -26,7 +28,10 @@ public enum DocumentStatus {
     COMPLETED,
 
     /** 解析失败 */
-    FAILED;
+    FAILED,
+
+    /** 删除进行中 — 中间状态，等待 MinIO + Neo4j 清理完成后转为逻辑删除 */
+    DELETING;
 
     /**
      * 校验状态转换是否合法。
@@ -47,10 +52,11 @@ public enum DocumentStatus {
      */
     private java.util.Set<DocumentStatus> getAllowedTargets() {
         return switch (this) {
-            case UPLOADED   -> java.util.Set.of(PROCESSING);
+            case UPLOADED   -> java.util.Set.of(PROCESSING, DELETING);
             case PROCESSING -> java.util.Set.of(COMPLETED, FAILED);
-            case COMPLETED  -> java.util.Set.of(PROCESSING);
-            case FAILED     -> java.util.Set.of(PROCESSING);
+            case COMPLETED  -> java.util.Set.of(PROCESSING, DELETING);
+            case FAILED     -> java.util.Set.of(PROCESSING, DELETING);
+            case DELETING   -> java.util.Set.of(); // 终态：进入后不可再转换，由 markDeleted 完成
         };
     }
 }

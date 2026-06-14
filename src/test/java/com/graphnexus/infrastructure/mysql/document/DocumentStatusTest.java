@@ -71,4 +71,36 @@ class DocumentStatusTest {
         assertThrows(IllegalArgumentException.class,
                 () -> DocumentStatus.UPLOADED.validateTransition(DocumentStatus.FAILED));
     }
+
+    @Test
+    @DisplayName("UPLOADED → DELETING 合法")
+    void uploadedToDeletingShouldPass() {
+        assertDoesNotThrow(() -> DocumentStatus.UPLOADED.validateTransition(DocumentStatus.DELETING));
+    }
+
+    @Test
+    @DisplayName("COMPLETED → DELETING 合法")
+    void completedToDeletingShouldPass() {
+        assertDoesNotThrow(() -> DocumentStatus.COMPLETED.validateTransition(DocumentStatus.DELETING));
+    }
+
+    @Test
+    @DisplayName("FAILED → DELETING 合法")
+    void failedToDeletingShouldPass() {
+        assertDoesNotThrow(() -> DocumentStatus.FAILED.validateTransition(DocumentStatus.DELETING));
+    }
+
+    @Test
+    @DisplayName("DELETING → 任何状态 非法（终态不可再转换）")
+    void deletingCannotTransition() {
+        assertThrows(IllegalArgumentException.class,
+                () -> DocumentStatus.DELETING.validateTransition(DocumentStatus.UPLOADED));
+    }
+
+    @Test
+    @DisplayName("PROCESSING → DELETING 非法（处理中不可删除）")
+    void processingToDeletingShouldFail() {
+        assertThrows(IllegalArgumentException.class,
+                () -> DocumentStatus.PROCESSING.validateTransition(DocumentStatus.DELETING));
+    }
 }
