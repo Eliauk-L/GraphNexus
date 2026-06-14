@@ -53,7 +53,7 @@ class GraphNodeAbstractionTest {
     }
 
     @Test
-    @DisplayName("NodeType 包含全部 4 种已注册类型")
+    @DisplayName("NodeType 包含全部 4 种已注册类型且 nodeClass 非空")
     void testNodeTypeHasAllRegisteredTypes() {
         NodeType[] types = NodeType.values();
         assertEquals(4, types.length);
@@ -61,6 +61,16 @@ class GraphNodeAbstractionTest {
         assertTrue(containsLabel(types, "Entity"));
         assertTrue(containsLabel(types, "KnowledgePoint"));
         assertTrue(containsLabel(types, "KnowledgeCategory"));
+
+        // 所有 nodeClass 都不为 null
+        for (NodeType t : types) {
+            assertNotNull(t.getNodeClass(),
+                    t.name() + " 的 nodeClass 不应为 null");
+        }
+        assertEquals(DocumentNode.class, NodeType.DOCUMENT.getNodeClass());
+        assertEquals(EntityNode.class, NodeType.ENTITY.getNodeClass());
+        assertEquals(KnowledgePointNode.class, NodeType.KNOWLEDGE_POINT.getNodeClass());
+        assertEquals(KnowledgeCategoryNode.class, NodeType.KNOWLEDGE_CATEGORY.getNodeClass());
     }
 
     private boolean containsLabel(NodeType[] types, String label) {

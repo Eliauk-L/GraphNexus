@@ -16,16 +16,16 @@ import lombok.Getter;
 public enum NodeType {
 
     /** 文档节点 */
-    DOCUMENT("Document", null),
+    DOCUMENT("Document", DocumentNode.class),
 
     /** 实体节点（从文档原文中抽取的片段） */
-    ENTITY("Entity", null),
+    ENTITY("Entity", EntityNode.class),
 
     /** 知识点节点（跨文档标准化概念） */
-    KNOWLEDGE_POINT("KnowledgePoint", null),
+    KNOWLEDGE_POINT("KnowledgePoint", KnowledgePointNode.class),
 
     /** 知识分类节点（层次分类树中的节点） */
-    KNOWLEDGE_CATEGORY("KnowledgeCategory", null);
+    KNOWLEDGE_CATEGORY("KnowledgeCategory", KnowledgeCategoryNode.class);
 
     /**
      * Neo4j label 名称（如 {@code "Entity"}、{@code "KnowledgePoint"}）。
@@ -33,8 +33,7 @@ public enum NodeType {
     private final String label;
 
     /**
-     * 对应的 Java 节点子类（预留，后续可用于反射实例化或类型校验）。
-     * 当前传 {@code null} 也可正常使用枚举的 label 映射功能。
+     * 对应的 Java 节点子类，可用于反射实例化或运行时类型校验。
      */
     private final Class<? extends GraphNode> nodeClass;
 
