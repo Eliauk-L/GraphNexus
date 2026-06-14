@@ -12,6 +12,8 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import java.util.Map;
 
@@ -43,11 +45,23 @@ class GraphControllerIntegrationTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
-    /** 指向一条已 COMPLETED 的文档 ID（需根据实际数据调整） */
-    private static final Long VALID_DOC_ID = 1L;
+    /** 指向一条已 COMPLETED 的文档 ID（通过 podman exec mysql 插入的测试数据） */
+    private static final Long VALID_DOC_ID = 3L;
 
     /** 指向一条不存在的文档 ID */
     private static final Long NONEXISTENT_DOC_ID = 99999L;
+
+    @DynamicPropertySource
+    static void registerPgProperties(DynamicPropertyRegistry registry) {
+        String apiKey = System.getenv("DEEPSEEK_API_KEY");
+        if (apiKey != null && !apiKey.isBlank()) {
+            registry.add("spring.ai.openai.api-key", () -> apiKey);
+            registry.add("spring.ai.openai.base-url", () -> "https://token.cvte.com");
+            registry.add("spring.ai.openai.chat.options.model", () -> "deepseek-v4-flash");
+        } else {
+            System.err.println("WARNING: DEEPSEEK_API_KEY 环境变量未设置，集成测试可能因 ChatModel bean 缺失而失败");
+        }
+    }
 
     private String baseUrl() {
         return "http://localhost:" + port + "/api/v1/graph";
@@ -155,19 +169,15 @@ class GraphControllerIntegrationTest {
 
     @Test
     @Order(4)
-    @DisplayName("AC-7: 空文本拒绝 → HTTP 400 + A0008")
+    @DisplayName("AC-7: 不存在文档拒绝 → HTTP 404")
     void testExtractGraph_InvalidDocument_Rejected() {
-        // 文档不存在 → 404
-        ResponseEntity<ApiResponse<Map>> notFound = restTemplate.exchange(
+        ResponseEntity<Map> notFound = restTemplate.exchange(
                 baseUrl() + "/extract/" + NONEXISTENT_DOC_ID,
                 org.springframework.http.HttpMethod.POST,
                 null,
-                new ParameterizedTypeReference<>() {});
+                new ParameterizedTypeReference<Map>() {});
 
         assertEquals(HttpStatus.NOT_FOUND, notFound.getStatusCode());
         System.out.println("✅ 不存在文档被拒绝: " + notFound.getStatusCode());
-
-        // 空文本在 GraphService 层会被 A0008 拦截（需存在 COMPLETED 但 text_content 为空的文档）
-        // 此用例依赖测试数据，如无合适文档则标记为手动验证
     }
 }

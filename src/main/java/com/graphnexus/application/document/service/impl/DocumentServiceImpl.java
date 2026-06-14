@@ -74,7 +74,7 @@ public class DocumentServiceImpl implements DocumentService {
         String documentNo = computeMd5(pdfBytes);
 
         // ④ 去重检查
-        if (documentRepository.existsByDocumentNoAndSubjectAndIsDeletedFalse(documentNo, subject)) {
+        if (documentRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(documentNo, subject).isPresent()) {
             throw new BusinessException(ErrorCode.A0007,
                     "文档内容重复: subject=" + subject + ", md5=" + documentNo);
         }
