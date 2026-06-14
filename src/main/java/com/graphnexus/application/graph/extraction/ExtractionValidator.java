@@ -43,6 +43,7 @@ public class ExtractionValidator {
 
         validateEntities(raw);
         validateEntityRelations(raw);
+        validateEntityAlignmentCompleteness(raw);
         validateAlignments(raw);
         validateCategories(raw);
 
@@ -139,6 +140,37 @@ public class ExtractionValidator {
             if (!StringUtils.hasText(cat.getName())) {
                 throw new BusinessException(ErrorCode.A0010,
                         String.format("categories[%d].name 为空", i));
+            }
+        }
+    }
+
+    /**
+     * 校验每个实体都有对应的知识点对齐 — 禁止孤立实体。
+     */
+    private void validateEntityAlignmentCompleteness(ExtractionRawResult raw) {
+        int entityCount = raw.getEntities().size();
+        int kpCount = raw.getKnowledgePoints() != null ? raw.getKnowledgePoints().size() : 0;
+
+        if (kpCount == 0) {
+            throw new BusinessException(ErrorCode.A0010,
+                    "knowledgePoints 数组为空，每个实体必须对应一个知识点");
+        }
+
+        // 统计每个 entityIndex 是否已被对齐
+        boolean[] aligned = new boolean[entityCount];
+        if (raw.getAlignments() != null) {
+            for (ExtractionRawResult.RawAlignment align : raw.getAlignments()) {
+                if (align.getEntityIndex() != null && align.getEntityIndex() >= 0
+                        && align.getEntityIndex() < entityCount) {
+                    aligned[align.getEntityIndex()] = true;
+                }
+            }
+        }
+
+        for (int i = 0; i < entityCount; i++) {
+            if (!aligned[i]) {
+                throw new BusinessException(ErrorCode.A0010,
+                        String.format("entities[%d] 缺少对应的知识点对齐（alignments 中未找到 entityIndex=%d）", i, i));
             }
         }
     }

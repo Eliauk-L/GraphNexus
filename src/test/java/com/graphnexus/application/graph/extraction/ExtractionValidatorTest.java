@@ -37,6 +37,12 @@ class ExtractionValidatorTest {
         kp.setName("二次函数定义");
         kp.setDescription("标准定义");
         validResult.setKnowledgePoints(List.of(kp));
+
+        // 实体→知识点对齐
+        ExtractionRawResult.RawAlignment alignment = new ExtractionRawResult.RawAlignment();
+        alignment.setEntityIndex(0);
+        alignment.setKnowledgePointIndex(0);
+        validResult.setAlignments(List.of(alignment));
     }
 
     @Test
@@ -85,12 +91,22 @@ class ExtractionValidatorTest {
     void testInvalidRelationType_ShouldThrow() {
         ExtractionRawResult.RawEntityRelation rel = new ExtractionRawResult.RawEntityRelation();
         rel.setSourceEntityIndex(0);
-        rel.setTargetEntityIndex(0);
+        rel.setTargetEntityIndex(1);
         rel.setType("INVALID_TYPE");
-        validResult.setEntities(List.of(
-                validResult.getEntities().get(0),
-                createEntity("FORMULA", "一般式", "y=ax²+bx+c")
-        ));
+
+        // 第二个实体
+        ExtractionRawResult.RawEntity entity2 = createEntity("FORMULA", "一般式", "y=ax²+bx+c");
+        validResult.setEntities(List.of(validResult.getEntities().get(0), entity2));
+        // 第二个知识点 + 对齐
+        ExtractionRawResult.RawKnowledgePoint kp2 = new ExtractionRawResult.RawKnowledgePoint();
+        kp2.setName("一般式");
+        kp2.setDescription("一般式");
+        validResult.setKnowledgePoints(List.of(validResult.getKnowledgePoints().get(0), kp2));
+        ExtractionRawResult.RawAlignment align2 = new ExtractionRawResult.RawAlignment();
+        align2.setEntityIndex(1);
+        align2.setKnowledgePointIndex(1);
+        validResult.setAlignments(List.of(validResult.getAlignments().get(0), align2));
+
         validResult.setEntityRelations(List.of(rel));
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -114,6 +130,35 @@ class ExtractionValidatorTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> validator.validate(validResult));
         assertEquals("A0010", ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("实体缺少知识点对齐 → BusinessException A0010")
+    void testMissingAlignment_ShouldThrow() {
+        // 新增第二个实体但没有对应的 alignment
+        ExtractionRawResult.RawEntity entity2 = new ExtractionRawResult.RawEntity();
+        entity2.setEntityType("FORMULA");
+        entity2.setName("一般式");
+        entity2.setOriginalText("y=ax²+bx+c");
+        entity2.setPageNumber(2);
+        validResult.setEntities(List.of(validResult.getEntities().get(0), entity2));
+        // alignments 只有一条（entityIndex=0），entityIndex=1 缺失
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> validator.validate(validResult));
+        assertEquals("A0010", ex.getErrorCode());
+        assertTrue(ex.getMessage().contains("entityIndex=1"),
+                "错误信息应提示缺失对齐的实体索引，实际: " + ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("knowledgePoints 为空 → BusinessException A0010")
+    void testNoKnowledgePoints_ShouldThrow() {
+        validResult.setKnowledgePoints(List.of());
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> validator.validate(validResult));
+        assertEquals("A0010", ex.getErrorCode());
+        assertTrue(ex.getMessage().contains("knowledgePoints"));
     }
 
     private ExtractionRawResult.RawEntity createEntity(String type, String name, String text) {
