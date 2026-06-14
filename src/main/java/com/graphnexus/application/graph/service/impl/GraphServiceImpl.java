@@ -57,7 +57,7 @@ public class GraphServiceImpl implements GraphService {
         // 4. 构建 DocumentNode
         String neo4jDocumentId = String.valueOf(documentId);
         DocumentNode documentNode = new DocumentNode(
-                doc.getId(), doc.getName(), doc.getSubject(),
+                doc.getName(), doc.getSubject(),
                 doc.getPageCount(), neo4jDocumentId);
 
         // 5. 调用 LLM 抽取

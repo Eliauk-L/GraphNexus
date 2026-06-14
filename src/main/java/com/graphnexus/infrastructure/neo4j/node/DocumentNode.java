@@ -20,9 +20,6 @@ import org.springframework.data.neo4j.core.schema.Node;
 @EqualsAndHashCode(callSuper = true)
 public class DocumentNode extends GraphNode {
 
-    /** 对应 MySQL document 表的主键 ID */
-    private Long mysqlId;
-
     /** 文档名称 */
     private String name;
 
@@ -32,10 +29,9 @@ public class DocumentNode extends GraphNode {
     /** PDF 页数 */
     private Integer pageCount;
 
-    public DocumentNode(Long mysqlId, String name, String subject, Integer pageCount, String documentId) {
+    public DocumentNode(String name, String subject, Integer pageCount, String documentId) {
         super(NodeType.DOCUMENT.getLabel());
         this.setDocumentId(documentId);
-        this.mysqlId = mysqlId;
         this.name = name;
         this.subject = subject;
         this.pageCount = pageCount;
