@@ -48,9 +48,12 @@ class GraphControllerIntegrationTest {
 
     @DynamicPropertySource
     static void registerPgProperties(DynamicPropertyRegistry registry) {
+        // DeepSeek 主模型
         registry.add("spring.ai.openai.api-key", () -> "ollama");
         registry.add("spring.ai.openai.base-url", () -> "http://localhost:11434/v1");
         registry.add("spring.ai.openai.chat.options.model", () -> "deepseek-r1:7b");
+        // Ollama 兜底
+        registry.add("spring.ai.ollama.base-url", () -> "http://localhost:11434");
     }
 
     private String baseUrl() {

@@ -73,13 +73,25 @@ spring:
     virtual-host: graphnexus
 
   # ---------------------------------------------------------------------------
-  # Ollama API（Spring AI OpenAI starter，兼容 OpenAI 协议）
-  # 前置：ollama pull deepseek-r1:7b && ollama serve
+  # DeepSeek API（Spring AI OpenAI starter，兼容 OpenAI 协议）
+  # API Key 通过 .env 文件注入：source .env && mvn spring-boot:run
   # ---------------------------------------------------------------------------
   ai:
     openai:
-      base-url: http://localhost:11434/v1
-      api-key: ollama
+      base-url: https://api.deepseek.com
+      api-key: ${DEEPSEEK_API_KEY:}
+      chat:
+        options:
+          model: deepseek-v4-flash
+          temperature: 0.3
+          max-tokens: 4096
+
+    # ---------------------------------------------------------------------------
+    # Ollama 本地（兜底）— 当 DeepSeek API 不可用时使用
+    # 前置：ollama pull deepseek-r1:7b && ollama serve
+    # ---------------------------------------------------------------------------
+    ollama:
+      base-url: http://localhost:11434
       chat:
         options:
           model: deepseek-r1:7b
