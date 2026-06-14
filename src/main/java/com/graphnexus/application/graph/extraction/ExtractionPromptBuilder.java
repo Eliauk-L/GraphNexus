@@ -84,8 +84,11 @@ public class ExtractionPromptBuilder {
                     {"entityIndex":2,"knowledgePointIndex":2},
                     {"entityIndex":3,"knowledgePointIndex":3},
                     {"entityIndex":4,"knowledgePointIndex":4},
+                    {"entityIndex":5,"knowledgePointIndex":3},
+                    {"entityIndex":5,"knowledgePointIndex":4},
                     {"entityIndex":5,"knowledgePointIndex":5},
-                    {"entityIndex":6,"knowledgePointIndex":6}
+                    {"entityIndex":6,"knowledgePointIndex":6},
+                    {"entityIndex":6,"knowledgePointIndex":1}
                   ],
                   "entityRelations": [
                     {"sourceEntityIndex":0,"targetEntityIndex":1,"type":"DERIVES","description":"定义推导出一般式表达式"},
@@ -112,7 +115,7 @@ public class ExtractionPromptBuilder {
                 2. 忽略页眉页脚、页码等非正文内容
                 3. entityType 必须使用规定枚举值，禁止自创
                 4. entityRelations.type 必须使用规定枚举值（DERIVES/CONTAINS/REFERENCES）
-                5. **每个实体（entity）必须对应一个知识点（knowledgePoint）**，通过 alignments 数组建立一一对应关系，确保每个实体都有 ALIGNED_TO 边
+                5. **每个实体（entity）必须至少对应一个知识点（knowledgePoint）**，通过 alignments 数组建立多对多关系。一个实体可以对齐到多个知识点（如例题同时涉及对称轴和顶点坐标），多个实体也可以对齐到同一知识点
                 6. 每类至少返回 1 条，实在没有返回空数组 []
                 7. **仅输出纯 JSON，禁止使用 markdown 代码块包裹**
                 8. JSON 顶层字段名必须为：entities, knowledgePoints, categories, alignments, entityRelations, prerequisites, categoryRelations

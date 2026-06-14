@@ -153,7 +153,7 @@ public class ExtractionValidator {
 
         if (kpCount == 0) {
             throw new BusinessException(ErrorCode.A0010,
-                    "knowledgePoints 数组为空，每个实体必须对应一个知识点");
+                    "knowledgePoints 数组为空，每个实体必须至少对应一个知识点");
         }
 
         // 统计每个 entityIndex 是否已被对齐
