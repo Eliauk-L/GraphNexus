@@ -1,7 +1,7 @@
 package com.graphnexus.infrastructure.neo4j.repository;
 
 import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
-import com.graphnexus.infrastructure.neo4j.node.GraphNode;
+import com.graphnexus.infrastructure.neo4j.node.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.neo4j.core.Neo4jClient;
@@ -29,23 +29,76 @@ public class GraphNodeRepository {
     private final Neo4jClient neo4jClient;
 
     /** 所有节点共享的公共 label，用于索引扫描 */
-    private static final String COMMON_LABEL = "GraphNode";
+    private static final String COMMON_LABEL = "";
 
-    /**
-     * 保存任意 GraphNode 子类，委托 SDN 自动映射。
-     */
-    public <T extends GraphNode> T save(T node) {
-        return neo4jTemplate.save(node);
+    /** 构建带标签+属性的节点模式 */
+    private static String node(String alias, String props) {
+        String labelPart = COMMON_LABEL.isEmpty() ? "" : ":" + COMMON_LABEL;
+        if (props.isEmpty()) {
+            return "(" + alias + labelPart + ")";
+        }
+        return "(" + alias + labelPart + " " + props + ")";
     }
 
     /**
-     * 批量保存节点 — 使用 SDN 批量 API 避免 N+1。
+     * 保存任意 GraphNode 子类 — 通过 Cypher MERGE 创建。
+     */
+    public <T extends GraphNode> T save(T node) {
+        String label = node.getNodeType();
+        String cypher = String.format(
+                "MERGE (n:%s {id: $id}) SET n = $props",
+                label);
+        Map<String, Object> props = toNodeProps(node);
+        Map<String, Object> params = new HashMap<>();
+        params.put("id", node.getId());
+        params.put("props", props);
+        neo4jClient.query(cypher)
+                .bindAll(params)
+                .run();
+        return node;
+    }
+
+    /**
+     * 批量保存节点 — 逐条 MERGE（节点数量通常不多）。
      */
     public <T extends GraphNode> List<T> saveAll(List<T> nodes) {
         if (nodes == null || nodes.isEmpty()) {
             return Collections.emptyList();
         }
-        return new ArrayList<>(neo4jTemplate.saveAll(nodes));
+        for (T node : nodes) {
+            save(node);
+        }
+        return nodes;
+    }
+
+    /** 将 GraphNode 的属性转为 Cypher 参数 Map */
+    private Map<String, Object> toNodeProps(GraphNode node) {
+        Map<String, Object> props = new HashMap<>();
+        props.put("id", node.getId());
+        props.put("nodeType", node.getNodeType());
+        props.put("documentId", node.getDocumentId());
+        props.put("createdAt", node.getCreatedAt() != null ? node.getCreatedAt().toString() : null);
+        if (node instanceof DocumentNode doc) {
+            props.put("name", doc.getName());
+            props.put("subject", doc.getSubject());
+            props.put("pageCount", doc.getPageCount());
+        } else if (node instanceof EntityNode ent) {
+            props.put("entityType", ent.getEntityType());
+            props.put("name", ent.getName());
+            props.put("originalText", ent.getOriginalText());
+            props.put("pageNumber", ent.getPageNumber());
+            props.put("metadata", ent.getMetadata());
+        } else if (node instanceof KnowledgePointNode kp) {
+            props.put("name", kp.getName());
+            props.put("description", kp.getDescription());
+            props.put("subject", kp.getSubject());
+            props.put("gradeLevel", kp.getGradeLevel());
+        } else if (node instanceof KnowledgeCategoryNode cat) {
+            props.put("name", cat.getName());
+            props.put("level", cat.getLevel());
+            props.put("parentName", cat.getParentName());
+        }
+        return props;
     }
 
     /**
@@ -54,11 +107,12 @@ public class GraphNodeRepository {
      * <p>使用 {@code :GraphNode} 标签确保走索引；edgeType 来自枚举，通过 {@code String.format} 注入安全。</p>
      */
     public void saveEdge(GraphEdge edge) {
+        String labelPart = COMMON_LABEL.isEmpty() ? "" : ":" + COMMON_LABEL;
         String cypher = String.format(
-                "MATCH (a:%s {id: $sourceId}), (b:%s {id: $targetId}) " +
+                "MATCH (a%s {id: $sourceId}), (b%s {id: $targetId}) " +
                 "CREATE (a)-[r:%s]->(b) " +
                 "SET r.createdAt = $createdAt, r.edgeType = $edgeType, r.weight = $weight, r.description = $description",
-                COMMON_LABEL, COMMON_LABEL, edge.getEdgeType());
+                labelPart, labelPart, edge.getEdgeType());
 
         neo4jClient.query(cypher)
                 .bindAll(Map.of(
@@ -101,13 +155,11 @@ public class GraphNodeRepository {
                     })
                     .collect(Collectors.toList());
 
-            String cypher = String.format(
-                    "UNWIND $edges AS edge " +
-                    "MATCH (a:%s {id: edge.sourceId}), (b:%s {id: edge.targetId}) " +
-                    "CREATE (a)-[r:%s]->(b) " +
+            String cypher = "UNWIND $edges AS edge " +
+                    "MATCH " + node("a", "{id: edge.sourceId}") + ", " + node("b", "{id: edge.targetId}") + " " +
+                    "CREATE (a)-[r:" + type + "]->(b) " +
                     "SET r.createdAt = edge.createdAt, r.edgeType = $type, " +
-                    "r.weight = edge.weight, r.description = edge.description",
-                    COMMON_LABEL, COMMON_LABEL, type);
+                    "r.weight = edge.weight, r.description = edge.description";
 
             neo4jClient.query(cypher)
                     .bindAll(Map.of("edges", edgeParams, "type", type))
@@ -118,16 +170,27 @@ public class GraphNodeRepository {
 
     /**
      * 按 documentId 查询该文档关联的所有节点。
-     *
-     * <p>使用 {@code :GraphNode} 标签 + documentId 属性索引，走 INDEX SEEK 而非 AllNodesScan。</p>
+     * 使用 Neo4jClient 直接查询，绕过 SDN 的抽象类映射限制。
      */
     public List<GraphNode> findByDocumentId(String documentId) {
         try {
-            return new ArrayList<>(neo4jTemplate.findAll(
-                    "MATCH (n:" + COMMON_LABEL + " {documentId: $docId}) RETURN n",
-                    Map.of("docId", documentId),
-                    GraphNode.class
-            ));
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (n {documentId: $docId}) RETURN n ORDER BY n.nodeType"
+            ).bindAll(Map.of("docId", documentId)).fetch().all();
+
+            List<GraphNode> nodes = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                org.neo4j.driver.types.Node n = (org.neo4j.driver.types.Node) row.get("n");
+                SimpleGraphNode node = new SimpleGraphNode();
+                node.setId(n.get("id").asString());
+                node.setNodeType(n.get("nodeType").asString());
+                node.setDocumentId(n.get("documentId").asString());
+                try { node.setCreatedAt(java.time.LocalDateTime.parse(n.get("createdAt").asString())); }
+                catch (Exception e) { node.setCreatedAt(null); }
+                node.setProperties(new HashMap<>());
+                nodes.add(node);
+            }
+            return nodes;
         } catch (Exception e) {
             log.warn("按 documentId={} 查询节点失败: {}", documentId, e.getMessage());
             return Collections.emptyList();
@@ -140,7 +203,7 @@ public class GraphNodeRepository {
     public List<GraphEdge> findEdgesByDocumentId(String documentId) {
         try {
             Collection<Map<String, Object>> result = neo4jClient.query(
-                    "MATCH (a:" + COMMON_LABEL + ")-[r]->(b:" + COMMON_LABEL + ") " +
+                    "MATCH " + node("a", "") + "-[r]->" + node("b", "") + " " +
                     "WHERE a.documentId = $docId OR b.documentId = $docId " +
                     "RETURN a.id AS sourceNodeId, b.id AS targetNodeId, type(r) AS edgeType"
             ).bindAll(Map.of("docId", documentId)).fetch().all();
@@ -163,7 +226,7 @@ public class GraphNodeRepository {
      */
     public void deleteByDocumentId(String documentId) {
         neo4jClient.query(
-                "MATCH (n:" + COMMON_LABEL + " {documentId: $docId}) DETACH DELETE n"
+                "MATCH " + node("n", "{documentId: $docId}") + " DETACH DELETE n"
         ).bindAll(Map.of("docId", documentId)).run();
         log.debug("已删除 documentId={} 的所有节点和边", documentId);
     }
@@ -173,6 +236,13 @@ public class GraphNodeRepository {
      */
     private static class SimpleGraphEdge extends GraphEdge {
         SimpleGraphEdge() {
+            super("");
+        }
+    }
+
+    /** 内部类，用于查询结果的 GraphNode 实例。 */
+    private static class SimpleGraphNode extends GraphNode {
+        SimpleGraphNode() {
             super("");
         }
     }

@@ -29,9 +29,18 @@ public class Neo4jIndexConfig {
         // documentId 查找索引 — 所有 :GraphNode 节点共享
         try {
             neo4jClient.query(
-                    "CREATE INDEX graphnode_documentId IF NOT EXISTS FOR (n:GraphNode) ON (n.documentId)"
+                    "CREATE INDEX doc_document_id IF NOT EXISTS FOR (n:Document) ON (n.documentId)"
             ).run();
-            log.info("索引 graphnode_documentId 就绪");
+            neo4jClient.query(
+                    "CREATE INDEX entity_document_id IF NOT EXISTS FOR (n:Entity) ON (n.documentId)"
+            ).run();
+            neo4jClient.query(
+                    "CREATE INDEX kp_document_id IF NOT EXISTS FOR (n:KnowledgePoint) ON (n.documentId)"
+            ).run();
+            neo4jClient.query(
+                    "CREATE INDEX kpcat_document_id IF NOT EXISTS FOR (n:KnowledgeCategory) ON (n.documentId)"
+            ).run();
+            log.info("各节点类型 documentId 索引就绪");
         } catch (Exception e) {
             log.warn("创建索引 graphnode_documentId 失败（可能已存在）: {}", e.getMessage());
         }
@@ -39,9 +48,18 @@ public class Neo4jIndexConfig {
         // 节点 ID 查找索引
         try {
             neo4jClient.query(
-                    "CREATE INDEX graphnode_id IF NOT EXISTS FOR (n:GraphNode) ON (n.id)"
+                    "CREATE INDEX graphnode_id IF NOT EXISTS FOR (n:Document) ON (n.id)"
             ).run();
-            log.info("索引 graphnode_id 就绪");
+            neo4jClient.query(
+                    "CREATE INDEX entity_id IF NOT EXISTS FOR (n:Entity) ON (n.id)"
+            ).run();
+            neo4jClient.query(
+                    "CREATE INDEX kp_id IF NOT EXISTS FOR (n:KnowledgePoint) ON (n.id)"
+            ).run();
+            neo4jClient.query(
+                    "CREATE INDEX kpcat_id IF NOT EXISTS FOR (n:KnowledgeCategory) ON (n.id)"
+            ).run();
+            log.info("各节点类型 id 索引就绪");
         } catch (Exception e) {
             log.warn("创建索引 graphnode_id 失败（可能已存在）: {}", e.getMessage());
         }

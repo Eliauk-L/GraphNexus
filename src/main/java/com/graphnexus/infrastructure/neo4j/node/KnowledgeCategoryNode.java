@@ -15,7 +15,7 @@ import org.springframework.data.neo4j.core.schema.Node;
  * @date 2026/06/13
  */
 @Data
-@Node(primaryLabel = "KnowledgeCategory", labels = {"GraphNode"})
+@Node("KnowledgeCategory")
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class KnowledgeCategoryNode extends GraphNode {

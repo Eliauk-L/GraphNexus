@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ public abstract class GraphNode {
      * Neo4j 内部 ID（UUID 生成，不作为业务主键）。
      */
     @Id
+    @GeneratedValue
     private String id;
 
     /**
