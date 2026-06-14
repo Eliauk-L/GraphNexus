@@ -5,7 +5,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 /**
- * REFERENCES 边 — EntityNode → EntityNode，表示引用关系（A 引用/使用了 B）。
+ * CONTAINS 边 — EntityNode → EntityNode，表示包含关系（A 概念包含 B 子概念）。
  *
  * @author Jay
  * @date 2026/06/13
@@ -13,10 +13,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class ReferencesEdge extends GraphEdge {
+public class ContainsEdge extends GraphEdge {
 
-    public ReferencesEdge(String sourceNodeId, String targetNodeId, String description) {
-        super(EdgeType.REFERENCES.getRelationshipType());
+    public ContainsEdge(String sourceNodeId, String targetNodeId, String description) {
+        super(EdgeType.CONTAINS.getRelationshipType());
         this.setSourceNodeId(sourceNodeId);
         this.setTargetNodeId(targetNodeId);
         this.setDescription(description);

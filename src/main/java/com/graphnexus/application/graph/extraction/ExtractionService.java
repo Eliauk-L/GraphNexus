@@ -194,11 +194,14 @@ public class ExtractionService {
             for (ExtractionRawResult.RawEntityRelation rer : raw.getEntityRelations()) {
                 if (rer.getSourceEntityIndex() < entityIds.size()
                         && rer.getTargetEntityIndex() < entityIds.size()) {
-                    edges.add(new ReferencesEdge(
-                            entityIds.get(rer.getSourceEntityIndex()),
-                            entityIds.get(rer.getTargetEntityIndex()),
-                            rer.getType(),
-                            rer.getDescription()));
+                    String srcId = entityIds.get(rer.getSourceEntityIndex());
+                    String tgtId = entityIds.get(rer.getTargetEntityIndex());
+                    String desc = rer.getDescription();
+                    switch (rer.getType()) {
+                        case "DERIVES" -> edges.add(new DerivesEdge(srcId, tgtId, desc));
+                        case "CONTAINS" -> edges.add(new ContainsEdge(srcId, tgtId, desc));
+                        default -> edges.add(new ReferencesEdge(srcId, tgtId, desc));
+                    }
                 }
             }
         }
