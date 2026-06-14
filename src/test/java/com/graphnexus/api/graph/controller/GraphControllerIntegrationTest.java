@@ -15,8 +15,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -171,13 +169,14 @@ class GraphControllerIntegrationTest {
     @Order(4)
     @DisplayName("AC-7: 不存在文档拒绝 → HTTP 404")
     void testExtractGraph_InvalidDocument_Rejected() {
-        ResponseEntity<Map> notFound = restTemplate.exchange(
+        ResponseEntity<String> notFound = restTemplate.exchange(
                 baseUrl() + "/extract/" + NONEXISTENT_DOC_ID,
                 org.springframework.http.HttpMethod.POST,
                 null,
-                new ParameterizedTypeReference<Map>() {});
+                new ParameterizedTypeReference<String>() {});
 
+        System.out.println("=== DEBUG: " + notFound.getStatusCode() + " ===");
+        System.out.println("Body: " + notFound.getBody());
         assertEquals(HttpStatus.NOT_FOUND, notFound.getStatusCode());
-        System.out.println("✅ 不存在文档被拒绝: " + notFound.getStatusCode());
     }
 }

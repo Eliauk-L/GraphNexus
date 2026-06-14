@@ -37,7 +37,7 @@ public class GraphServiceImpl implements GraphService {
     private final GraphNodeRepository graphNodeRepository;
 
     @Override
-    @Transactional("neo4jTransactionManager")
+    @Transactional
     public ExtractionResultBO extract(Long documentId) {
         // 1. 查询文档
         DocumentDO doc = documentRepository.findByIdAndIsDeletedFalse(documentId)
@@ -98,7 +98,7 @@ public class GraphServiceImpl implements GraphService {
     }
 
     @Override
-    @Transactional(value = "neo4jTransactionManager", readOnly = true)
+    @Transactional(readOnly = true)
     public GraphSubgraphBO getSubgraph(Long documentId) {
         String neo4jDocumentId = String.valueOf(documentId);
         List<GraphNode> nodes = graphNodeRepository.findByDocumentId(neo4jDocumentId);
