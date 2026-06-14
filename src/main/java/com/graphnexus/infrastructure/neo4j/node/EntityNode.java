@@ -17,7 +17,7 @@ import java.util.Map;
  * @date 2026/06/13
  */
 @Data
-@Node("Entity")
+@Node(primaryLabel = "Entity", labels = {"GraphNode"})
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class EntityNode extends GraphNode {

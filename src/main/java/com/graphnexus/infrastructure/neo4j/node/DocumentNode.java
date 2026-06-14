@@ -15,7 +15,7 @@ import org.springframework.data.neo4j.core.schema.Node;
  * @date 2026/06/13
  */
 @Data
-@Node("Document")
+@Node(primaryLabel = "Document", labels = {"GraphNode"})
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class DocumentNode extends GraphNode {

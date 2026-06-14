@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("GraphNode 抽象层可扩展性测试")
 class GraphNodeAbstractionTest {
 
-    @Node("TestLabel")
+    @Node(primaryLabel = "TestLabel", labels = {"GraphNode"})
     static class TestNode extends GraphNode {
         private String testField;
 
