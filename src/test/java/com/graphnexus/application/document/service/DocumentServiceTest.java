@@ -77,8 +77,8 @@ class DocumentServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.pdf", "application/pdf", "pdf-content".getBytes()
         );
-        when(documentRepository.existsByDocumentNoAndSubjectAndIsDeletedFalse(anyString(), eq("MATH")))
-                .thenReturn(false);
+        when(documentRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(anyString(), eq("MATH")))
+                .thenReturn(Optional.empty());
         when(documentRepository.save(any(DocumentDO.class)))
                 .thenReturn(sampleDoc);
         doNothing().when(fileStorageService).uploadFile(any(InputStream.class), anyString(), anyString());
@@ -124,8 +124,8 @@ class DocumentServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.pdf", "application/pdf", "content".getBytes()
         );
-        when(documentRepository.existsByDocumentNoAndSubjectAndIsDeletedFalse(anyString(), eq("MATH")))
-                .thenReturn(true);
+        when(documentRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(anyString(), eq("MATH")))
+                .thenReturn(Optional.of(1L));
 
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> documentService.upload(file, "MATH"));
