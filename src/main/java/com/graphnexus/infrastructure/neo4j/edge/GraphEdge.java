@@ -46,16 +46,23 @@ public abstract class GraphEdge {
     private LocalDateTime createdAt;
 
     /**
+     * 关系权重（0~1，默认 1.0）— 为后续事件边（如 MasteryEdge）预留。
+     * 可用于表示掌握度、置信度、相关性等强度指标。
+     */
+    private Double weight;
+
+    /**
      * 扩展属性容器。
      */
     private Map<String, Object> properties;
 
     /**
-     * 子类构造时调用此方法设创建时间。
+     * 子类构造时调用此方法设创建时间和默认权重。
      */
     protected GraphEdge(String edgeType) {
         this.edgeType = edgeType;
         this.createdAt = LocalDateTime.now();
+        this.weight = 1.0;
         this.properties = new HashMap<>();
     }
 }

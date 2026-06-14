@@ -57,7 +57,7 @@ public class GraphNodeRepository {
     public void saveEdge(GraphEdge edge) {
         String cypher = String.format(
                 "MATCH (a {id: $sourceId}), (b {id: $targetId}) " +
-                "CREATE (a)-[r:%s]->(b) SET r.createdAt = $createdAt, r.edgeType = $edgeType",
+                "CREATE (a)-[r:%s]->(b) SET r.createdAt = $createdAt, r.edgeType = $edgeType, r.weight = $weight",
                 edge.getEdgeType());
 
         neo4jClient.query(cypher)
@@ -65,7 +65,8 @@ public class GraphNodeRepository {
                         "sourceId", edge.getSourceNodeId(),
                         "targetId", edge.getTargetNodeId(),
                         "createdAt", edge.getCreatedAt().toString(),
-                        "edgeType", edge.getEdgeType()
+                        "edgeType", edge.getEdgeType(),
+                        "weight", edge.getWeight()
                 ))
                 .run();
     }
