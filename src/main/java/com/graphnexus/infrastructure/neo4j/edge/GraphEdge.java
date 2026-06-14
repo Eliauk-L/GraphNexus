@@ -52,6 +52,11 @@ public abstract class GraphEdge {
     private Double weight;
 
     /**
+     * 关系描述 — 说明此边存在的原因或含义，便于后续扩展（如事件边、推理边）。
+     */
+    private String description;
+
+    /**
      * 扩展属性容器。
      */
     private Map<String, Object> properties;

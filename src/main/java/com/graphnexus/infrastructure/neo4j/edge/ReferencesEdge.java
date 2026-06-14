@@ -24,14 +24,11 @@ public class ReferencesEdge extends GraphEdge {
      */
     private String referenceType;
 
-    /** 关系说明（如"一般式通过配方可推导出对称轴公式"） */
-    private String description;
-
     public ReferencesEdge(String sourceNodeId, String targetNodeId, String referenceType, String description) {
         super(referenceType);
         this.setSourceNodeId(sourceNodeId);
         this.setTargetNodeId(targetNodeId);
         this.referenceType = referenceType;
-        this.description = description;
+        this.setDescription(description);
     }
 }

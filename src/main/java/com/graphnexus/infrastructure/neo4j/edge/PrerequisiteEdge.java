@@ -21,14 +21,12 @@ public class PrerequisiteEdge extends GraphEdge {
     /** 依赖强度（0~1），越高表示越强依赖 */
     private Double strength;
 
-    /** 为什么 B 依赖 A 的说明 */
-    private String description;
-
     public PrerequisiteEdge(String sourceNodeId, String targetNodeId, Double strength, String description) {
         super(EdgeType.PREREQUISITE_OF.getRelationshipType());
         this.setSourceNodeId(sourceNodeId);
         this.setTargetNodeId(targetNodeId);
         this.strength = strength;
-        this.description = description;
+        this.setDescription(description);
+        this.setWeight(strength);
     }
 }
