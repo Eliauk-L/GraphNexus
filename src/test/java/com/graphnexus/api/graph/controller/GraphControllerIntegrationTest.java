@@ -48,14 +48,9 @@ class GraphControllerIntegrationTest {
 
     @DynamicPropertySource
     static void registerPgProperties(DynamicPropertyRegistry registry) {
-        String apiKey = System.getenv("DEEPSEEK_API_KEY");
-        if (apiKey != null && !apiKey.isBlank()) {
-            registry.add("spring.ai.openai.api-key", () -> apiKey);
-            registry.add("spring.ai.openai.base-url", () -> "https://api.deepseek.com");
-            registry.add("spring.ai.openai.chat.options.model", () -> "deepseek-v4-flash");
-        } else {
-            System.err.println("WARNING: DEEPSEEK_API_KEY 环境变量未设置，集成测试可能因 ChatModel bean 缺失而失败");
-        }
+        registry.add("spring.ai.openai.api-key", () -> "ollama");
+        registry.add("spring.ai.openai.base-url", () -> "http://localhost:11434/v1");
+        registry.add("spring.ai.openai.chat.options.model", () -> "deepseek-r1:7b");
     }
 
     private String baseUrl() {
