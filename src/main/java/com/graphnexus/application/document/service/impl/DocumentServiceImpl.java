@@ -203,19 +203,35 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public void deleteDocument(Long id) {
-        DocumentDO doc = documentRepository.findByIdAndIsDeletedFalse(id)
+        // 幂等：允许 DELETING 状态的文档重复删除，从中断点继续
+        DocumentDO doc = documentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
 
-        // ① 进入 DELETING 中间状态，标记删除意图并持久化
-        doc.setStatus(DocumentStatus.DELETING);
-        documentRepository.saveAndFlush(doc);
-        log.info("文档进入 DELETING 状态: id={}", id);
+        // 已逻辑删除 → 幂等返回
+        if (doc.getIsDeleted() == 1) {
+            log.info("文档已删除（幂等跳过）: id={}", id);
+            return;
+        }
 
-        // ② MinIO 物理删除
-        fileStorageService.deleteFile(doc.getMinioPath());
+        // ① 进入/保持 DELETING 状态，标记删除意图
+        if (doc.getStatus() != DocumentStatus.DELETING) {
+            doc.setStatus(DocumentStatus.DELETING);
+            documentRepository.saveAndFlush(doc);
+            log.info("文档进入 DELETING 状态: id={}", id);
+        } else {
+            log.info("文档已在 DELETING 状态，从中断点继续: id={}", id);
+        }
 
-        // ③ Neo4j 图谱删除
+        // ② MinIO 物理删除（幂等：文件不存在时跳过）
+        try {
+            fileStorageService.deleteFile(doc.getMinioPath());
+        } catch (Exception e) {
+            log.warn("MinIO 文件删除失败（可能已被删除，忽略继续）: path={}, error={}",
+                    doc.getMinioPath(), e.getMessage());
+        }
+
+        // ③ Neo4j 图谱删除（幂等：无极节点时无影响）
         graphNodeRepository.deleteByDocumentId(String.valueOf(id));
 
         // ④ 全部组件清理完成，逻辑删除
