@@ -74,14 +74,15 @@ spring:
 
   # ---------------------------------------------------------------------------
   # DeepSeek API（Spring AI OpenAI starter，兼容 OpenAI 协议）
+  # API Key 通过 .env 文件注入：source .env && mvn spring-boot:run
   # ---------------------------------------------------------------------------
   ai:
     openai:
-      base-url: https://api.deepseek.com
+      base-url: https://token.cvte.com
       api-key: ${DEEPSEEK_API_KEY:}
       chat:
         options:
-          model: deepseek-chat
+          model: deepseek-v4-flash
           temperature: 0.3
           max-tokens: 4096
 
