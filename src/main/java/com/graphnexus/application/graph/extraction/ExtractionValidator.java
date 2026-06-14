@@ -2,11 +2,14 @@ package com.graphnexus.application.graph.extraction;
 
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
+import com.graphnexus.infrastructure.neo4j.node.EntityType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.Arrays;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * LLM 抽取结果校验器 — 对 {@link ExtractionRawResult} 执行结构和语义校验。
@@ -22,7 +25,7 @@ import java.util.Set;
 public class ExtractionValidator {
 
     private static final Set<String> VALID_ENTITY_TYPES =
-            Set.of("DEFINITION", "FORMULA", "CONCEPT", "EXAMPLE", "SOLUTION");
+            Arrays.stream(EntityType.values()).map(EntityType::getValue).collect(Collectors.toSet());
 
     private static final Set<String> VALID_RELATION_TYPES =
             Set.of("DERIVES", "CONTAINS", "REFERENCES");
