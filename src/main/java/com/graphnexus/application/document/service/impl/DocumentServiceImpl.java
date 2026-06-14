@@ -10,6 +10,7 @@ import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.document.DocumentDO;
 import com.graphnexus.infrastructure.mysql.document.DocumentRepository;
 import com.graphnexus.infrastructure.mysql.document.DocumentStatus;
+import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final DocumentRepository documentRepository;
     private final FileStorageService fileStorageService;
     private final DocumentParser documentParser;
+    private final GraphNodeRepository graphNodeRepository;
 
     // ======================== 上传 ========================
 
@@ -211,6 +213,9 @@ public class DocumentServiceImpl implements DocumentService {
 
         // MinIO 物理删除
         fileStorageService.deleteFile(doc.getMinioPath());
+
+        // Neo4j 图谱删除
+        graphNodeRepository.deleteByDocumentId(String.valueOf(id));
 
         log.info("文档已删除: id={}, minioPath={}", doc.getId(), doc.getMinioPath());
     }
