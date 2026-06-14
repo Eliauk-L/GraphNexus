@@ -6,9 +6,13 @@ import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
+
+import java.time.Duration;
 
 /**
- * LLM 手动配置 — 绕开 Spring AI 自动配置的 api-key 注入问题。
+ * LLM 手动配置 — Ollama 本地部署，使用 OpenAI 兼容端点 /v1/chat/completions。
  *
  * @author Jay
  * @date 2026/06/14
@@ -16,24 +20,36 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LlmConfig {
 
-    @Value("${spring.ai.openai.api-key}")
-    private String apiKey;
-
-    @Value("${spring.ai.openai.base-url}")
+    @Value("${spring.ai.ollama.base-url}")
     private String baseUrl;
 
-    @Value("${spring.ai.openai.chat.options.model}")
+    @Value("${spring.ai.ollama.chat.options.model}")
     private String model;
 
-    @Value("${spring.ai.openai.chat.options.temperature:0.3}")
+    @Value("${spring.ai.ollama.chat.options.temperature:0.3}")
     private Double temperature;
 
-    @Value("${spring.ai.openai.chat.options.max-tokens:4096}")
+    @Value("${spring.ai.ollama.chat.options.max-tokens:4096}")
     private Integer maxTokens;
 
     @Bean
     public OpenAiChatModel chatModel() {
-        OpenAiApi openAiApi = new OpenAiApi(baseUrl, apiKey);
+        // 加大超时：Ollama 首次推理需加载模型到内存，大模型可能耗时 30-120s
+        var requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(10));
+        requestFactory.setReadTimeout(Duration.ofMinutes(10));
+
+        var restClientBuilder = RestClient.builder()
+                .requestFactory(requestFactory);
+
+        OpenAiApi openAiApi = new OpenAiApi(
+                baseUrl, "ollama",
+                "/v1/chat/completions", "/v1/embeddings",
+                restClientBuilder,
+                org.springframework.web.reactive.function.client.WebClient.builder(),
+                org.springframework.ai.retry.RetryUtils.DEFAULT_RESPONSE_ERROR_HANDLER
+        );
+
         OpenAiChatOptions options = OpenAiChatOptions.builder()
                 .withModel(model)
                 .withTemperature(temperature)
