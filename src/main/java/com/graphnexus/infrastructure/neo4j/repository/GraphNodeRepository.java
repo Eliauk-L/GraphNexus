@@ -73,15 +73,47 @@ public class GraphNodeRepository {
     }
 
     /**
-     * 批量保存边。
+     * 批量保存边 — 按 edgeType 分组，每组一条 UNWIND Cypher 避免 N+1。
      */
     public void saveAllEdges(List<? extends GraphEdge> edges) {
         if (edges == null || edges.isEmpty()) {
             return;
         }
-        for (GraphEdge edge : edges) {
-            saveEdge(edge);
+
+        // 按 edgeType 分组
+        Map<String, List<GraphEdge>> byType = edges.stream()
+                .collect(Collectors.groupingBy(GraphEdge::getEdgeType));
+
+        for (var entry : byType.entrySet()) {
+            String type = entry.getKey();
+            List<GraphEdge> group = entry.getValue();
+
+            // 构建每条边的参数 Map
+            List<Map<String, Object>> edgeParams = group.stream()
+                    .map(e -> {
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("sourceId", e.getSourceNodeId());
+                        m.put("targetId", e.getTargetNodeId());
+                        m.put("createdAt", e.getCreatedAt());
+                        m.put("weight", e.getWeight());
+                        m.put("description", e.getDescription() != null ? e.getDescription() : "");
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+
+            String cypher = String.format(
+                    "UNWIND $edges AS edge " +
+                    "MATCH (a:%s {id: edge.sourceId}), (b:%s {id: edge.targetId}) " +
+                    "CREATE (a)-[r:%s]->(b) " +
+                    "SET r.createdAt = edge.createdAt, r.edgeType = $type, " +
+                    "r.weight = edge.weight, r.description = edge.description",
+                    COMMON_LABEL, COMMON_LABEL, type);
+
+            neo4jClient.query(cypher)
+                    .bindAll(Map.of("edges", edgeParams, "type", type))
+                    .run();
         }
+        log.debug("批量保存 {} 条边完成，共 {} 种类型", edges.size(), byType.size());
     }
 
     /**
