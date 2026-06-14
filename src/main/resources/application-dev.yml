@@ -73,6 +73,19 @@ spring:
     virtual-host: graphnexus
 
   # ---------------------------------------------------------------------------
+  # DeepSeek API（Spring AI OpenAI starter，兼容 OpenAI 协议）
+  # ---------------------------------------------------------------------------
+  ai:
+    openai:
+      base-url: https://api.deepseek.com
+      api-key: ${DEEPSEEK_API_KEY:}
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.3
+          max-tokens: 4096
+
+  # ---------------------------------------------------------------------------
   # MinIO 对象存储
   # ---------------------------------------------------------------------------
   # MinIO 无 Spring Boot 自动配置，使用 MinioClient 手动管理

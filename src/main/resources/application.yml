@@ -20,11 +20,7 @@ spring:
   # =========================================================================
   autoconfigure:
     exclude:
-      # Neo4j
-      - org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jDataAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jRepositoriesAutoConfiguration
-      # MySQL / JPA / Hibernate — 已激活（document-process-pdf-minimal）
+      # Neo4j — 已激活（knowledge-graph-extraction）
       # Redis
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
@@ -35,7 +31,6 @@ spring:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
       - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
       # 基础设施健康检查（已在 management.health 中逐一禁用，此处 double check）
-      - org.springframework.boot.actuate.autoconfigure.neo4j.Neo4jHealthContributorAutoConfiguration
       - org.springframework.boot.actuate.autoconfigure.redis.RedisHealthContributorAutoConfiguration
 
 # Actuator
@@ -52,7 +47,7 @@ management:
         enabled: true
   health:
     neo4j:
-      enabled: false
+      enabled: true
     db:
       enabled: false
     redis:
