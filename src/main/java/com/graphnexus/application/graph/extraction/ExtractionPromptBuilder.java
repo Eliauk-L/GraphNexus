@@ -68,7 +68,9 @@ public class ExtractionPromptBuilder {
                     {"name":"二次函数一般式","description":"y=ax²+bx+c 形式","subject":"数学","gradeLevel":"初中"},
                     {"name":"二次函数顶点式","description":"y=a(x-h)²+k 形式","subject":"数学","gradeLevel":"初中"},
                     {"name":"对称轴","description":"二次函数图像的对称轴 x=-b/(2a)","subject":"数学","gradeLevel":"初中"},
-                    {"name":"顶点坐标","description":"二次函数图像的顶点 (-b/(2a),(4ac-b²)/(4a))","subject":"数学","gradeLevel":"初中"}
+                    {"name":"顶点坐标","description":"二次函数图像的顶点 (-b/(2a),(4ac-b²)/(4a))","subject":"数学","gradeLevel":"初中"},
+                    {"name":"二次函数综合应用","description":"利用二次函数性质求解顶点和对称轴的典型题型","subject":"数学","gradeLevel":"初中"},
+                    {"name":"配方法","description":"通过配方将一般式化为顶点式的代数方法","subject":"数学","gradeLevel":"初中"}
                   ],
                   "categories": [
                     {"name":"初中数学","parentName":null,"level":1},
@@ -81,15 +83,21 @@ public class ExtractionPromptBuilder {
                     {"entityIndex":1,"knowledgePointIndex":1},
                     {"entityIndex":2,"knowledgePointIndex":2},
                     {"entityIndex":3,"knowledgePointIndex":3},
-                    {"entityIndex":4,"knowledgePointIndex":4}
+                    {"entityIndex":4,"knowledgePointIndex":4},
+                    {"entityIndex":5,"knowledgePointIndex":5},
+                    {"entityIndex":6,"knowledgePointIndex":6}
                   ],
                   "entityRelations": [
                     {"sourceEntityIndex":0,"targetEntityIndex":1,"type":"DERIVES","description":"定义推导出一般式表达式"},
-                    {"sourceEntityIndex":1,"targetEntityIndex":3,"type":"DERIVES","description":"一般式可通过配方法推导出对称轴公式"}
+                    {"sourceEntityIndex":1,"targetEntityIndex":6,"type":"DERIVES","description":"一般式可通过配方法化为顶点式"},
+                    {"sourceEntityIndex":3,"targetEntityIndex":4,"type":"CONTAINS","description":"对称轴概念包含顶点坐标的 x 分量推导"},
+                    {"sourceEntityIndex":5,"targetEntityIndex":6,"type":"REFERENCES","description":"例题解答引用了配方法"}
                   ],
                   "prerequisites": [
                     {"sourceKnowledgePointIndex":0,"targetKnowledgePointIndex":1,"strength":0.95,"description":"理解定义才能掌握一般式"},
-                    {"sourceKnowledgePointIndex":1,"targetKnowledgePointIndex":3,"strength":0.9,"description":"一般式是推导对称轴公式的基础"}
+                    {"sourceKnowledgePointIndex":1,"targetKnowledgePointIndex":3,"strength":0.9,"description":"一般式是推导对称轴公式的基础"},
+                    {"sourceKnowledgePointIndex":3,"targetKnowledgePointIndex":4,"strength":0.95,"description":"对称轴是顶点坐标的前置知识"},
+                    {"sourceKnowledgePointIndex":6,"targetKnowledgePointIndex":5,"strength":0.85,"description":"配方法是求解综合应用题的常用工具"}
                   ],
                   "categoryRelations": [
                     {"childCategoryIndex":1,"parentCategoryIndex":0},
