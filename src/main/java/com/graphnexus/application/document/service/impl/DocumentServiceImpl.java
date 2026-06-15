@@ -2,6 +2,7 @@ package com.graphnexus.application.document.service.impl;
 
 import com.graphnexus.application.document.model.DocumentBO;
 import com.graphnexus.application.document.model.DeleteResultBO;
+import com.graphnexus.application.document.model.GradeRecordBO;
 import com.graphnexus.application.document.model.GradeUploadResultBO;
 import com.graphnexus.application.document.model.ParseResult;
 import com.graphnexus.application.document.model.UpdateDocumentBO;
@@ -27,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -254,6 +256,11 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public DeleteResultBO deleteGradeByExamNo(String examNo) {
         return gradeService.deleteByExamNo(examNo);
+    }
+
+    @Override
+    public List<GradeRecordBO> queryGradeByExam(String examNo) {
+        return gradeService.queryByExam(examNo);
     }
 
     // ======================== 工具方法 ========================

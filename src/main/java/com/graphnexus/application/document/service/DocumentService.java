@@ -82,4 +82,12 @@ public interface DocumentService {
      * @return 删除结果
      */
     DeleteResultBO deleteGradeByExamNo(String examNo);
+
+    /**
+     * 按考试编号查询成绩列表（委托 GradeService）。
+     *
+     * @param examNo 考试编号
+     * @return 成绩记录列表
+     */
+    java.util.List<com.graphnexus.application.document.model.GradeRecordBO> queryGradeByExam(String examNo);
 }

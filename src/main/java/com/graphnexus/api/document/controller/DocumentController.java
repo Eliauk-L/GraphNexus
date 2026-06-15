@@ -1,9 +1,14 @@
 package com.graphnexus.api.document.controller;
 
+import com.graphnexus.api.document.dto.DeleteResultVO;
 import com.graphnexus.api.document.dto.DocumentVO;
+import com.graphnexus.api.document.dto.GradeUploadResultVO;
 import com.graphnexus.api.document.dto.ParseResultVO;
 import com.graphnexus.api.document.dto.UpdateDocumentRequest;
+import com.graphnexus.application.document.model.DeleteResultBO;
 import com.graphnexus.application.document.model.DocumentBO;
+import com.graphnexus.application.document.model.GradeUploadResultBO;
+import com.graphnexus.application.document.parser.FileParserRegistry;
 import com.graphnexus.application.document.service.DocumentService;
 import com.graphnexus.application.document.model.ParseResult;
 import com.graphnexus.application.document.model.UpdateDocumentBO;
@@ -14,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * 文档处理 REST API 控制器。
@@ -37,15 +44,25 @@ import org.springframework.web.multipart.MultipartFile;
 public class DocumentController {
 
     private final DocumentService documentService;
+    private final FileParserRegistry fileParserRegistry;
 
     /**
-     * 上传 PDF 文件。
+     * 上传文件（PDF / CSV 统一入口，D12 策略+工厂路由）。
      */
     @PostMapping("/upload")
-    public ApiResponse<DocumentVO> upload(
+    public ApiResponse<?> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam("subject") String subject
     ) {
+        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "";
+        var parser = fileParserRegistry.getParser(filename);
+
+        if (parser.isPresent() && parser.get().supportedType().name().equals("CSV_GRADE")) {
+            GradeUploadResultBO bo = documentService.uploadGradeCsv(file, subject);
+            return ApiResponse.success(GradeUploadResultVO.from(bo));
+        }
+
+        // 默认走 PDF 链路
         DocumentBO bo = documentService.upload(file, subject);
         return ApiResponse.success(DocumentVO.from(bo));
     }
@@ -101,5 +118,37 @@ public class DocumentController {
     public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         documentService.deleteDocument(id);
         return ApiResponse.success(null);
+    }
+
+    // ======================== 成绩端点 ========================
+
+    /**
+     * 按考试编号查询成绩列表（AC-4）。
+     */
+    @GetMapping("/grade/exam/{examNo}")
+    public ApiResponse<List<GradeUploadResultVO>> queryGrade(
+            @PathVariable("examNo") String examNo
+    ) {
+        var records = documentService.queryGradeByExam(examNo);
+        // Map GradeRecordBO to a simple response; full VO mapping in future task
+        List<GradeUploadResultVO> result = records.stream().map(r ->
+                GradeUploadResultVO.builder()
+                        .examNo(r.getExamNo())
+                        .examName(r.getExamName())
+                        .subject(r.getSubject())
+                        .build()
+        ).toList();
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 按考试编号级联删除成绩（AC-7）。
+     */
+    @DeleteMapping("/grade/exam/{examNo}")
+    public ApiResponse<DeleteResultVO> deleteGrade(
+            @PathVariable("examNo") String examNo
+    ) {
+        DeleteResultBO bo = documentService.deleteGradeByExamNo(examNo);
+        return ApiResponse.success(DeleteResultVO.from(bo));
     }
 }
