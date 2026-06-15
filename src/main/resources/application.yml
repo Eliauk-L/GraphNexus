@@ -32,6 +32,9 @@ spring:
       - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
       # 基础设施健康检查（已在 management.health 中逐一禁用，此处 double check）
       - org.springframework.boot.actuate.autoconfigure.redis.RedisHealthContributorAutoConfiguration
+  jackson:
+    deserialization:
+          fail-on-unknown-properties: false
 
 # Actuator
 management:
@@ -65,8 +68,3 @@ logging:
     org.springframework.web: INFO
     org.springframework.data.neo4j: WARN
     org.springframework.data.redis: WARN
-
-spring:
-  jackson:
-    deserialization:
-      fail-on-unknown-properties: false

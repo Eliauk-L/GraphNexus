@@ -41,24 +41,15 @@ class GraphControllerIntegrationTest {
     private TestRestTemplate restTemplate;
 
     /** 指向一条已 COMPLETED 的文档 ID（通过 podman exec mysql 插入的测试数据） */
-    private static final Long VALID_DOC_ID = 3L;
+    private static final Long VALID_DOC_ID = 5L;
 
     /** 指向一条不存在的文档 ID */
     private static final Long NONEXISTENT_DOC_ID = 99999L;
 
     @DynamicPropertySource
     static void registerPgProperties(DynamicPropertyRegistry registry) {
-        // DeepSeek 主模型
-        String apiKey = System.getenv("DEEPSEEK_API_KEY");
-        if (apiKey != null && !apiKey.isBlank()) {
-            registry.add("spring.ai.openai.api-key", () -> apiKey);
-        } else {
-            registry.add("spring.ai.openai.api-key", () -> "ollama");
-        }
         registry.add("spring.ai.openai.base-url", () -> "https://api.deepseek.com");
         registry.add("spring.ai.openai.chat.options.model", () -> "deepseek-v4-flash");
-        // Ollama 兜底
-        registry.add("spring.ai.ollama.base-url", () -> "http://localhost:11434");
     }
 
     private String baseUrl() {
