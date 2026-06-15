@@ -207,6 +207,51 @@ public class GraphNodeRepository {
     }
 
     /**
+     * 按考试编号删除指定类型的边（幂等）。
+     *
+     * <p>ATTENDED 方向：{@code MATCH (:Student)-[r:ATTENDED]->(e:Exam {examNo}) DELETE r}<br>
+     * TESTED 方向：{@code MATCH (e:Exam {examNo})-[r:TESTED]->(:KnowledgePoint) DELETE r}</p>
+     *
+     * <p>见全局删除约束 C2（幂等）+ C4（删除顺序：先边后节点）+ C5（共享节点保留）。</p>
+     *
+     * @param examNo   考试编号
+     * @param edgeType 边类型（ATTENDED / TESTED）
+     * @return 删除的边数（0 表示已无此边，幂等）
+     */
+    public int deleteEdgesByExamNo(String examNo, String edgeType) {
+        String cypher;
+        if ("ATTENDED".equals(edgeType)) {
+            cypher = "MATCH (:Student)-[r:ATTENDED]->(e:Exam {examNo: $examNo}) DELETE r";
+        } else {
+            cypher = "MATCH (e:Exam {examNo: $examNo})-[r:TESTED]->(:KnowledgePoint) DELETE r";
+        }
+        var summary = neo4jClient.query(cypher)
+                .bindAll(Map.of("examNo", examNo))
+                .run();
+        int deletedCount = summary.counters().relationshipsDeleted();
+        log.debug("已删除 {} 边 {} 条（examNo={}）", edgeType, deletedCount, examNo);
+        return deletedCount;
+    }
+
+    /**
+     * 删除 Neo4j 中的 Exam 节点（幂等）。
+     *
+     * <p>使用 DETACH DELETE 兜底清除残留边。若节点不存在则不报错。
+     * Student 和 KnowledgePoint 节点不删除（全局约束 C5）。</p>
+     *
+     * @param examNo 考试编号
+     * @return 删除的节点数（0 表示已无此节点，幂等）
+     */
+    public int deleteExamNode(String examNo) {
+        var summary = neo4jClient.query(
+                "MATCH (e:Exam {examNo: $examNo}) DETACH DELETE e"
+        ).bindAll(Map.of("examNo", examNo)).run();
+        int deletedCount = summary.counters().nodesDeleted();
+        log.debug("已删除 Exam 节点 {} 个（examNo={}）", deletedCount, examNo);
+        return deletedCount;
+    }
+
+    /**
      * 内部类，用于查询结果的 GraphEdge 实例。
      */
     private static class SimpleGraphEdge extends GraphEdge {
