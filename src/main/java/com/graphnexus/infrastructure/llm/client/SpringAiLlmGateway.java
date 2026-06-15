@@ -3,63 +3,66 @@ package com.graphnexus.infrastructure.llm.client;
 import com.graphnexus.application.llmgateway.service.LlmGateway;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 /**
- * LlmGateway 的 Spring AI 实现 — 通过 {@link ChatClient} 调用 DeepSeek API（OpenAI 兼容协议）。
- *
- * <p>读取 {@code spring.ai.openai.*} 配置（base-url/api-key/model），
- * 调用失败时包装为 {@link BusinessException}(ErrorCode.C0001)。</p>
- *
- * <p>设计决策见 ADR-004。接口在 L2，实现在 L3，隔离 Spring AI 具体 API。</p>
+ * LlmGateway 的双模型降级实现 — DeepSeek 云端为主，Ollama 本地兜底。
  *
  * @author Jay
- * @date 2026/06/13
+ * @date 2026/06/14
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class SpringAiLlmGateway implements LlmGateway {
 
-    private final ChatModel chatModel;
+    private final ChatModel primaryModel;
+    private final ChatModel fallbackModel;
 
-    /**
-     * 发送 Prompt 到 LLM 并返回原始文本响应。
-     *
-     * @param systemPrompt 系统提示词
-     * @param userMessage  用户消息
-     * @return LLM 原始文本响应
-     * @throws BusinessException 调用失败时（网络超时/API 错误/空响应）
-     */
+    public SpringAiLlmGateway(
+            @Qualifier("deepseekChatModel") ChatModel primaryModel,
+            @Qualifier("ollamaChatModel") ChatModel fallbackModel) {
+        this.primaryModel = primaryModel;
+        this.fallbackModel = fallbackModel;
+    }
+
     @Override
     public String chat(String systemPrompt, String userMessage) {
-        log.debug("调用 LLM API，systemPrompt 长度={}, userMessage 长度={}",
-                systemPrompt.length(), userMessage.length());
-
+        // 先调 DeepSeek 主模型
         try {
-            String response = ChatClient.builder(chatModel).build()
-                    .prompt()
-                    .system(systemPrompt)
-                    .user(userMessage)
-                    .call()
-                    .content();
-
-            if (response == null || response.isBlank()) {
-                log.error("LLM 返回空响应");
-                throw new BusinessException(ErrorCode.C0001, "LLM 返回空响应");
-            }
-
-            log.debug("LLM 响应长度={}", response.length());
-            return response;
-        } catch (BusinessException e) {
-            throw e;
+            return callModel(primaryModel, "DeepSeek", systemPrompt, userMessage);
         } catch (Exception e) {
-            log.error("LLM 调用失败: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.C0001, "LLM 调用失败: " + e.getMessage());
+            log.warn("DeepSeek 主模型失败，降级到 Ollama 本地: {}", e.getMessage());
         }
+
+        // 兜底调 Ollama 本地
+        try {
+            return callModel(fallbackModel, "Ollama", systemPrompt, userMessage);
+        } catch (Exception e) {
+            log.error("Ollama 兜底也失败了: {}", e.getMessage());
+            throw new BusinessException(ErrorCode.C0001, "LLM 双模型全部调用失败: " + e.getMessage());
+        }
+    }
+
+    private String callModel(ChatModel model, String name, String systemPrompt, String userMessage) {
+        log.debug("调用 {} API，systemPrompt 长度={}, userMessage 长度={}",
+                name, systemPrompt.length(), userMessage.length());
+
+        String response = ChatClient.builder(model).build()
+                .prompt()
+                .system(systemPrompt)
+                .user(userMessage)
+                .call()
+                .content();
+
+        if (response == null || response.isBlank()) {
+            throw new BusinessException(ErrorCode.C0001, name + " 返回空响应");
+        }
+
+        log.debug("{} 响应长度={}", name, response.length());
+        return response;
     }
 }

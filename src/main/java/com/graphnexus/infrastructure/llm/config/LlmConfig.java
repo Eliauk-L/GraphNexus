@@ -62,12 +62,12 @@ public class LlmConfig {
     @Bean
     public OpenAiChatModel ollamaChatModel() {
         // Ollama 首次推理需加载模型到内存，加大超时
-        return buildChatModel(ollamaBaseUrl, "ollama", ollamaModel,
+        return buildChatModel(ollamaBaseUrl, ollamaModel,
                 ollamaTemperature, ollamaMaxTokens, Duration.ofMinutes(10));
     }
 
     private OpenAiChatModel buildChatModel(String baseUrl, String apiKey, String model,
-                                            Double temperature, Integer maxTokens, Duration readTimeout) {
+                                           Double temperature, Integer maxTokens, Duration readTimeout) {
         var requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(10));
         requestFactory.setReadTimeout(readTimeout);
@@ -77,6 +77,30 @@ public class LlmConfig {
 
         OpenAiApi openAiApi = new OpenAiApi(
                 baseUrl, apiKey,
+                restClientBuilder,
+                org.springframework.web.reactive.function.client.WebClient.builder(),
+                org.springframework.ai.retry.RetryUtils.DEFAULT_RESPONSE_ERROR_HANDLER
+        );
+
+        OpenAiChatOptions options = OpenAiChatOptions.builder()
+                .withModel(model)
+                .withTemperature(temperature)
+                .withMaxTokens(maxTokens)
+                .build();
+        return new OpenAiChatModel(openAiApi, options);
+    }
+
+    private OpenAiChatModel buildChatModel(String baseUrl, String model,
+                                            Double temperature, Integer maxTokens, Duration readTimeout) {
+        var requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(10));
+        requestFactory.setReadTimeout(readTimeout);
+
+        var restClientBuilder = RestClient.builder()
+                .requestFactory(requestFactory);
+
+        OpenAiApi openAiApi = new OpenAiApi(
+                baseUrl, "",
                 "/v1/chat/completions", "/v1/embeddings",
                 restClientBuilder,
                 org.springframework.web.reactive.function.client.WebClient.builder(),
