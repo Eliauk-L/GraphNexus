@@ -78,7 +78,7 @@ spring:
   # ---------------------------------------------------------------------------
   ai:
     openai:
-      base-url: https://api.deepseek.com
+      base-url: https://token.cvte.com
       api-key: ${DEEPSEEK_API_KEY:}
       chat:
         options:
