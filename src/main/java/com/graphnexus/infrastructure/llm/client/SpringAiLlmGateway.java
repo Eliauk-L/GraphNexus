@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -27,6 +28,15 @@ public class SpringAiLlmGateway implements LlmGateway {
 
     private final ChatModel primaryModel;
     private final ChatModel fallbackModel;
+
+    @Value("${spring.ai.openai.base-url}")
+    private String deepseekBaseUrl;
+
+    @Value("${spring.ai.openai.chat.options.model}")
+    private String deepseekModel;
+
+    @Value("${spring.ai.openai.api-key}")
+    private String deepseekApiKey;
 
     public SpringAiLlmGateway(
             @Qualifier("deepseekChatModel") ChatModel primaryModel,
@@ -73,7 +83,7 @@ public class SpringAiLlmGateway implements LlmGateway {
     private void dumpRawDeepSeekResponse(String systemPrompt, String userMessage) {
         try {
             Map<String, Object> body = Map.of(
-                    "model", "deepseek-chat",
+                    "model", deepseekModel,
                     "messages", List.of(
                             Map.of("role", "system", "content", systemPrompt),
                             Map.of("role", "user", "content", userMessage)
@@ -82,10 +92,11 @@ public class SpringAiLlmGateway implements LlmGateway {
                     "max_tokens", 4096
             );
 
+            String url = deepseekBaseUrl + "/v1/chat/completions";
             String raw = RestClient.builder().build()
                     .post()
-                    .uri("https://api.deepseek.com/v1/chat/completions")
-                    .header("Authorization", "Bearer " + System.getenv("DEEPSEEK_API_KEY"))
+                    .uri(url)
+                    .header("Authorization", "Bearer " + deepseekApiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(body)
                     .retrieve()
