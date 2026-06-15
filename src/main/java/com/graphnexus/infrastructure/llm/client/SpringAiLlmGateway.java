@@ -1,105 +1,65 @@
 package com.graphnexus.infrastructure.llm.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphnexus.application.llmgateway.service.LlmGateway;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-
-import java.util.List;
-import java.util.Map;
 
 /**
- * LlmGateway 实现 — 绕过 Spring AI 反序列化，直接通过 HTTP 调用 DeepSeek API。
+ * LlmGateway 的 Spring AI 实现 — 通过 {@link ChatClient} 调用 DeepSeek API（OpenAI 兼容协议）。
+ *
+ * <p>读取 {@code spring.ai.openai.*} 配置（base-url/api-key/model），
+ * 调用失败时包装为 {@link BusinessException}(ErrorCode.C0001)。</p>
+ *
+ * <p>设计决策见 ADR-004。接口在 L2，实现在 L3，隔离 Spring AI 具体 API。</p>
  *
  * @author Jay
- * @date 2026/06/15
+ * @date 2026/06/13
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SpringAiLlmGateway implements LlmGateway {
 
-    private final String baseUrl;
-    private final String model;
-    private final String apiKey;
-    private final ObjectMapper objectMapper;
-    private final RestClient restClient;
+    private final ChatModel chatModel;
 
-    public SpringAiLlmGateway(
-            @Value("${spring.ai.openai.base-url}") String baseUrl,
-            @Value("${spring.ai.openai.chat.options.model}") String model,
-            @Value("${spring.ai.openai.api-key}") String apiKey,
-            ObjectMapper objectMapper) {
-        this.baseUrl = baseUrl;
-        this.model = model;
-        this.apiKey = apiKey;
-        this.objectMapper = objectMapper;
-        this.restClient = RestClient.builder().build();
-    }
-
+    /**
+     * 发送 Prompt 到 LLM 并返回原始文本响应。
+     *
+     * @param systemPrompt 系统提示词
+     * @param userMessage  用户消息
+     * @return LLM 原始文本响应
+     * @throws BusinessException 调用失败时（网络超时/API 错误/空响应）
+     */
     @Override
     public String chat(String systemPrompt, String userMessage) {
-        String url = baseUrl + "/v1/chat/completions";
-        Map<String, Object> body = Map.of(
-                "model", model,
-                "messages", List.of(
-                        Map.of("role", "system", "content", systemPrompt),
-                        Map.of("role", "user", "content", userMessage)
-                ),
-                "temperature", 0.3,
-                "max_tokens", 4096
-        );
-
-        log.debug("调用 DeepSeek API: url={}, model={}, prompt={}/{}chars",
-                url, model, systemPrompt.length(), userMessage.length());
+        log.debug("调用 LLM API，systemPrompt 长度={}, userMessage 长度={}",
+                systemPrompt.length(), userMessage.length());
 
         try {
-            String raw = restClient.post()
-                    .uri(url)
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
+            String response = ChatClient.builder(chatModel).build()
+                    .prompt()
+                    .system(systemPrompt)
+                    .user(userMessage)
+                    .call()
+                    .content();
 
-            if (raw == null || raw.isBlank()) {
-                throw new BusinessException(ErrorCode.C0001, "DeepSeek 返回空响应");
+            if (response == null || response.isBlank()) {
+                log.error("LLM 返回空响应");
+                throw new BusinessException(ErrorCode.C0001, "LLM 返回空响应");
             }
 
-            JsonNode root = objectMapper.readTree(raw);
-
-            // 检查是否有 error
-            if (root.has("error")) {
-                String errMsg = root.get("error").toPrettyString();
-                log.error("DeepSeek API 返回错误: {}", errMsg);
-                throw new BusinessException(ErrorCode.C0001, "DeepSeek API 错误: " + errMsg);
-            }
-
-            // 提取 content：choices[0].message.content
-            JsonNode content = root.at("/choices/0/message/content");
-            if (content.isMissingNode()) {
-                log.error("DeepSeek 响应缺少 choices[0].message.content，原始: {}", raw.substring(0, Math.min(500, raw.length())));
-                throw new BusinessException(ErrorCode.C0001, "DeepSeek 响应格式错误：缺少 content 字段");
-            }
-
-            String text = content.asText();
-            if (text.isBlank()) {
-                throw new BusinessException(ErrorCode.C0001, "DeepSeek 返回空 content");
-            }
-
-            log.debug("DeepSeek 调用成功，响应长度={}", text.length());
-            return text;
-
+            log.debug("LLM 响应长度={}", response.length());
+            return response;
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            log.error("DeepSeek 调用失败: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.C0001, "DeepSeek 调用失败: " + e.getMessage());
+            log.error("LLM 调用失败: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.C0001, "LLM 调用失败: " + e.getMessage());
         }
     }
 }
