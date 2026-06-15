@@ -118,6 +118,13 @@
             <version>3.0.3</version>
         </dependency>
 
+        <!-- CSV Processing -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.11.0</version>
+        </dependency>
+
         <!-- Security -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
