@@ -37,7 +37,13 @@ public enum EdgeType {
     CHILD_OF("CHILD_OF"),
 
     /** 知识点前置依赖：前置 KnowledgePoint → 后置 KnowledgePoint */
-    PREREQUISITE_OF("PREREQUISITE_OF");
+    PREREQUISITE_OF("PREREQUISITE_OF"),
+
+    /** 学生参加考试：Student → Exam */
+    ATTENDED("ATTENDED"),
+
+    /** 考试考查知识点：Exam → KnowledgePoint */
+    TESTED("TESTED");
 
     /**
      * Neo4j relationship type 名称（如 {@code "EXTRACTS"}、{@code "PREREQUISITE_OF"}）。

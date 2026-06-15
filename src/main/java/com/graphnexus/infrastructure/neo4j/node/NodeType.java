@@ -25,7 +25,13 @@ public enum NodeType {
     KNOWLEDGE_POINT("KnowledgePoint", KnowledgePointNode.class),
 
     /** 知识分类节点（层次分类树中的节点） */
-    KNOWLEDGE_CATEGORY("KnowledgeCategory", KnowledgeCategoryNode.class);
+    KNOWLEDGE_CATEGORY("KnowledgeCategory", KnowledgeCategoryNode.class),
+
+    /** 学生节点（CSV 成绩导入） */
+    STUDENT("Student", StudentNode.class),
+
+    /** 考试节点（CSV 成绩导入） */
+    EXAM("Exam", ExamNode.class);
 
     /**
      * Neo4j label 名称（如 {@code "Entity"}、{@code "KnowledgePoint"}）。
