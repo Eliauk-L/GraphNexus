@@ -1,10 +1,13 @@
 package com.graphnexus.application.document.service.impl;
 
 import com.graphnexus.application.document.model.DocumentBO;
+import com.graphnexus.application.document.model.DeleteResultBO;
+import com.graphnexus.application.document.model.GradeUploadResultBO;
 import com.graphnexus.application.document.model.ParseResult;
 import com.graphnexus.application.document.model.UpdateDocumentBO;
 import com.graphnexus.application.document.parser.DocumentParser;
 import com.graphnexus.application.document.service.DocumentService;
+import com.graphnexus.application.document.service.GradeService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.common.util.Md5Utils;
@@ -47,6 +50,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final FileStorageService fileStorageService;
     private final DocumentParser documentParser;
     private final GraphNodeRepository graphNodeRepository;
+    private final GradeService gradeService;
 
     // ======================== 上传 ========================
 
@@ -81,7 +85,7 @@ public class DocumentServiceImpl implements DocumentService {
         }
 
         // ⑤ 生成 MinIO 路径
-        String minioPath = UUID.randomUUID() + ".pdf";
+        String minioPath = "textbooks/" + UUID.randomUUID() + ".pdf";
 
         // ⑥ 上传到 MinIO
         try (InputStream inputStream = file.getInputStream()) {
@@ -238,6 +242,18 @@ public class DocumentServiceImpl implements DocumentService {
         documentRepository.save(doc);
 
         log.info("文档已删除: id={}, minioPath={}", doc.getId(), doc.getMinioPath());
+    }
+
+    // ======================== CSV 成绩委托 ========================
+
+    @Override
+    public GradeUploadResultBO uploadGradeCsv(MultipartFile file, String subject) {
+        return gradeService.uploadGradeCsv(file, subject);
+    }
+
+    @Override
+    public DeleteResultBO deleteGradeByExamNo(String examNo) {
+        return gradeService.deleteByExamNo(examNo);
     }
 
     // ======================== 工具方法 ========================

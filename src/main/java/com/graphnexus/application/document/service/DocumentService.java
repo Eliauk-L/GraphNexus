@@ -1,6 +1,8 @@
 package com.graphnexus.application.document.service;
 
+import com.graphnexus.application.document.model.DeleteResultBO;
 import com.graphnexus.application.document.model.DocumentBO;
+import com.graphnexus.application.document.model.GradeUploadResultBO;
 import com.graphnexus.application.document.model.ParseResult;
 import com.graphnexus.application.document.model.UpdateDocumentBO;
 import org.springframework.data.domain.Page;
@@ -63,4 +65,21 @@ public interface DocumentService {
      * @param id 文档 ID
      */
     void deleteDocument(Long id);
+
+    /**
+     * 上传 CSV 成绩文件（委托 GradeService）。
+     *
+     * @param file    CSV 文件
+     * @param subject 所属学科
+     * @return 上传结果
+     */
+    GradeUploadResultBO uploadGradeCsv(MultipartFile file, String subject);
+
+    /**
+     * 按考试编号级联删除成绩（委托 GradeService）。
+     *
+     * @param examNo 考试编号
+     * @return 删除结果
+     */
+    DeleteResultBO deleteGradeByExamNo(String examNo);
 }
