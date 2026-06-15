@@ -7,6 +7,7 @@ import com.graphnexus.application.document.parser.DocumentParser;
 import com.graphnexus.application.document.service.DocumentService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
+import com.graphnexus.common.util.Md5Utils;
 import com.graphnexus.infrastructure.mysql.document.DocumentDO;
 import com.graphnexus.infrastructure.mysql.document.DocumentRepository;
 import com.graphnexus.infrastructure.mysql.document.DocumentStatus;
@@ -23,8 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 /**
@@ -73,7 +72,7 @@ public class DocumentServiceImpl implements DocumentService {
             log.error("读取上传文件失败", e);
             throw new BusinessException(ErrorCode.A0004, "文件读取失败", "上传文件无法读取，请重试");
         }
-        String documentNo = computeMd5(pdfBytes);
+        String documentNo = Md5Utils.computeMd5(pdfBytes);
 
         // ④ 去重检查
         if (documentRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(documentNo, subject).isPresent()) {
@@ -263,23 +262,6 @@ public class DocumentServiceImpl implements DocumentService {
                 .createTime(doc.getCreateTime())
                 .updateTime(doc.getUpdateTime())
                 .build();
-    }
-
-    /**
-     * 计算字节数组的 MD5（32 位小写十六进制）。
-     */
-    private String computeMd5(byte[] data) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(data);
-            StringBuilder sb = new StringBuilder(32);
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("MD5 algorithm not available", e);
-        }
     }
 
     /**
