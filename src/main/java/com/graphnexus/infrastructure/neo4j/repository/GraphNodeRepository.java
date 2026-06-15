@@ -71,34 +71,9 @@ public class GraphNodeRepository {
         return nodes;
     }
 
-    /** 将 GraphNode 的属性转为 Cypher 参数 Map */
+    /** 将 GraphNode 的属性转为 Cypher 参数 Map（多态分发，见 DESIGN D11） */
     private Map<String, Object> toNodeProps(GraphNode node) {
-        Map<String, Object> props = new HashMap<>();
-        props.put("id", node.getId());
-        props.put("nodeType", node.getNodeType());
-        props.put("documentId", node.getDocumentId());
-        props.put("createdAt", node.getCreatedAt() != null ? node.getCreatedAt().toString() : null);
-        if (node instanceof DocumentNode doc) {
-            props.put("name", doc.getName());
-            props.put("subject", doc.getSubject());
-            props.put("pageCount", doc.getPageCount());
-        } else if (node instanceof EntityNode ent) {
-            props.put("entityType", ent.getEntityType());
-            props.put("name", ent.getName());
-            props.put("originalText", ent.getOriginalText());
-            props.put("pageNumber", ent.getPageNumber());
-            props.put("metadata", ent.getMetadata());
-        } else if (node instanceof KnowledgePointNode kp) {
-            props.put("name", kp.getName());
-            props.put("description", kp.getDescription());
-            props.put("subject", kp.getSubject());
-            props.put("gradeLevel", kp.getGradeLevel());
-        } else if (node instanceof KnowledgeCategoryNode cat) {
-            props.put("name", cat.getName());
-            props.put("level", cat.getLevel());
-            props.put("parentName", cat.getParentName());
-        }
-        return props;
+        return node.toProperties();
     }
 
     /**

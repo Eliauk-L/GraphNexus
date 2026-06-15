@@ -5,6 +5,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.springframework.data.neo4j.core.schema.Node;
 
+import java.util.Map;
+
 /**
  * Neo4j 知识点节点 — 跨文档的标准化学科概念。
  *
@@ -40,5 +42,27 @@ public class KnowledgePointNode extends GraphNode {
         this.description = description;
         this.subject = subject;
         this.gradeLevel = gradeLevel;
+    }
+
+    /**
+     * CSV 成绩解析专用构造器 — 不关联 documentId。
+     *
+     * <p>CSV 成绩文件不是 Document，其中的知识点节点独立存在，
+     * 通过 {@code name + subject} 做 MERGE key 自动去重。见 DESIGN D6。</p>
+     */
+    public KnowledgePointNode(String name, String subject) {
+        super(NodeType.KNOWLEDGE_POINT.getLabel());
+        this.name = name;
+        this.subject = subject;
+    }
+
+    @Override
+    public Map<String, Object> toProperties() {
+        Map<String, Object> props = super.toProperties();
+        props.put("name", this.getName());
+        props.put("description", this.getDescription());
+        props.put("subject", this.getSubject());
+        props.put("gradeLevel", this.getGradeLevel());
+        return props;
     }
 }

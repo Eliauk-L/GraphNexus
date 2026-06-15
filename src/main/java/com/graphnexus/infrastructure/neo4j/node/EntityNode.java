@@ -7,6 +7,8 @@ import org.springframework.data.neo4j.core.schema.Node;
 
 import java.util.Map;
 
+import java.util.Map;
+
 /**
  * Neo4j 实体节点 — LLM 从文档原文中抽取的知识片段。
  *
@@ -46,5 +48,16 @@ public class EntityNode extends GraphNode {
         this.originalText = originalText;
         this.pageNumber = pageNumber;
         this.metadata = metadata;
+    }
+
+    @Override
+    public Map<String, Object> toProperties() {
+        Map<String, Object> props = super.toProperties();
+        props.put("entityType", this.getEntityType());
+        props.put("name", this.getName());
+        props.put("originalText", this.getOriginalText());
+        props.put("pageNumber", this.getPageNumber());
+        props.put("metadata", this.getMetadata());
+        return props;
     }
 }

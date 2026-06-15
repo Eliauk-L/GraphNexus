@@ -5,6 +5,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.springframework.data.neo4j.core.schema.Node;
 
+import java.util.Map;
+
 /**
  * Neo4j 知识分类节点 — 知识点的层次分类树节点。
  *
@@ -35,5 +37,14 @@ public class KnowledgeCategoryNode extends GraphNode {
         this.name = name;
         this.level = level;
         this.parentName = parentName;
+    }
+
+    @Override
+    public Map<String, Object> toProperties() {
+        Map<String, Object> props = super.toProperties();
+        props.put("name", this.getName());
+        props.put("level", this.getLevel());
+        props.put("parentName", this.getParentName());
+        return props;
     }
 }

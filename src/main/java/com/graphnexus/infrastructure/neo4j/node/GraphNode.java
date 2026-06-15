@@ -67,4 +67,24 @@ public abstract class GraphNode {
         this.createdAt = LocalDateTime.now();
         this.properties = new HashMap<>();
     }
+
+    /**
+     * 将节点属性映射为 Cypher 参数 Map。
+     *
+     * <p>基类提供公共字段（id / nodeType / documentId / createdAt）的默认实现。
+     * 子类覆盖此方法以追加自身独有字段，必须调用 {@code super.toProperties()}
+     * 以继承公共字段。</p>
+     *
+     * <p>设计决策见 DESIGN D11（多态替代 instanceof 链）。</p>
+     *
+     * @return 包含本节点所有属性的不可变视图（调用方可修改）
+     */
+    public Map<String, Object> toProperties() {
+        Map<String, Object> props = new HashMap<>();
+        props.put("id", this.getId());
+        props.put("nodeType", this.getNodeType());
+        props.put("documentId", this.getDocumentId());
+        props.put("createdAt", this.getCreatedAt() != null ? this.getCreatedAt().toString() : null);
+        return props;
+    }
 }

@@ -5,6 +5,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.springframework.data.neo4j.core.schema.Node;
 
+import java.util.Map;
+
 /**
  * Neo4j 文档节点 — 对应已解析的 PDF 文档。
  *
@@ -35,5 +37,14 @@ public class DocumentNode extends GraphNode {
         this.name = name;
         this.subject = subject;
         this.pageCount = pageCount;
+    }
+
+    @Override
+    public Map<String, Object> toProperties() {
+        Map<String, Object> props = super.toProperties();
+        props.put("name", this.getName());
+        props.put("subject", this.getSubject());
+        props.put("pageCount", this.getPageCount());
+        return props;
     }
 }
