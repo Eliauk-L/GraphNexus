@@ -2,6 +2,7 @@ package com.graphnexus.api.document.controller;
 
 import com.graphnexus.api.document.dto.DeleteResultVO;
 import com.graphnexus.api.document.dto.DocumentVO;
+import com.graphnexus.api.document.dto.GradeRecordVO;
 import com.graphnexus.api.document.dto.GradeUploadResultVO;
 import com.graphnexus.api.document.dto.ParseResultVO;
 import com.graphnexus.api.document.dto.UpdateDocumentRequest;
@@ -126,18 +127,13 @@ public class DocumentController {
      * 按考试编号查询成绩列表（AC-4）。
      */
     @GetMapping("/grade/exam/{examNo}")
-    public ApiResponse<List<GradeUploadResultVO>> queryGrade(
+    public ApiResponse<List<GradeRecordVO>> queryGrade(
             @PathVariable("examNo") String examNo
     ) {
         var records = documentService.queryGradeByExam(examNo);
-        // Map GradeRecordBO to a simple response; full VO mapping in future task
-        List<GradeUploadResultVO> result = records.stream().map(r ->
-                GradeUploadResultVO.builder()
-                        .examNo(r.getExamNo())
-                        .examName(r.getExamName())
-                        .subject(r.getSubject())
-                        .build()
-        ).toList();
+        List<GradeRecordVO> result = records.stream()
+                .map(GradeRecordVO::from)
+                .toList();
         return ApiResponse.success(result);
     }
 

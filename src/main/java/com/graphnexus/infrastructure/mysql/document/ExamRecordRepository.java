@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 考试成绩记录 Repository。
@@ -27,10 +26,10 @@ public interface ExamRecordRepository extends JpaRepository<ExamRecordDO, Long> 
     List<ExamRecordDO> findByExamNoAndIsDeletedFalse(String examNo);
 
     /**
-     * 按 CSV MD5 查找未删除的记录（用于上传判重）。
+     * 按 CSV MD5 查找未删除的记录（用于上传判重，一个 CSV 对应多条学生记录）。
      */
     @Query("SELECT e FROM ExamRecordDO e WHERE e.csvMd5 = :csvMd5 AND e.isDeleted = 0")
-    Optional<ExamRecordDO> findByCsvMd5AndIsDeletedFalse(String csvMd5);
+    List<ExamRecordDO> findByCsvMd5AndIsDeletedFalse(String csvMd5);
 
     /**
      * 按考试编号查询所有记录（含 isDeleted=1，删除流程内部使用）。

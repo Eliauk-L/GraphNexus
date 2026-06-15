@@ -4,7 +4,6 @@ import com.graphnexus.application.document.model.GradeRecordBO;
 import com.graphnexus.application.document.model.GradeUploadResultBO;
 import com.graphnexus.application.document.parser.CsvGradeParser.CsvParsePayload;
 import com.graphnexus.application.document.parser.CsvGradeParser.StudentRecord;
-import com.graphnexus.application.document.parser.CsvGradeParser.ScoreDetail;
 import com.graphnexus.infrastructure.neo4j.edge.AttendedEdge;
 import com.graphnexus.infrastructure.neo4j.edge.TestedEdge;
 import com.graphnexus.infrastructure.neo4j.node.ExamNode;
@@ -69,9 +68,9 @@ public class GradeServiceImpl implements GradeService {
         String csvMd5 = Md5Utils.computeMd5(rawBytes);
 
         // 判重
-        Optional<ExamRecordDO> dup = examRecordRepository.findByCsvMd5AndIsDeletedFalse(csvMd5);
-        if (dup.isPresent()) {
-            String existExamNo = dup.get().getExamNo();
+        List<ExamRecordDO> dups = examRecordRepository.findByCsvMd5AndIsDeletedFalse(csvMd5);
+        if (!dups.isEmpty()) {
+            String existExamNo = dups.get(0).getExamNo();
             log.info("CSV 重复上传（MD5={}），将覆盖 examNo={}", csvMd5, existExamNo);
             deleteByExamNo(existExamNo);
         }
