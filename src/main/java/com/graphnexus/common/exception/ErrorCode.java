@@ -45,6 +45,21 @@ public enum ErrorCode {
     /** LLM 抽取结果校验失败 */
     A0010("A0010", HttpStatus.BAD_REQUEST, "LLM 返回结果格式不符合预期，请稍后重试"),
 
+    /** CSV 格式错误（表头行数/成绩格式/列数不一致） */
+    A0011("A0011", HttpStatus.BAD_REQUEST, "CSV 文件格式不符合要求，请检查表头和成绩格式"),
+
+    /** CSV 缺少必要列（学号/考试编号） */
+    A0012("A0012", HttpStatus.BAD_REQUEST, "CSV 文件缺少必要列（学号或考试编号），请检查文件"),
+
+    /** CSV 编码异常（非 UTF-8 且非 GBK） */
+    A0013("A0013", HttpStatus.BAD_REQUEST, "CSV 文件编码不支持，请使用 UTF-8 或 GBK 编码"),
+
+    /** 考试编号不存在 */
+    A0014("A0014", HttpStatus.CONFLICT, "考试编号不存在，无法执行操作"),
+
+    /** 待删除的考试编号不存在（保留占位） */
+    A0015("A0015", HttpStatus.NOT_FOUND, "待删除的考试记录不存在或已被删除"),
+
     // ======================== B · 系统错误 ========================
 
     /** 系统内部错误（兜底） */
