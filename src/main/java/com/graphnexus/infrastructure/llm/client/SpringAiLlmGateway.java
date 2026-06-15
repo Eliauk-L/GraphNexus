@@ -7,10 +7,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * LlmGateway 的双模型降级实现 — DeepSeek 云端为主，Ollama 本地兜底。
+ * 反序列化失败时输出 LLM 原始返回内容。
  *
  * @author Jay
  * @date 2026/06/14
@@ -33,22 +39,19 @@ public class SpringAiLlmGateway implements LlmGateway {
     public String chat(String systemPrompt, String userMessage) {
         // 先调 DeepSeek 主模型
         try {
-            return callModel(primaryModel, "DeepSeek", systemPrompt, userMessage);
+            return callWithChatClient(primaryModel, "DeepSeek", systemPrompt, userMessage);
         } catch (Exception e) {
-            log.warn("DeepSeek 主模型失败，降级到 Ollama 本地: {}", e.getMessage());
+            log.warn("DeepSeek 主模型失败，降级到 Ollama: {}", e.getMessage());
+            // 用原始 HTTP 查看 DeepSeek 实际返回了什么
+            dumpRawDeepSeekResponse(systemPrompt, userMessage);
         }
 
-        // 兜底调 Ollama 本地
-        try {
-            return callModel(fallbackModel, "Ollama", systemPrompt, userMessage);
-        } catch (Exception e) {
-            log.error("Ollama 兜底也失败了: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.C0001, "LLM 双模型全部调用失败: " + e.getMessage());
-        }
+        // 兜底 Ollama
+        return callWithChatClient(fallbackModel, "Ollama", systemPrompt, userMessage);
     }
 
-    private String callModel(ChatModel model, String name, String systemPrompt, String userMessage) {
-        log.debug("调用 {} API，systemPrompt 长度={}, userMessage 长度={}",
+    private String callWithChatClient(ChatModel model, String name, String systemPrompt, String userMessage) {
+        log.info("调用 {} API，systemPrompt={}chars, userMessage={}chars",
                 name, systemPrompt.length(), userMessage.length());
 
         String response = ChatClient.builder(model).build()
@@ -62,7 +65,35 @@ public class SpringAiLlmGateway implements LlmGateway {
             throw new BusinessException(ErrorCode.C0001, name + " 返回空响应");
         }
 
-        log.debug("{} 响应长度={}", name, response.length());
+        log.info("{} 调用成功，响应长度={}", name, response.length());
         return response;
+    }
+
+    /** 用原始 HTTP 请求查看 DeepSeek 返回的原始内容（用于排查反序列化问题） */
+    private void dumpRawDeepSeekResponse(String systemPrompt, String userMessage) {
+        try {
+            Map<String, Object> body = Map.of(
+                    "model", "deepseek-chat",
+                    "messages", List.of(
+                            Map.of("role", "system", "content", systemPrompt),
+                            Map.of("role", "user", "content", userMessage)
+                    ),
+                    "temperature", 0.3,
+                    "max_tokens", 4096
+            );
+
+            String raw = RestClient.builder().build()
+                    .post()
+                    .uri("https://api.deepseek.com/v1/chat/completions")
+                    .header("Authorization", "Bearer " + System.getenv("DEEPSEEK_API_KEY"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(body)
+                    .retrieve()
+                    .body(String.class);
+
+            log.info("DeepSeek 原始返回 (前2000字符): {}", raw != null ? raw.substring(0, Math.min(2000, raw.length())) : "null");
+        } catch (Exception ex) {
+            log.error("查看原始返回也失败: {}", ex.getMessage());
+        }
     }
 }
