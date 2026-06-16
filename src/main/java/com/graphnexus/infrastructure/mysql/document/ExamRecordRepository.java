@@ -37,9 +37,5 @@ public interface ExamRecordRepository extends JpaRepository<ExamRecordDO, Long> 
     @Query("SELECT e FROM ExamRecordDO e WHERE e.examNo = :examNo")
     List<ExamRecordDO> findByExamNo(String examNo);
 
-    /**
-     * 按学号查询未删除的成绩记录（MASTERS 重算用）。
-     */
-    @Query("SELECT e FROM ExamRecordDO e WHERE e.studentNo = :studentNo AND e.isDeleted = 0")
-    List<ExamRecordDO> findByStudentNoAndIsDeletedFalse(String studentNo);
+    List<ExamRecordDO> findExamRecordDOByStudentNoAndIsDeleted(String studentNo, Integer isDeleted);
 }

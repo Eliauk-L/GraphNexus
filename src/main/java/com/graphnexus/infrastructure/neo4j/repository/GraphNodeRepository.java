@@ -272,31 +272,20 @@ public class GraphNodeRepository {
     }
 
     /**
-     * 按名称列表查询指定 subject 的 KP（增量融合用）。
+     * 按名称列表 + 学科查询 KP（增量融合 / MASTERS 重算用）。
      */
-    public List<Map<String, Object>> findKnowledgePointsByNames(List<String> names, String subject) {
+    public List<Map<String, Object>> findKnowledgePointsByNamesAndSubject(List<String> names, String subject) {
         if (names == null || names.isEmpty()) return Collections.emptyList();
         try {
-            String cypher;
-            Map<String, Object> params;
-            if (subject == null) {
-                cypher = "MATCH (kp:KnowledgePoint) WHERE kp.name IN $names " +
-                        "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
-                        "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
-                        "kp.description AS description, kp.gradeLevel AS gradeLevel";
-                params = Map.of("names", names);
-            } else {
-                cypher = "MATCH (kp:KnowledgePoint) WHERE kp.name IN $names AND kp.subject = $subject " +
-                        "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
-                        "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
-                        "kp.description AS description, kp.gradeLevel AS gradeLevel";
-                params = Map.of("names", names, "subject", subject);
-            }
-            Collection<Map<String, Object>> rows = neo4jClient.query(cypher)
-                    .bindAll(params).fetch().all();
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint) WHERE kp.name IN $names AND kp.subject = $subject " +
+                    "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
+                    "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
+                    "kp.description AS description, kp.gradeLevel AS gradeLevel"
+            ).bindAll(Map.of("names", names, "subject", subject)).fetch().all();
             return new ArrayList<>(rows);
         } catch (Exception e) {
-            log.warn("按名称查询 KP 失败: {}", e.getMessage());
+            log.warn("按名称+学科查询 KP 失败: {}", e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -411,6 +400,7 @@ public class GraphNodeRepository {
 
     /**
      * 按知识点名称查找受影响的 Student（增量融合用）。
+     */
     public List<Map<String, Object>> findStudentsByKnowledgePointNames(List<String> kpNames, String subject) {
         if (kpNames == null || kpNames.isEmpty()) return Collections.emptyList();
         try {

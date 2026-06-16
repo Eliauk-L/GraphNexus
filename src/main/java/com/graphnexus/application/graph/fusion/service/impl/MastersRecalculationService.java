@@ -134,7 +134,7 @@ public class MastersRecalculationService {
 
     private String findKpId(String kpName, String subject) {
         List<Map<String, Object>> kps =
-                graphNodeRepository.findKnowledgePointsByNames(List.of(kpName), subject);
+                graphNodeRepository.findKnowledgePointsByNamesAndSubject(List.of(kpName), subject);
         return kps.stream().map(m -> (String) m.get("id")).findFirst().orElse(null);
     }
 }

@@ -105,7 +105,7 @@ public class FusionServiceImpl implements FusionService {
 
         try {
             List<Map<String, Object>> affectedKps =
-                    graphNodeRepository.findKnowledgePointsByNames(kpNames, subject);
+                    graphNodeRepository.findKnowledgePointsByNamesAndSubject(kpNames, subject);
             if (affectedKps.size() < 2) {
                 updateLogCompleted(logEntry, 0, 0, "[]", startTime);
                 return new FusionExecuteResult(logEntry.getId(), 0, 0);
