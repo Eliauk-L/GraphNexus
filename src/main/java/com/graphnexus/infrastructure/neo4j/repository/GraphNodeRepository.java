@@ -258,12 +258,23 @@ public class GraphNodeRepository {
      */
     public List<Map<String, Object>> findAllKnowledgePointsBySubject(String subject) {
         try {
-            Collection<Map<String, Object>> rows = neo4jClient.query(
-                    "MATCH (kp:KnowledgePoint {subject: $subject}) " +
-                    "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
-                    "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
-                    "kp.description AS description, kp.gradeLevel AS gradeLevel"
-            ).bindAll(Map.of("subject", subject)).fetch().all();
+            String cypher;
+            Map<String, Object> params;
+            if (subject == null) {
+                cypher = "MATCH (kp:KnowledgePoint) " +
+                        "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
+                        "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
+                        "kp.description AS description, kp.gradeLevel AS gradeLevel";
+                params = Collections.emptyMap();
+            } else {
+                cypher = "MATCH (kp:KnowledgePoint {subject: $subject}) " +
+                        "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
+                        "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
+                        "kp.description AS description, kp.gradeLevel AS gradeLevel";
+                params = Map.of("subject", subject);
+            }
+            Collection<Map<String, Object>> rows = neo4jClient.query(cypher)
+                    .bindAll(params).fetch().all();
             return new ArrayList<>(rows);
         } catch (Exception e) {
             log.warn("按 subject={} 查询 KP 失败: {}", subject, e.getMessage());
@@ -277,12 +288,23 @@ public class GraphNodeRepository {
     public List<Map<String, Object>> findKnowledgePointsByNames(List<String> names, String subject) {
         if (names == null || names.isEmpty()) return Collections.emptyList();
         try {
-            Collection<Map<String, Object>> rows = neo4jClient.query(
-                    "MATCH (kp:KnowledgePoint) WHERE kp.name IN $names AND kp.subject = $subject " +
-                    "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
-                    "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
-                    "kp.description AS description, kp.gradeLevel AS gradeLevel"
-            ).bindAll(Map.of("names", names, "subject", subject)).fetch().all();
+            String cypher;
+            Map<String, Object> params;
+            if (subject == null) {
+                cypher = "MATCH (kp:KnowledgePoint) WHERE kp.name IN $names " +
+                        "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
+                        "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
+                        "kp.description AS description, kp.gradeLevel AS gradeLevel";
+                params = Map.of("names", names);
+            } else {
+                cypher = "MATCH (kp:KnowledgePoint) WHERE kp.name IN $names AND kp.subject = $subject " +
+                        "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
+                        "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
+                        "kp.description AS description, kp.gradeLevel AS gradeLevel";
+                params = Map.of("names", names, "subject", subject);
+            }
+            Collection<Map<String, Object>> rows = neo4jClient.query(cypher)
+                    .bindAll(params).fetch().all();
             return new ArrayList<>(rows);
         } catch (Exception e) {
             log.warn("按名称查询 KP 失败: {}", e.getMessage());
@@ -376,11 +398,21 @@ public class GraphNodeRepository {
     public List<Map<String, Object>> findStudentsByKnowledgePointNames(List<String> kpNames, String subject) {
         if (kpNames == null || kpNames.isEmpty()) return Collections.emptyList();
         try {
-            Collection<Map<String, Object>> rows = neo4jClient.query(
-                    "MATCH (s:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint) " +
-                    "WHERE kp.name IN $names AND kp.subject = $subject " +
-                    "RETURN DISTINCT s.studentNo AS studentNo, s.id AS studentNodeId"
-            ).bindAll(Map.of("names", kpNames, "subject", subject)).fetch().all();
+            String cypher;
+            Map<String, Object> params;
+            if (subject == null) {
+                cypher = "MATCH (s:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint) " +
+                        "WHERE kp.name IN $names " +
+                        "RETURN DISTINCT s.studentNo AS studentNo, s.id AS studentNodeId";
+                params = Map.of("names", kpNames);
+            } else {
+                cypher = "MATCH (s:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint) " +
+                        "WHERE kp.name IN $names AND kp.subject = $subject " +
+                        "RETURN DISTINCT s.studentNo AS studentNo, s.id AS studentNodeId";
+                params = Map.of("names", kpNames, "subject", subject);
+            }
+            Collection<Map<String, Object>> rows = neo4jClient.query(cypher)
+                    .bindAll(params).fetch().all();
             return new ArrayList<>(rows);
         } catch (Exception e) {
             log.warn("查找受影响 Student 失败: {}", e.getMessage());

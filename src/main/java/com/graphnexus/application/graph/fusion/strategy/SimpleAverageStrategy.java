@@ -15,7 +15,7 @@ import java.util.List;
  * @author Jay
  * @date 2026/06/15
  */
-@Component
+@Component("simple-average")
 public class SimpleAverageStrategy implements WeightCalculationStrategy {
 
     @Override

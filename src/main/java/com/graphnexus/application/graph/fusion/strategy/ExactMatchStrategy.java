@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  * @author Jay
  * @date 2026/06/15
  */
-@Component
+@Component("exact")
 public class ExactMatchStrategy implements KpMatchingStrategy {
 
     @Override

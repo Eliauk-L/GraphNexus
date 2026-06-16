@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * @author Jay
  * @date 2026/06/15
  */
-@Component
+@Component("time-decay")
 @RequiredArgsConstructor
 public class TimeDecayStrategy implements WeightCalculationStrategy {
 

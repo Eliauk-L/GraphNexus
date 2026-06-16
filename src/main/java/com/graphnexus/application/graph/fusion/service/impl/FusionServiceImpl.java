@@ -53,7 +53,7 @@ public class FusionServiceImpl implements FusionService {
         LocalDateTime startTime = LocalDateTime.now();
 
         try {
-            // 1. 按 subject 分组查询所有 KP
+            // 1. 查询所有 KP
             List<Map<String, Object>> allKps = graphNodeRepository.findAllKnowledgePointsBySubject(null);
             // 查询所有 subject 的 KP（分 subject 遍历）
             Set<String> subjects = allKps.stream()
@@ -441,7 +441,7 @@ public class FusionServiceImpl implements FusionService {
     private int recalculateAllMasters(String subject) {
         // 查询所有 Student 的所有 MASTERS 相关成绩
         // 简化：通过查找所有 exam_record 来重算
-        // 实际实现中走 Neo4j + MySQL 组合查询
+        // TODO: 实际实现中走 Neo4j + MySQL 组合查询
         List<Map<String, Object>> allStudents =
                 graphNodeRepository.findStudentsByKnowledgePointNames(
                         List.of(""), subject); // 通配查询所有
