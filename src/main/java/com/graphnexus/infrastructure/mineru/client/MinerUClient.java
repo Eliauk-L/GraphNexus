@@ -35,12 +35,14 @@ import java.util.zip.ZipInputStream;
 public class MinerUClient {
 
     private final RestClient restClient;
+    private final RestClient.Builder restClientBuilder;
     private final MinerUProperties properties;
     private final ObjectMapper objectMapper;
 
     public MinerUClient(RestClient.Builder restClientBuilder, MinerUProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.restClientBuilder = restClientBuilder;
         this.restClient = restClientBuilder
                 .baseUrl(properties.getApi().getBaseUrl())
                 .defaultHeader("Authorization", "Bearer " + properties.getApi().getToken())
@@ -115,7 +117,7 @@ public class MinerUClient {
 
         try {
             // 使用独立的 RestClient（不带 Authorization 头，OSS 签名已包含认证）
-            RestClient uploadClient = RestClient.create();
+            RestClient uploadClient = restClientBuilder.baseUrl("").build();
             String putResponse = uploadClient.put()
                     .uri(fileUrl)
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -234,7 +236,7 @@ public class MinerUClient {
 
         try {
             // 下载 zip（无须 Token，CDN 公开链接）
-            RestClient downloadClient = RestClient.create();
+            RestClient downloadClient = restClientBuilder.baseUrl("").build();
             byte[] zipBytes = downloadClient.get()
                     .uri(fullZipUrl)
                     .retrieve()
