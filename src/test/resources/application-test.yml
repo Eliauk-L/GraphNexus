@@ -20,3 +20,19 @@ minio:
   access-key: minioadmin
   secret-key: minioadmin123
   bucket: graphnexus-test
+
+# ---------------------------------------------------------------------------
+# MinerU — 测试环境默认关闭（单元测试直接 mock MinerUClient）
+# ---------------------------------------------------------------------------
+mineru:
+  enabled: false
+  api:
+    base-url: http://localhost:19999
+    token: test-token
+    model-version: vlm
+    poll-timeout: 5s
+    poll-interval: 100ms
+  parse:
+    enable-formula: true
+    enable-table: true
+    language: ch
