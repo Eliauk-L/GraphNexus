@@ -95,9 +95,7 @@ public class MastersRecalculationService {
 
     /** 从 MySQL exam_record 按 kpName 分组提取成绩 */
     private Map<String, List<TestedRecord>> groupScoresByKp(String studentNo) {
-        List<ExamRecordDO> records = examRecordRepository.findAll().stream()
-                .filter(r -> studentNo.equals(r.getStudentNo()) && r.getIsDeleted() == 0)
-                .collect(Collectors.toList());
+        List<ExamRecordDO> records = examRecordRepository.findByStudentNoAndIsDeletedFalse(studentNo);
 
         Map<String, List<TestedRecord>> byKp = new HashMap<>();
         for (ExamRecordDO rec : records) {
