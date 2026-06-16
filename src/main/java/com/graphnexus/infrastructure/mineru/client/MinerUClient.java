@@ -1,5 +1,6 @@
 package com.graphnexus.infrastructure.mineru.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphnexus.common.exception.BusinessException;
@@ -15,6 +16,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -46,7 +50,6 @@ public class MinerUClient {
         this.restClient = restClientBuilder
                 .baseUrl(properties.getApi().getBaseUrl())
                 .defaultHeader("Authorization", "Bearer " + properties.getApi().getToken())
-                .defaultHeader("Content-Type", "application/json")
                 .build();
     }
 
@@ -60,28 +63,28 @@ public class MinerUClient {
      * @return 包含 batchId 和 fileUrl 的结果
      */
     public BatchSubmitResult submitBatch(String fileName) {
-        Map<String, Object> requestBody = Map.of(
-                "files", new Object[]{
-                        Map.of("name", fileName,
-                               "is_ocr", false,
-                               "enable_formula", properties.getParse().isEnableFormula(),
-                               "enable_table", properties.getParse().isEnableTable())
-                },
-                "model_version", properties.getApi().getModelVersion(),
-                "enable_formula", properties.getParse().isEnableFormula(),
-                "enable_table", properties.getParse().isEnableTable(),
-                "language", properties.getParse().getLanguage()
-        );
+        Map<String, Object> requestBody = new HashMap<>();
+        List<Map<String, Object>> files = new ArrayList<>();
+        Map<String, Object> fileInfo = new HashMap<>();
+        fileInfo.put("name", fileName);
+        files.add(fileInfo);
+        requestBody.put("files", files);
+        requestBody.put("model_version", properties.getApi().getModelVersion());
+        requestBody.put("enable_formula", properties.getParse().isEnableFormula());
+        requestBody.put("enable_table", properties.getParse().isEnableTable());
+        requestBody.put("language", properties.getParse().getLanguage());
 
         log.info("MinerU 提交批量上传申请: fileName={}, model={}", fileName, properties.getApi().getModelVersion());
 
         try {
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
+            log.debug("MinerU batch request body: {}", jsonBody);
             String response = restClient.post()
                     .uri("/api/v4/file-urls/batch")
-                    .body(requestBody)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(jsonBody)
                     .retrieve()
                     .body(String.class);
-
             JsonNode root = objectMapper.readTree(response);
             int code = root.path("code").asInt(-1);
             if (code != 0) {
@@ -116,11 +119,11 @@ public class MinerUClient {
         log.info("MinerU 开始上传文件: size={} bytes", pdfBytes.length);
 
         try {
-            // 使用独立的 RestClient（不带 Authorization 头，OSS 签名已包含认证）
-            RestClient uploadClient = restClientBuilder.baseUrl("").build();
+            // 使用独立的 RestClient（不带 Authorization 头，OSS 签名已包含认证；
+            // 不设置 Content-Type，OSS 签名校验时 Content-Type 必须为空或完全匹配签名时的值）
+            RestClient uploadClient = RestClient.create();
             String putResponse = uploadClient.put()
                     .uri(fileUrl)
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .body(pdfBytes)
                     .retrieve()
                     .body(String.class);
