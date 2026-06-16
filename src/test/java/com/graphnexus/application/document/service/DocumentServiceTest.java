@@ -3,10 +3,12 @@ package com.graphnexus.application.document.service;
 import com.graphnexus.application.document.model.DocumentBO;
 import com.graphnexus.application.document.model.ParseResult;
 import com.graphnexus.application.document.model.UpdateDocumentBO;
-import com.graphnexus.application.document.parser.DocumentParser;
+import com.graphnexus.application.document.parser.MinerUDocumentParser;
+import com.graphnexus.application.document.parser.PdfBoxDocumentParser;
 import com.graphnexus.application.document.service.impl.DocumentServiceImpl;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
+import com.graphnexus.infrastructure.mineru.config.MinerUProperties;
 import com.graphnexus.infrastructure.mysql.document.DocumentDO;
 import com.graphnexus.infrastructure.mysql.document.DocumentRepository;
 import com.graphnexus.infrastructure.mysql.document.DocumentStatus;
@@ -25,6 +27,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,7 +52,13 @@ class DocumentServiceTest {
     private FileStorageService fileStorageService;
 
     @Mock
-    private DocumentParser documentParser;
+    private MinerUDocumentParser minerUDocumentParser;
+
+    @Mock
+    private PdfBoxDocumentParser pdfBoxDocumentParser;
+
+    @Mock
+    private MinerUProperties minerUProperties;
 
     @InjectMocks
     private DocumentServiceImpl documentService;
@@ -137,11 +146,12 @@ class DocumentServiceTest {
     @Test
     @DisplayName("解析成功：状态 COMPLETED + 结果返回（AC-2）")
     void processShouldSucceed() {
+        when(minerUProperties.isEnabled()).thenReturn(false);
         when(documentRepository.findByIdAndIsDeletedFalse(1L))
                 .thenReturn(Optional.of(sampleDoc));
         when(fileStorageService.getFile("uuid.pdf"))
                 .thenReturn(new ByteArrayInputStream("pdf-bytes".getBytes()));
-        when(documentParser.parse(any(byte[].class)))
+        when(pdfBoxDocumentParser.parse(any(byte[].class)))
                 .thenReturn(new ParseResult("Hello GraphNexus", 5));
         when(documentRepository.save(any(DocumentDO.class)))
                 .thenReturn(sampleDoc);
@@ -168,16 +178,16 @@ class DocumentServiceTest {
     }
 
     @Test
-    @DisplayName("AC-6: mock DocumentParser 替换 PdfBoxDocumentParser")
-    void mockParserShouldBeUsed() {
-        DocumentParser mockParser = mock(DocumentParser.class);
-        when(mockParser.parse(any(byte[].class)))
-                .thenReturn(new ParseResult("mock result", 1));
+    @DisplayName("AC-6: PdfBoxDocumentParser 作为兜底可独立工作")
+    void pdfBoxParserShouldWorkStandalone() {
+        PdfBoxDocumentParser realParser = mock(PdfBoxDocumentParser.class);
+        when(realParser.parse(any(byte[].class)))
+                .thenReturn(new ParseResult("pdfbox result", 1));
 
-        // 验证接口可替换：mock 实例可以正常工作
-        ParseResult r = mockParser.parse(new byte[]{1, 2, 3});
-        assertEquals("mock result", r.textContent());
-        verify(mockParser).parse(any(byte[].class));
+        // 验证 PDFBox 解析器可以独立工作
+        ParseResult r = realParser.parse(new byte[]{1, 2, 3});
+        assertEquals("pdfbox result", r.textContent());
+        verify(realParser).parse(any(byte[].class));
     }
 
     // ======================== 查询测试 ========================

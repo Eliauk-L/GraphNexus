@@ -6,18 +6,19 @@ import com.graphnexus.application.document.model.GradeRecordBO;
 import com.graphnexus.application.document.model.GradeUploadResultBO;
 import com.graphnexus.application.document.model.ParseResult;
 import com.graphnexus.application.document.model.UpdateDocumentBO;
-import com.graphnexus.application.document.parser.DocumentParser;
+import com.graphnexus.application.document.parser.MinerUDocumentParser;
+import com.graphnexus.application.document.parser.PdfBoxDocumentParser;
 import com.graphnexus.application.document.service.DocumentService;
 import com.graphnexus.application.document.service.GradeService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.common.util.Md5Utils;
+import com.graphnexus.infrastructure.mineru.config.MinerUProperties;
 import com.graphnexus.infrastructure.mysql.document.DocumentDO;
 import com.graphnexus.infrastructure.mysql.document.DocumentRepository;
 import com.graphnexus.infrastructure.mysql.document.DocumentStatus;
 import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,7 +29,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -42,7 +45,6 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DocumentServiceImpl implements DocumentService {
 
     private static final String PDF_MIME_TYPE = "application/pdf";
@@ -50,9 +52,27 @@ public class DocumentServiceImpl implements DocumentService {
 
     private final DocumentRepository documentRepository;
     private final FileStorageService fileStorageService;
-    private final DocumentParser documentParser;
+    private final MinerUDocumentParser minerUDocumentParser;
+    private final PdfBoxDocumentParser pdfBoxDocumentParser;
+    private final MinerUProperties minerUProperties;
     private final GraphNodeRepository graphNodeRepository;
     private final GradeService gradeService;
+
+    public DocumentServiceImpl(DocumentRepository documentRepository,
+                               FileStorageService fileStorageService,
+                               MinerUDocumentParser minerUDocumentParser,
+                               PdfBoxDocumentParser pdfBoxDocumentParser,
+                               MinerUProperties minerUProperties,
+                               GraphNodeRepository graphNodeRepository,
+                               GradeService gradeService) {
+        this.documentRepository = documentRepository;
+        this.fileStorageService = fileStorageService;
+        this.minerUDocumentParser = minerUDocumentParser;
+        this.pdfBoxDocumentParser = pdfBoxDocumentParser;
+        this.minerUProperties = minerUProperties;
+        this.graphNodeRepository = graphNodeRepository;
+        this.gradeService = gradeService;
+    }
 
     // ======================== 上传 ========================
 
@@ -133,21 +153,64 @@ public class DocumentServiceImpl implements DocumentService {
             // ④ 读入 byte[]
             byte[] pdfBytes = toByteArray(is);
 
-            // ⑤ 调用解析器
-            ParseResult result = documentParser.parse(pdfBytes);
+            // ⑤ 调用解析器（MinerU 优先 → PDFBox 兜底）
+            ParseResult result;
+            Map<String, String> parseMetadata = new LinkedHashMap<>();
+            String parserUsed;
+
+            if (minerUProperties.isEnabled()) {
+                try {
+                    result = minerUDocumentParser.parse(pdfBytes);
+                    parseMetadata.putAll(result.metadata());
+                    parseMetadata.put("parser", "mineru-v4");
+                    parserUsed = "mineru-v4";
+                    log.info("MinerU v4 解析成功: docId={}", doc.getId());
+                } catch (Exception mineruEx) {
+                    log.warn("MinerU 解析失败，fallback to PDFBox: docId={}, error={}",
+                            doc.getId(), mineruEx.getMessage());
+                    try {
+                        result = pdfBoxDocumentParser.parse(pdfBytes);
+                        parseMetadata.putAll(result.metadata());
+                        parseMetadata.put("parser", "pdfbox-fallback");
+                        parseMetadata.put("fallbackReason", truncate(mineruEx.getMessage(), 200));
+                        parserUsed = "pdfbox-fallback";
+                        log.info("PDFBox 兜底解析成功: docId={}", doc.getId());
+                    } catch (Exception pdfBoxEx) {
+                        // 两次都失败 → FAILED
+                        doc.setStatus(DocumentStatus.FAILED);
+                        String failReason = String.format(
+                                "MinerU: %s; PDFBox: %s",
+                                truncate(mineruEx.getMessage(), 200),
+                                truncate(pdfBoxEx.getMessage(), 200));
+                        doc.setFailReason(failReason);
+                        documentRepository.save(doc);
+                        log.error("MinerU + PDFBox 双失败: docId={}, failReason={}",
+                                doc.getId(), failReason);
+                        throw new BusinessException(ErrorCode.A0004,
+                                "文档解析失败（MinerU + PDFBox 均失败）",
+                                failReason);
+                    }
+                }
+            } else {
+                log.info("MinerU 已禁用，直接使用 PDFBox: docId={}", doc.getId());
+                result = pdfBoxDocumentParser.parse(pdfBytes);
+                parseMetadata.putAll(result.metadata());
+                parseMetadata.put("parser", "pdfbox-direct");
+                parserUsed = "pdfbox-direct";
+            }
 
             // ⑥ 更新 DO
             doc.setTextContent(result.textContent());
             doc.setPageCount(result.pageCount());
-            doc.setMetadataJson(toJson(result.metadata()));
+            doc.setMetadataJson(toJson(parseMetadata));
             doc.setStatus(DocumentStatus.COMPLETED);
             doc.setFailReason(null);
             documentRepository.save(doc);
 
-            log.info("文档解析完成: id={}, pages={}, textLength={}",
-                    doc.getId(), result.pageCount(),
+            log.info("文档解析完成: id={}, parser={}, pages={}, textLength={}",
+                    doc.getId(), parserUsed, result.pageCount(),
                     result.textContent() != null ? result.textContent().length() : 0);
-            return result;
+            return new ParseResult(result.textContent(), result.pageCount(), parseMetadata);
 
         } catch (BusinessException e) {
             // 解析失败 → 标记 FAILED
@@ -337,5 +400,15 @@ public class DocumentServiceImpl implements DocumentService {
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
+    }
+
+    /**
+     * 截断字符串至指定长度（用于 failReason，避免 DB 字段溢出）。
+     */
+    private String truncate(String s, int maxLen) {
+        if (s == null) {
+            return "";
+        }
+        return s.length() <= maxLen ? s : s.substring(0, maxLen) + "...";
     }
 }
