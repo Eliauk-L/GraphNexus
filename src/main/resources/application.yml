@@ -71,6 +71,7 @@ mineru:
     base-url: https://mineru.net
     token: ${MINERU_API_TOKEN:}
     model-version: vlm
+    parser-name: mineru-v4
     poll-timeout: 300s
     poll-interval: 3s
   parse:

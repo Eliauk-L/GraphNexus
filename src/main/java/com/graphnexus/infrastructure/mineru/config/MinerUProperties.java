@@ -40,6 +40,9 @@ public class MinerUProperties {
         /** 模型版本：pipeline / vlm */
         private String modelVersion = "vlm";
 
+        /** 解析器标识名（写入 metadata.parser） */
+        private String parserName = "mineru-v4";
+
         /** 轮询超时 */
         private Duration pollTimeout = Duration.ofSeconds(300);
 

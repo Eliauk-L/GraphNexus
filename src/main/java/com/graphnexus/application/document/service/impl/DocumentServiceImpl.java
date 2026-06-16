@@ -162,8 +162,9 @@ public class DocumentServiceImpl implements DocumentService {
                 try {
                     result = minerUDocumentParser.parse(pdfBytes);
                     parseMetadata.putAll(result.metadata());
-                    parseMetadata.put("parser", "mineru-v4");
-                    parserUsed = "mineru-v4";
+                    String parserName = minerUProperties.getApi().getParserName();
+                    parseMetadata.put("parser", parserName);
+                    parserUsed = parserName;
                     log.info("MinerU v4 解析成功: docId={}", doc.getId());
                 } catch (Exception mineruEx) {
                     log.warn("MinerU 解析失败，fallback to PDFBox: docId={}, error={}",

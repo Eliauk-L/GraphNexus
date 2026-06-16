@@ -80,7 +80,7 @@ public class MinerUDocumentParser implements DocumentParser {
 
         // ⑤ 构建返回结果
         Map<String, String> metadata = new LinkedHashMap<>();
-        metadata.put("parser", "mineru-v4");
+        metadata.put("parser", properties.getApi().getParserName());
         metadata.put("model", properties.getApi().getModelVersion());
         metadata.put("batchId", submitResult.batchId());
 
