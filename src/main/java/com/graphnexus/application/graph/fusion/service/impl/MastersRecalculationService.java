@@ -41,7 +41,7 @@ public class MastersRecalculationService {
      */
     public int recalculateAll(String subject) {
         List<Map<String, Object>> allStudents =
-                graphNodeRepository.findStudentsByKnowledgePointNames(List.of(subject), subject);
+                graphNodeRepository.findAllStudentsBySubject(subject);
         return recalculate(allStudents);
     }
 

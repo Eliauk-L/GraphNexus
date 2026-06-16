@@ -394,8 +394,23 @@ public class GraphNodeRepository {
     }
 
     /**
-     * 查找受影响的 Student（通过 TESTED 边关联到指定 KP 名称列表）。
+     * 查询某学科下所有有考试记录的学生（全量 MASTERS 重算用）。
      */
+    public List<Map<String, Object>> findAllStudentsBySubject(String subject) {
+        try {
+            String cypher = "MATCH (s:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint {subject: $subject}) " +
+                    "RETURN DISTINCT s.studentNo AS studentNo, s.id AS studentNodeId";
+            Collection<Map<String, Object>> rows = neo4jClient.query(cypher)
+                    .bindAll(Map.of("subject", subject)).fetch().all();
+            return new ArrayList<>(rows);
+        } catch (Exception e) {
+            log.warn("查询 subject={} 的学生失败: {}", subject, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 按知识点名称查找受影响的 Student（增量融合用）。
     public List<Map<String, Object>> findStudentsByKnowledgePointNames(List<String> kpNames, String subject) {
         if (kpNames == null || kpNames.isEmpty()) return Collections.emptyList();
         try {
