@@ -125,7 +125,7 @@ public class FusionRollbackService {
 
     private String findStudentNodeId(String studentNo, String kpName) {
         List<Map<String, Object>> students =
-                graphNodeRepository.findStudentsByKnowledgePointNames(List.of(kpName), null);
+                graphNodeRepository.findStudentsByKpNames(List.of(kpName));
         return students.stream()
                 .filter(s -> studentNo.equals(s.get("studentNo")))
                 .map(s -> (String) s.get("studentNodeId"))

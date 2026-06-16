@@ -118,7 +118,7 @@ public class FusionServiceImpl implements FusionService {
             groupBuilder.merge(groups);
 
             List<Map<String, Object>> affectedStudents =
-                    graphNodeRepository.findStudentsByKnowledgePointNames(kpNames, subject);
+                    graphNodeRepository.findStudentsByKpNamesAndSubject(kpNames, subject);
             int totalMasters = mastersService.recalculate(affectedStudents, subject);
 
             String detailJson = buildFusionDetailJson(groups);

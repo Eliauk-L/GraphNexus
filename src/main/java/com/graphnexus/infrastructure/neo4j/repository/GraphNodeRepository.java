@@ -399,29 +399,37 @@ public class GraphNodeRepository {
     }
 
     /**
-     * 按知识点名称查找受影响的 Student（增量融合用）。
+     * 按知识点名称 + 学科查找受影响的 Student（增量融合用）。
      */
-    public List<Map<String, Object>> findStudentsByKnowledgePointNames(List<String> kpNames, String subject) {
+    public List<Map<String, Object>> findStudentsByKpNamesAndSubject(List<String> kpNames, String subject) {
         if (kpNames == null || kpNames.isEmpty()) return Collections.emptyList();
         try {
-            String cypher;
-            Map<String, Object> params;
-            if (subject == null) {
-                cypher = "MATCH (s:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint) " +
-                        "WHERE kp.name IN $names " +
-                        "RETURN DISTINCT s.studentNo AS studentNo, s.id AS studentNodeId";
-                params = Map.of("names", kpNames);
-            } else {
-                cypher = "MATCH (s:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint) " +
-                        "WHERE kp.name IN $names AND kp.subject = $subject " +
-                        "RETURN DISTINCT s.studentNo AS studentNo, s.id AS studentNodeId";
-                params = Map.of("names", kpNames, "subject", subject);
-            }
-            Collection<Map<String, Object>> rows = neo4jClient.query(cypher)
-                    .bindAll(params).fetch().all();
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (s:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint) " +
+                    "WHERE kp.name IN $names AND kp.subject = $subject " +
+                    "RETURN DISTINCT s.studentNo AS studentNo, s.id AS studentNodeId"
+            ).bindAll(Map.of("names", kpNames, "subject", subject)).fetch().all();
             return new ArrayList<>(rows);
         } catch (Exception e) {
-            log.warn("查找受影响 Student 失败: {}", e.getMessage());
+            log.warn("按 KP 名称+学科查找 Student 失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 按知识点名称查找受影响的 Student（回滚用，不限学科）。
+     */
+    public List<Map<String, Object>> findStudentsByKpNames(List<String> kpNames) {
+        if (kpNames == null || kpNames.isEmpty()) return Collections.emptyList();
+        try {
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (s:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint) " +
+                    "WHERE kp.name IN $names " +
+                    "RETURN DISTINCT s.studentNo AS studentNo, s.id AS studentNodeId"
+            ).bindAll(Map.of("names", kpNames)).fetch().all();
+            return new ArrayList<>(rows);
+        } catch (Exception e) {
+            log.warn("按 KP 名称查找 Student 失败: {}", e.getMessage());
             return Collections.emptyList();
         }
     }
