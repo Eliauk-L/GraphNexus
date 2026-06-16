@@ -4,6 +4,7 @@ import com.graphnexus.application.graph.extraction.ExtractionService;
 import com.graphnexus.application.graph.model.ExtractionResultBO;
 import com.graphnexus.application.graph.model.GraphSubgraphBO;
 import com.graphnexus.application.graph.service.GraphService;
+import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.document.DocumentDO;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 知识图谱服务实现 — 编排抽取流程并管理 Neo4j 事务。
@@ -35,6 +37,7 @@ public class GraphServiceImpl implements GraphService {
     private final DocumentRepository documentRepository;
     private final ExtractionService extractionService;
     private final GraphNodeRepository graphNodeRepository;
+    private final FusionService fusionService;
 
     @Override
     @Transactional
@@ -94,6 +97,18 @@ public class GraphServiceImpl implements GraphService {
         log.info("图谱抽取完成：docId={}, entities={}, kp={}, categories={}, edges={}",
                 documentId, result.getEntityCount(), result.getKnowledgePointCount(),
                 result.getCategoryCount(), result.getEdgeCount());
+
+        // 增量融合（见 ADR-009）
+        List<String> affectedKpNames = extracted.knowledgePoints().stream()
+                .map(kp -> kp.getName())
+                .collect(Collectors.toList());
+        try {
+            fusionService.fuseIncremental(affectedKpNames, doc.getSubject());
+        } catch (Exception e) {
+            log.error("增量融合失败（文档抽取后），documentId={}, kps={}，可手动全量融合修复",
+                    documentId, affectedKpNames, e);
+        }
+
         return result;
     }
 

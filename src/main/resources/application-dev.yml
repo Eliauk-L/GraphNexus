@@ -6,8 +6,7 @@
 # =============================================================================
 
 spring:
-  config:
-    import: optional:file:.env
+  
   # ---------------------------------------------------------------------------
   # Neo4j 图数据库
   # ---------------------------------------------------------------------------
@@ -113,6 +112,24 @@ minio:
   access-key: minioadmin
   secret-key: minioadmin123
   bucket: graphnexus-dev
+
+# ---------------------------------------------------------------------------
+# 宽图谱融合配置
+# ---------------------------------------------------------------------------
+fusion:
+  kp-matching:
+    strategy: fuzzy             # fuzzy（模糊匹配）/ exact（精确匹配）
+    threshold: 0.85             # 融合相似度阈值
+    fuzzy:
+      alpha: 0.3                # 字符 Jaccard 权重
+      beta: 0.5                 # Bigram Jaccard 权重
+      gamma: 0.2                # 归一化编辑距离权重
+  weight:
+    strategy: time-decay        # time-decay（时间衰减）/ simple-average（简单平均）
+    time-decay:
+      factor: 0.9               # 月衰减因子
+  rollback:
+    weight-tolerance: 0.01      # MASTERS weight 回滚校验容差
 
 # ---------------------------------------------------------------------------
 # 日志

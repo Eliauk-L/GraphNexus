@@ -34,6 +34,15 @@ public class KnowledgePointNode extends GraphNode {
     /** 年级/学段（如"初中"、"高中"） */
     private String gradeLevel;
 
+    /**
+     * 融合来源标记 — 记录此 KP 节点的数据来源。
+     *
+     * <p>可能值：{@code "DOCUMENT"}（文档抽取）、{@code "CSV_IMPORT"}（成绩导入）、
+     * {@code "DOCUMENT,CSV_IMPORT"}（融合后的规范节点，来自多源）。
+     * 见 DESIGN D10。</p>
+     */
+    private String fusionSource;
+
     public KnowledgePointNode(String name, String description, String subject,
                                String gradeLevel, String documentId) {
         super(NodeType.KNOWLEDGE_POINT.getLabel());
@@ -42,6 +51,7 @@ public class KnowledgePointNode extends GraphNode {
         this.description = description;
         this.subject = subject;
         this.gradeLevel = gradeLevel;
+        this.fusionSource = "DOCUMENT";
     }
 
     /**
@@ -54,6 +64,21 @@ public class KnowledgePointNode extends GraphNode {
         super(NodeType.KNOWLEDGE_POINT.getLabel());
         this.name = name;
         this.subject = subject;
+        this.fusionSource = "CSV_IMPORT";
+    }
+
+    /**
+     * 融合规范节点构造器 — 继承主 KP 信息并标记多源。
+     */
+    public KnowledgePointNode(String name, String description, String subject,
+                               String gradeLevel, String documentId, String fusionSource) {
+        super(NodeType.KNOWLEDGE_POINT.getLabel());
+        this.setDocumentId(documentId);
+        this.name = name;
+        this.description = description;
+        this.subject = subject;
+        this.gradeLevel = gradeLevel;
+        this.fusionSource = fusionSource;
     }
 
     @Override
@@ -63,6 +88,7 @@ public class KnowledgePointNode extends GraphNode {
         props.put("description", this.getDescription());
         props.put("subject", this.getSubject());
         props.put("gradeLevel", this.getGradeLevel());
+        props.put("fusionSource", this.getFusionSource());
         return props;
     }
 }

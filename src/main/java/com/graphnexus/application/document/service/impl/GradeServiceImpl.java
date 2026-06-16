@@ -17,6 +17,7 @@ import com.graphnexus.application.document.model.DeleteResultBO;
 import com.graphnexus.application.document.parser.FileParseRequest;
 import com.graphnexus.application.document.parser.FileParserRegistry;
 import com.graphnexus.application.document.service.GradeService;
+import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.common.util.Md5Utils;
@@ -51,6 +52,7 @@ public class GradeServiceImpl implements GradeService {
     private final FileStorageService fileStorageService;
     private final FileParserRegistry fileParserRegistry;
     private final ObjectMapper objectMapper;
+    private final FusionService fusionService;
 
     // ======================== 上传 ========================
 
@@ -155,6 +157,14 @@ public class GradeServiceImpl implements GradeService {
         log.info("CSV 成绩上传完成: examNo={}, students={}, questions={}, kps={}",
                 payload.examNo(), payload.students().size(),
                 payload.questionCount(), payload.knowledgePoints().size());
+
+        // 增量融合（见 ADR-009）
+        try {
+            fusionService.fuseIncremental(payload.knowledgePoints(), payload.subject());
+        } catch (Exception e) {
+            log.error("增量融合失败（CSV 上传后），examNo={}, kps={}，可手动全量融合修复",
+                    payload.examNo(), payload.knowledgePoints(), e);
+        }
 
         return GradeUploadResultBO.builder()
                 .examNo(payload.examNo())

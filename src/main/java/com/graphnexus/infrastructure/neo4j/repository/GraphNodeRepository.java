@@ -251,9 +251,199 @@ public class GraphNodeRepository {
         return deletedCount;
     }
 
+    // ======================== 宽图谱融合方法（见 DESIGN T10） ========================
+
     /**
-     * 内部类，用于查询结果的 GraphEdge 实例。
+     * 按 subject 查询所有 KnowledgePoint 节点（全量融合用）。
      */
+    public List<Map<String, Object>> findAllKnowledgePointsBySubject(String subject) {
+        try {
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint {subject: $subject}) " +
+                    "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
+                    "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
+                    "kp.description AS description, kp.gradeLevel AS gradeLevel"
+            ).bindAll(Map.of("subject", subject)).fetch().all();
+            return new ArrayList<>(rows);
+        } catch (Exception e) {
+            log.warn("按 subject={} 查询 KP 失败: {}", subject, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 按名称列表查询指定 subject 的 KP（增量融合用）。
+     */
+    public List<Map<String, Object>> findKnowledgePointsByNames(List<String> names, String subject) {
+        if (names == null || names.isEmpty()) return Collections.emptyList();
+        try {
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint) WHERE kp.name IN $names AND kp.subject = $subject " +
+                    "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
+                    "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
+                    "kp.description AS description, kp.gradeLevel AS gradeLevel"
+            ).bindAll(Map.of("names", names, "subject", subject)).fetch().all();
+            return new ArrayList<>(rows);
+        } catch (Exception e) {
+            log.warn("按名称查询 KP 失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 边重定向：将源 KP 节点的边迁移到目标 KP 节点。
+     */
+    public void redirectEdges(String fromKpId, String toKpId) {
+        // 入边重定向：其他节点 → fromKpId → 改为 → toKpId
+        neo4jClient.query(
+                "MATCH (a)-[r]->(b:KnowledgePoint {id: $fromId}) " +
+                "WHERE type(r) <> 'MASTERS' " +
+                "CREATE (a)-[r2:" + "REL" + "]->(c:KnowledgePoint {id: $toId}) " +
+                "SET r2 = properties(r) " +
+                "DELETE r"
+        ).bindAll(Map.of("fromId", fromKpId, "toId", toKpId)).run();
+
+        // 实际用动态关系类型：分别处理每种入边
+        String[] inTypes = {"ALIGNED_TO", "BELONGS_TO", "TESTED", "PREREQUISITE_OF", "CHILD_OF"};
+        for (String type : inTypes) {
+            try {
+                neo4jClient.query(
+                        "MATCH (a)-[r:" + type + "]->(b:KnowledgePoint {id: $fromId}) " +
+                        "CREATE (a)-[r2:" + type + "]->(c:KnowledgePoint {id: $toId}) " +
+                        "SET r2 = properties(r) " +
+                        "DELETE r"
+                ).bindAll(Map.of("fromId", fromKpId, "toId", toKpId)).run();
+            } catch (Exception e) {
+                log.debug("重定向入边 {} 时无匹配边（from={} → to={}）: {}", type, fromKpId, toKpId, e.getMessage());
+            }
+        }
+
+        // 出边重定向：fromKpId → 其他节点 → 改为 toKpId → 其他节点
+        String[] outTypes = {"PREREQUISITE_OF", "BELONGS_TO", "CHILD_OF"};
+        for (String type : outTypes) {
+            try {
+                neo4jClient.query(
+                        "MATCH (a:KnowledgePoint {id: $fromId})-[r:" + type + "]->(b) " +
+                        "CREATE (c:KnowledgePoint {id: $toId})-[r2:" + type + "]->(b) " +
+                        "SET r2 = properties(r) " +
+                        "DELETE r"
+                ).bindAll(Map.of("fromId", fromKpId, "toId", toKpId)).run();
+            } catch (Exception e) {
+                log.debug("重定向出边 {} 时无匹配边（from={} → to={}）: {}", type, fromKpId, toKpId, e.getMessage());
+            }
+        }
+        log.debug("边重定向完成: {} → {}", fromKpId, toKpId);
+    }
+
+    /**
+     * 删除指定的 KnowledgePoint 节点（DETACH DELETE，幂等）。
+     */
+    public void deleteKnowledgePoints(List<String> kpIds) {
+        if (kpIds == null || kpIds.isEmpty()) return;
+        neo4jClient.query(
+                "MATCH (kp:KnowledgePoint) WHERE kp.id IN $ids DETACH DELETE kp"
+        ).bindAll(Map.of("ids", kpIds)).run();
+        log.debug("已删除 {} 个冗余 KP 节点", kpIds.size());
+    }
+
+    /**
+     * 按 Student 批量 upsert MASTERS 边。
+     */
+    public void batchUpsertMastersEdges(String studentNodeId, List<MastersEdgeData> edges) {
+        if (edges == null || edges.isEmpty()) return;
+        List<Map<String, Object>> edgeParams = edges.stream().map(e -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("studentId", e.studentId());
+            m.put("kpId", e.kpId());
+            m.put("weight", e.weight());
+            m.put("description", e.description() != null ? e.description() : "");
+            return m;
+        }).collect(Collectors.toList());
+
+        neo4jClient.query(
+                "UNWIND $edges AS edge " +
+                "MATCH (s:Student {id: edge.studentId}), (kp:KnowledgePoint {id: edge.kpId}) " +
+                "MERGE (s)-[r:MASTERS]->(kp) " +
+                "SET r.weight = edge.weight, r.description = edge.description, " +
+                "r.edgeType = 'MASTERS', r.createdAt = datetime()"
+        ).bindAll(Map.of("edges", edgeParams)).run();
+        log.debug("批量 upsert {} 条 MASTERS 边完成（student={}）", edges.size(), studentNodeId);
+    }
+
+    /**
+     * 查找受影响的 Student（通过 TESTED 边关联到指定 KP 名称列表）。
+     */
+    public List<Map<String, Object>> findStudentsByKnowledgePointNames(List<String> kpNames, String subject) {
+        if (kpNames == null || kpNames.isEmpty()) return Collections.emptyList();
+        try {
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (s:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint) " +
+                    "WHERE kp.name IN $names AND kp.subject = $subject " +
+                    "RETURN DISTINCT s.studentNo AS studentNo, s.id AS studentNodeId"
+            ).bindAll(Map.of("names", kpNames, "subject", subject)).fetch().all();
+            return new ArrayList<>(rows);
+        } catch (Exception e) {
+            log.warn("查找受影响 Student 失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 查询某 Student 的所有 MASTERS 边（回滚校验用）。
+     */
+    public List<Map<String, Object>> findMastersEdgesByStudent(String studentNodeId) {
+        try {
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (s:Student {id: $id})-[r:MASTERS]->(kp:KnowledgePoint) " +
+                    "RETURN kp.name AS kpName, r.weight AS weight"
+            ).bindAll(Map.of("id", studentNodeId)).fetch().all();
+            return new ArrayList<>(rows);
+        } catch (Exception e) {
+            log.warn("查询 MASTERS 边失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 删除指定 KP 的指定类型入边（回滚用）。
+     */
+    public void deleteIncomingEdges(String kpId, String edgeType) {
+        neo4jClient.query(
+                "MATCH (a)-[r:" + edgeType + "]->(b:KnowledgePoint {id: $kpId}) DELETE r"
+        ).bindAll(Map.of("kpId", kpId)).run();
+    }
+
+    /**
+     * 重建节点（回滚用）。
+     */
+    public void createNodeWithProperties(String label, Map<String, Object> props) {
+        String cypher = String.format("CREATE (n:%s) SET n = $props", label);
+        neo4jClient.query(cypher).bindAll(Map.of("props", props)).run();
+    }
+
+    /**
+     * 删除 MASTERS 边（回滚用）。
+     */
+    public void deleteMastersEdge(String studentNodeId, String kpName) {
+        neo4jClient.query(
+                "MATCH (s:Student {id: $sid})-[r:MASTERS]->(kp:KnowledgePoint {name: $kpName}) DELETE r"
+        ).bindAll(Map.of("sid", studentNodeId, "kpName", kpName)).run();
+    }
+
+    /**
+     * 更新 MASTERS 边权重（回滚用）。
+     */
+    public void updateMastersWeight(String studentNodeId, String kpName, double weight, String description) {
+        neo4jClient.query(
+                "MATCH (s:Student {id: $sid})-[r:MASTERS]->(kp:KnowledgePoint {name: $kpName}) " +
+                "SET r.weight = $weight, r.description = $description"
+        ).bindAll(Map.of("sid", studentNodeId, "kpName", kpName, "weight", weight, "description", description != null ? description : "")).run();
+    }
+
+    /** MASTERS 批量写入的边数据 record */
+    public record MastersEdgeData(String studentId, String kpId, double weight, String description) {}
+
+    // ======================== 内部类 ========================
     private static class SimpleGraphEdge extends GraphEdge {
         SimpleGraphEdge() {
             super("");
