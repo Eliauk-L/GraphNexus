@@ -1,7 +1,5 @@
 package com.graphnexus.application.graph.extraction;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphnexus.application.llmgateway.service.LlmGateway;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
@@ -31,7 +29,7 @@ public class ExtractionService {
     private final LlmGateway llmGateway;
     private final ExtractionPromptBuilder promptBuilder;
     private final ExtractionValidator validator;
-    private final ObjectMapper objectMapper;
+    private final ExtractionJsonParser jsonParser;
 
     /**
      * 从文档文本中抽取知识图谱。
@@ -55,7 +53,7 @@ public class ExtractionService {
         String llmResponse = callLlmWithRetry(systemPrompt, userMessage);
 
         // 3. 预处理 + 反序列化
-        ExtractionRawResult rawResult = parseResponse(llmResponse);
+        ExtractionRawResult rawResult = jsonParser.parse(llmResponse);
 
         // 4. 校验
         validator.validate(rawResult);
@@ -91,48 +89,6 @@ public class ExtractionService {
                 throw new BusinessException(ErrorCode.C0001, "LLM 调用失败（已重试）: " + retryEx.getMessage());
             }
         }
-    }
-
-    /**
-     * 预处理 LLM 响应并反序列化。
-     */
-    private ExtractionRawResult parseResponse(String llmResponse) {
-        String cleaned = preprocessJson(llmResponse);
-        try {
-            return objectMapper.readValue(cleaned, ExtractionRawResult.class);
-        } catch (JsonProcessingException e) {
-            log.error("首次 JSON 解析失败，尝试去 markdown 包裹后重试: {}", e.getMessage());
-            // 二次清理：更激进地去除可能的包裹
-            String reCleaned = cleaned
-                    .replaceAll("^[^{]*", "")
-                    .replaceAll("[^}]*$", "");
-            try {
-                return objectMapper.readValue(reCleaned, ExtractionRawResult.class);
-            } catch (JsonProcessingException ex) {
-                log.error("二次解析也失败，原始响应前200字符: {}",
-                        llmResponse.substring(0, Math.min(200, llmResponse.length())));
-                throw new BusinessException(ErrorCode.A0010,
-                        "LLM 返回非合法 JSON: " + ex.getOriginalMessage());
-            }
-        }
-    }
-
-    /**
-     * 预处理 LLM 响应：去除 ```json ... ``` 包裹、首尾空白。
-     */
-    private String preprocessJson(String raw) {
-        String cleaned = raw.trim();
-        // 去除 ```json ... ``` 包裹
-        if (cleaned.startsWith("```")) {
-            int start = cleaned.indexOf("\n");
-            if (start > 0) {
-                cleaned = cleaned.substring(start + 1);
-            }
-            if (cleaned.endsWith("```")) {
-                cleaned = cleaned.substring(0, cleaned.lastIndexOf("```"));
-            }
-        }
-        return cleaned.trim();
     }
 
     /**
