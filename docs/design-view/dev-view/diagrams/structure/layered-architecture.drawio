@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="DDD四层架构" id="ddd-arch">
-    <mxGraphModel dx="1664" dy="911" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1350" math="0" shadow="0">
+    <mxGraphModel dx="1664" dy="1011" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1350" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -150,10 +150,10 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-4" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图构建" vertex="1">
           <mxGeometry height="32.5" width="160" x="410" y="373.5" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-5" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图融合" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-5" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图查询" vertex="1">
           <mxGeometry height="32.5" width="160" x="410" y="426" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-6" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图查询" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-6" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图融合" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="373.5" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-7" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图管理" vertex="1">
@@ -162,7 +162,7 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-8" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图剪枝" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="426" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-9" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="边权更新" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-9" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图谱度量" vertex="1">
           <mxGeometry height="32.5" width="160" x="410" y="526" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-10" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="上下文组装" vertex="1">
@@ -195,7 +195,7 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-19" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="Doubao" vertex="1">
           <mxGeometry height="32.5" width="70" x="880" y="646" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-21" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图谱度量" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-21" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="边权更新" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="476" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-22" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="实体对齐" vertex="1">

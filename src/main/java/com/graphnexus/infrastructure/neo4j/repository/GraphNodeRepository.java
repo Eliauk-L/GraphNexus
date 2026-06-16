@@ -447,9 +447,17 @@ public class GraphNodeRepository {
     }
 
     /**
-     * 重建节点（回滚用）。
+     * 更新节点属性（按 id 匹配现有节点）。
      */
-    public void createNodeWithProperties(String label, Map<String, Object> props) {
+    public void updateNodeProperties(String label, Map<String, Object> props) {
+        String cypher = String.format("MATCH (n:%s {id: $id}) SET n = $props", label);
+        neo4jClient.query(cypher).bindAll(Map.of("id", props.get("id"), "props", props)).run();
+    }
+
+    /**
+     * 创建新节点（回滚用，重建被删除的 KP）。
+     */
+    public void createNode(String label, Map<String, Object> props) {
         String cypher = String.format("CREATE (n:%s) SET n = $props", label);
         neo4jClient.query(cypher).bindAll(Map.of("props", props)).run();
     }

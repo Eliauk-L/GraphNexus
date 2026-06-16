@@ -101,7 +101,7 @@ public class FusionGroupBuilder {
                 graphNodeRepository.redirectEdges(sourceId, group.targetKpId());
             }
             graphNodeRepository.deleteKnowledgePoints(group.sourceKpIds());
-            graphNodeRepository.createNodeWithProperties("KnowledgePoint", group.targetKpProps());
+            graphNodeRepository.updateNodeProperties("KnowledgePoint", group.targetKpProps());
             log.debug("融合组 {}: {} → {}", group.groupId(), group.sourceKpIds(), group.targetKpId());
         }
     }

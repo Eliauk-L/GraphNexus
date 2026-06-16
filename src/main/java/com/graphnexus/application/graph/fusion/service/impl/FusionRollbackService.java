@@ -86,7 +86,7 @@ public class FusionRollbackService {
                     (List<Map<String, Object>>) group.get("sourceKpProperties");
             if (sourceKpPropsList != null) {
                 for (Map<String, Object> props : sourceKpPropsList) {
-                    graphNodeRepository.createNodeWithProperties("KnowledgePoint", props);
+                    graphNodeRepository.createNode("KnowledgePoint", props);
                     restoredKpCount++;
                 }
             }
