@@ -254,30 +254,19 @@ public class GraphNodeRepository {
     // ======================== 宽图谱融合方法（见 DESIGN T10） ========================
 
     /**
-     * 按 subject 查询所有 KnowledgePoint 节点（全量融合用）。
+     * 查询所有 KnowledgePoint 节点（全量融合用）。
      */
-    public List<Map<String, Object>> findAllKnowledgePointsBySubject(String subject) {
+    public List<Map<String, Object>> findAllKnowledgePoints() {
         try {
-            String cypher;
-            Map<String, Object> params;
-            if (subject == null) {
-                cypher = "MATCH (kp:KnowledgePoint) " +
-                        "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
-                        "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
-                        "kp.description AS description, kp.gradeLevel AS gradeLevel";
-                params = Collections.emptyMap();
-            } else {
-                cypher = "MATCH (kp:KnowledgePoint {subject: $subject}) " +
-                        "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
-                        "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
-                        "kp.description AS description, kp.gradeLevel AS gradeLevel";
-                params = Map.of("subject", subject);
-            }
-            Collection<Map<String, Object>> rows = neo4jClient.query(cypher)
-                    .bindAll(params).fetch().all();
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint) " +
+                    "RETURN kp.id AS id, kp.name AS name, kp.subject AS subject, " +
+                    "kp.documentId AS documentId, kp.fusionSource AS fusionSource, " +
+                    "kp.description AS description, kp.gradeLevel AS gradeLevel"
+            ).fetch().all();
             return new ArrayList<>(rows);
         } catch (Exception e) {
-            log.warn("按 subject={} 查询 KP 失败: {}", subject, e.getMessage());
+            log.warn("查询全部 KnowledgePoint 失败: {}", e.getMessage());
             return Collections.emptyList();
         }
     }

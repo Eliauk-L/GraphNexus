@@ -52,7 +52,7 @@ public class FusionServiceImpl implements FusionService {
         LocalDateTime startTime = LocalDateTime.now();
 
         try {
-            List<Map<String, Object>> allKps = graphNodeRepository.findAllKnowledgePointsBySubject(null);
+            List<Map<String, Object>> allKps = graphNodeRepository.findAllKnowledgePoints();
             Set<String> subjects = allKps.stream()
                     .map(m -> (String) m.get("subject"))
                     .filter(Objects::nonNull)
