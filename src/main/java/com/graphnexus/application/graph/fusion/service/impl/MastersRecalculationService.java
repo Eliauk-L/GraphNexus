@@ -95,7 +95,7 @@ public class MastersRecalculationService {
 
     /** 从 MySQL exam_record 按 kpName 分组提取成绩 */
     private Map<String, List<TestedRecord>> groupScoresByKp(String studentNo) {
-        List<ExamRecordDO> records = examRecordRepository.findByStudentNoAndIsDeletedFalse(studentNo);
+        List<ExamRecordDO> records = examRecordRepository.findExamRecordDOByStudentNoAndIsDeleted(studentNo,0);
 
         Map<String, List<TestedRecord>> byKp = new HashMap<>();
         for (ExamRecordDO rec : records) {
@@ -103,13 +103,15 @@ public class MastersRecalculationService {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> details = objectMapper.readValue(rec.getScoreDetails(), List.class);
                 for (Map<String, Object> d : details) {
-                    String kpName = extractKpName(d);
-                    if (kpName == null) continue;
+                    List<String> kpNames = extractKpNames(d);
+                    if (kpNames.isEmpty()) continue;
                     Double rawScore = toDouble(d.get("rawScore"));
                     Double maxScore = toDouble(d.get("maxScore"));
                     if (maxScore == null || maxScore == 0) maxScore = 1.0;
-                    byKp.computeIfAbsent(kpName, k -> new ArrayList<>())
-                            .add(new TestedRecord(rec.getExamDate(), rawScore, maxScore));
+                    for (String kpName : kpNames) {
+                        byKp.computeIfAbsent(kpName, k -> new ArrayList<>())
+                                .add(new TestedRecord(rec.getExamDate(), rawScore, maxScore));
+                    }
                 }
             } catch (Exception e) {
                 log.warn("解析 score_details JSON 失败 studentNo={}: {}", studentNo, e.getMessage());
@@ -118,15 +120,13 @@ public class MastersRecalculationService {
         return byKp;
     }
 
-    /** 从成绩明细中提取知识点名称 */
-    private String extractKpName(Map<String, Object> detail) {
+    /** 从成绩明细中提取知识点名称列表（一题多 KP 时全部返回） */
+    private List<String> extractKpNames(Map<String, Object> detail) {
         String kpName = (String) detail.get("kpName");
-        if (kpName == null && detail.get("kpNames") != null) {
-            @SuppressWarnings("unchecked")
-            List<String> kpNames = (List<String>) detail.get("kpNames");
-            kpName = kpNames.isEmpty() ? null : kpNames.get(0);
-        }
-        return kpName;
+        if (kpName != null) return List.of(kpName);
+        @SuppressWarnings("unchecked")
+        List<String> kpNames = (List<String>) detail.get("kpNames");
+        return kpNames != null ? kpNames : List.of();
     }
 
     private Double toDouble(Object obj) {
