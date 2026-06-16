@@ -40,8 +40,8 @@ class TimeDecayStrategyTest {
         LocalDate exam2 = now.minusMonths(1);  // 1 month ago
 
         List<TestedRecord> records = List.of(
-                new TestedRecord(exam1, 3.0, 8.0, "对称轴"),   // 0.375
-                new TestedRecord(exam2, 7.0, 10.0, "对称轴")   // 0.700
+                new TestedRecord(exam1, 3.0, 8.0),   // 0.375
+                new TestedRecord(exam2, 7.0, 10.0)   // 0.700
         );
 
         WeightResult result = strategy.calculate(records);
@@ -56,7 +56,7 @@ class TimeDecayStrategyTest {
     void singleExamNoDecayEffect() {
         LocalDate examDate = now.minusMonths(6);  // 半年前
         List<TestedRecord> records = List.of(
-                new TestedRecord(examDate, 8.0, 10.0, "对称轴")  // 0.80
+                new TestedRecord(examDate, 8.0, 10.0)  // 0.80
         );
 
         WeightResult result = strategy.calculate(records);
@@ -68,8 +68,8 @@ class TimeDecayStrategyTest {
     @DisplayName("AC-5: 缺考不计入")
     void absentSkipped() {
         List<TestedRecord> records = List.of(
-                new TestedRecord(now.minusMonths(1), null, 10.0, "判别式"), // 缺考
-                new TestedRecord(now.minusMonths(1), 8.0, 10.0, "判别式")   // 0.80
+                new TestedRecord(now.minusMonths(1), null, 10.0), // 缺考
+                new TestedRecord(now.minusMonths(1), 8.0, 10.0)   // 0.80
         );
 
         WeightResult result = strategy.calculate(records);
@@ -89,8 +89,8 @@ class TimeDecayStrategyTest {
     @DisplayName("全部缺考返回 weight=0")
     void allAbsentReturnsZero() {
         List<TestedRecord> records = List.of(
-                new TestedRecord(now, null, 10.0, "测试"),
-                new TestedRecord(now, null, 8.0, "测试")
+                new TestedRecord(now, null, 10.0),
+                new TestedRecord(now, null, 8.0)
         );
         WeightResult result = strategy.calculate(records);
         assertEquals(0.0, result.weight(), 0.001);
@@ -100,8 +100,8 @@ class TimeDecayStrategyTest {
     @DisplayName("同考试多次考同一 KP 先取平均")
     void sameDayMultipleQuestionsAveraged() {
         List<TestedRecord> records = List.of(
-                new TestedRecord(now.minusMonths(1), 6.0, 10.0, "对称轴"),  // 0.60
-                new TestedRecord(now.minusMonths(1), 8.0, 10.0, "对称轴")   // 0.80
+                new TestedRecord(now.minusMonths(1), 6.0, 10.0),  // 0.60
+                new TestedRecord(now.minusMonths(1), 8.0, 10.0)   // 0.80
                 // 同考试平均 = 0.70
         );
         WeightResult result = strategy.calculate(records);

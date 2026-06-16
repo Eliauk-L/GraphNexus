@@ -482,7 +482,7 @@ public class FusionServiceImpl implements FusionService {
                         Double rawScore = rawObj instanceof Number ? ((Number) rawObj).doubleValue() : null;
                         Double maxScore = maxObj instanceof Number ? ((Number) maxObj).doubleValue() : 0.0;
                         byKp.computeIfAbsent(kpName, k -> new ArrayList<>())
-                                .add(new TestedRecord(rec.getExamDate(), rawScore, maxScore, kpName));
+                                .add(new TestedRecord(rec.getExamDate(), rawScore, maxScore));
                     }
                 } catch (Exception e) {
                     log.warn("解析 score_details JSON 失败 studentNo={}: {}", studentNo, e.getMessage());
