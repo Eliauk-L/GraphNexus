@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * MASTERS 掌握度重算服务 — 从 MySQL 读成绩 → 策略计算 → Neo4j 批量写 MASTERS 边。
@@ -42,16 +41,17 @@ public class MastersRecalculationService {
     public int recalculateAll(String subject) {
         List<Map<String, Object>> allStudents =
                 graphNodeRepository.findAllStudentsBySubject(subject);
-        return recalculate(allStudents);
+        return recalculate(allStudents, subject);
     }
 
     /**
      * 重算指定学生列表的 MASTERS。
      *
      * @param students Neo4j 查询结果，每项含 studentNo + studentNodeId
+     * @param subject  学科，用于 KP 查重时限定范围
      * @return 创建的 MASTERS 边总数
      */
-    public int recalculate(List<Map<String, Object>> students) {
+    public int recalculate(List<Map<String, Object>> students, String subject) {
         if (students == null || students.isEmpty()) return 0;
 
         WeightCalculationStrategy weightCalc = getWeightStrategy();
@@ -61,15 +61,13 @@ public class MastersRecalculationService {
             String studentNo = (String) student.get("studentNo");
             String studentNodeId = (String) student.get("studentNodeId");
 
-            // 查 MySQL + 按 kpName 分组构建 TestedRecord
             Map<String, List<TestedRecord>> byKp = groupScoresByKp(studentNo);
 
-            // 对每个 KP 计算 MASTERS 边
             List<GraphNodeRepository.MastersEdgeData> edges = new ArrayList<>();
             for (var entry : byKp.entrySet()) {
                 String kpName = entry.getKey();
                 WeightResult result = weightCalc.calculate(entry.getValue());
-                String kpId = findKpId(kpName);
+                String kpId = findKpId(kpName, subject);
                 if (kpId != null) {
                     edges.add(new GraphNodeRepository.MastersEdgeData(
                             studentNodeId, kpId, result.weight(), result.summaryJson()));
@@ -95,7 +93,7 @@ public class MastersRecalculationService {
 
     /** 从 MySQL exam_record 按 kpName 分组提取成绩 */
     private Map<String, List<TestedRecord>> groupScoresByKp(String studentNo) {
-        List<ExamRecordDO> records = examRecordRepository.findExamRecordDOByStudentNoAndIsDeleted(studentNo,0);
+        List<ExamRecordDO> records = examRecordRepository.findExamRecordDOByStudentNoAndIsDeleted(studentNo, 0);
 
         Map<String, List<TestedRecord>> byKp = new HashMap<>();
         for (ExamRecordDO rec : records) {
@@ -134,8 +132,9 @@ public class MastersRecalculationService {
         return null;
     }
 
-    private String findKpId(String kpName) {
-        List<Map<String, Object>> kps = graphNodeRepository.findKnowledgePointsByNames(List.of(kpName), null);
+    private String findKpId(String kpName, String subject) {
+        List<Map<String, Object>> kps =
+                graphNodeRepository.findKnowledgePointsByNames(List.of(kpName), subject);
         return kps.stream().map(m -> (String) m.get("id")).findFirst().orElse(null);
     }
 }

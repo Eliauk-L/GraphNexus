@@ -119,7 +119,7 @@ public class FusionServiceImpl implements FusionService {
 
             List<Map<String, Object>> affectedStudents =
                     graphNodeRepository.findStudentsByKnowledgePointNames(kpNames, subject);
-            int totalMasters = mastersService.recalculate(affectedStudents);
+            int totalMasters = mastersService.recalculate(affectedStudents, subject);
 
             String detailJson = buildFusionDetailJson(groups);
             updateLogCompleted(logEntry, groups.size(), totalMasters, detailJson, startTime);
