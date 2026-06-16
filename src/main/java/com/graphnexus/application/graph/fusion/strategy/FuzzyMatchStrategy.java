@@ -1,6 +1,6 @@
 package com.graphnexus.application.graph.fusion.strategy;
 
-import com.graphnexus.application.graph.fusion.config.FusionProperties;
+import com.graphnexus.application.graph.fusion.config.FuzzyMatchProperties;
 import com.graphnexus.application.graph.fusion.model.KpCandidate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FuzzyMatchStrategy implements KpMatchingStrategy {
 
-    private final FusionProperties fusionProperties;
+    private final FuzzyMatchProperties fuzzyProperties;
 
     @Override
     public double match(KpCandidate a, KpCandidate b) {
@@ -37,10 +37,9 @@ public class FuzzyMatchStrategy implements KpMatchingStrategy {
             return 0.0;
         }
 
-        FusionProperties.KpMatching.Fuzzy fuzzy = fusionProperties.getMatching().getFuzzy();
-        double alpha = fuzzy.getAlpha();
-        double beta = fuzzy.getBeta();
-        double gamma = fuzzy.getGamma();
+        double alpha = fuzzyProperties.getAlpha();
+        double beta = fuzzyProperties.getBeta();
+        double gamma = fuzzyProperties.getGamma();
 
         double charJaccard = charJaccard(na, nb);
         double bigramJaccard = bigramJaccard(na, nb);

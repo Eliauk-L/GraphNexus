@@ -118,18 +118,23 @@ minio:
 # ---------------------------------------------------------------------------
 fusion:
   kp-matching:
-    strategy: fuzzy             # fuzzy（模糊匹配）/ exact（精确匹配）
+    strategy: fuzzy             # fuzzy（模糊匹配）/ exact（精确匹配）/ vector-similarity（未来）
     threshold: 0.85             # 融合相似度阈值
-    fuzzy:
-      alpha: 0.3                # 字符 Jaccard 权重
-      beta: 0.5                 # Bigram Jaccard 权重
-      gamma: 0.2                # 归一化编辑距离权重
   weight:
-    strategy: time-decay        # time-decay（时间衰减）/ simple-average（简单平均）
-    time-decay:
-      factor: 0.9               # 月衰减因子
+    strategy: time-decay        # time-decay（时间衰减）/ simple-average（简单平均）/ ewma（未来）
   rollback:
     weight-tolerance: 0.01      # MASTERS weight 回滚校验容差
+
+# ---------------------------------------------------------------------------
+# 策略专属配置 — 各策略独立绑定前缀，新增策略只需加新配置块
+# ---------------------------------------------------------------------------
+fusion.strategy.fuzzy:
+  alpha: 0.3                    # 字符 Jaccard 权重
+  beta: 0.5                     # Bigram Jaccard 权重
+  gamma: 0.2                    # 归一化编辑距离权重
+
+fusion.strategy.time-decay:
+  factor: 0.9                   # 月衰减因子（0~1）
 
 # ---------------------------------------------------------------------------
 # 日志

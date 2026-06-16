@@ -1,6 +1,6 @@
 package com.graphnexus.application.graph.fusion.strategy;
 
-import com.graphnexus.application.graph.fusion.config.FusionProperties;
+import com.graphnexus.application.graph.fusion.config.TimeDecayProperties;
 import com.graphnexus.application.graph.fusion.model.TestedRecord;
 import com.graphnexus.application.graph.fusion.model.WeightResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,8 +27,8 @@ class TimeDecayStrategyTest {
 
     @BeforeEach
     void setUp() {
-        FusionProperties props = new FusionProperties();
-        props.getWeight().getTimeDecay().setFactor(0.9);
+        TimeDecayProperties props = new TimeDecayProperties();
+        props.setFactor(0.9);
         strategy = new TimeDecayStrategy(props);
         now = LocalDate.now();
     }

@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="DDD四层架构" id="ddd-arch">
-    <mxGraphModel dx="2037" dy="1330" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1350" math="0" shadow="0">
+    <mxGraphModel dx="1664" dy="911" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1350" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -22,16 +22,16 @@
         <mxCell id="l4-label" parent="1" style="text;fontSize=13;fontStyle=1;fontColor=#6A1B9A;align=center;" value="基础设施层" vertex="1">
           <mxGeometry height="40" width="100" x="20" y="752" as="geometry" />
         </mxCell>
-        <mxCell id="l4-m1" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="Neo4j" vertex="1">
+        <mxCell id="l4-m1" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="✅Neo4j" vertex="1">
           <mxGeometry height="70" width="180" x="150" y="774" as="geometry" />
         </mxCell>
-        <mxCell id="l4-m2" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="MySQL" vertex="1">
+        <mxCell id="l4-m2" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="✅MySQL" vertex="1">
           <mxGeometry height="70" width="180" x="350" y="774" as="geometry" />
         </mxCell>
         <mxCell id="l4-m3" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="Redis" vertex="1">
           <mxGeometry height="70" width="160" x="550" y="774" as="geometry" />
         </mxCell>
-        <mxCell id="l4-m4" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="MinIO" vertex="1">
+        <mxCell id="l4-m4" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="✅MinIO" vertex="1">
           <mxGeometry height="70" width="160" x="730" y="774" as="geometry" />
         </mxCell>
         <mxCell id="l4-m5" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="RabbitMQ" vertex="1">
@@ -117,7 +117,7 @@
         <mxCell id="l3-m5" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=2;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="智能查询" vertex="1">
           <mxGeometry height="260" width="200" x="870" y="336" as="geometry" />
         </mxCell>
-        <mxCell id="pJuFPeDSOYz2AJHWoFTs-14" parent="1" style="rounded=1;whiteSpace=wrap;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;fillColor=default;fontColor=#333333;strokeColor=#666666;" value="日志" vertex="1">
+        <mxCell id="pJuFPeDSOYz2AJHWoFTs-14" parent="1" style="rounded=1;whiteSpace=wrap;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;fillColor=default;fontColor=#333333;strokeColor=#666666;" value="✅日志" vertex="1">
           <mxGeometry height="70" width="150" x="1130" y="80" as="geometry" />
         </mxCell>
         <mxCell id="pJuFPeDSOYz2AJHWoFTs-15" parent="1" style="rounded=1;whiteSpace=wrap;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;fillColor=default;fontColor=#333333;strokeColor=#666666;" value="备份" vertex="1">
@@ -138,22 +138,22 @@
         <mxCell id="pJuFPeDSOYz2AJHWoFTs-6" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#4CAF50;strokeWidth=2;fontSize=13;arcSize=5;align=center;" value="鉴权" vertex="1">
           <mxGeometry height="50" width="220" x="456" y="200" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-1" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="文档上传&#xa;" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-1" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅文档上传" vertex="1">
           <mxGeometry height="32.5" width="160" x="170" y="373.5" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-2" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="文档解析&#xa;" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-2" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅文档解析" vertex="1">
           <mxGeometry height="32.5" width="160" x="170" y="426" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-3" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="文档管理" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-3" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅文档管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="170" y="476" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-4" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图构建" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-4" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图构建" vertex="1">
           <mxGeometry height="32.5" width="160" x="410" y="373.5" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-5" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图查询" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-5" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图融合" vertex="1">
           <mxGeometry height="32.5" width="160" x="410" y="426" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-6" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图融合" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-6" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图查询" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="373.5" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-7" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图管理" vertex="1">
@@ -174,7 +174,7 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-12" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="配置管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="890" y="476" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-13" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="数据源管理" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-13" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅成绩管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="170" y="526" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-14" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="报告导出" vertex="1">

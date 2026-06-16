@@ -7,8 +7,10 @@ import org.springframework.stereotype.Component;
 /**
  * 宽图谱融合配置属性 — 绑定 application-dev.yml 中 {@code fusion.*} 配置项。
  *
- * <p>所有算法参数（匹配权重/阈值/衰减因子/回滚容差）集中管理，
- * 通过 yml 实时调参无需重新编译。见 DESIGN D1/D2/D7。</p>
+ * <p><b>策略专属参数不在此类</b>——每个策略独立绑定自己的
+ * {@code @ConfigurationProperties} 前缀（如 {@link FuzzyMatchProperties}、
+ * {@link TimeDecayProperties}）。新增策略只需新建配置类 + 实现接口，
+ * 无需修改本类。见 DESIGN 方案 B。</p>
  *
  * @author Jay
  * @date 2026/06/15
@@ -18,10 +20,10 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "fusion")
 public class FusionProperties {
 
-    /** KP 匹配策略配置 */
+    /** KP 匹配策略选择 */
     private KpMatching matching = new KpMatching();
 
-    /** 权重计算策略配置 */
+    /** 权重计算策略选择 */
     private Weight weight = new Weight();
 
     /** 回滚配置 */
@@ -29,41 +31,17 @@ public class FusionProperties {
 
     @Data
     public static class KpMatching {
-        /** 策略名称：fuzzy（默认）/ exact */
+        /** 策略名称：fuzzy / exact / vector-similarity（未来） */
         private String strategy = "fuzzy";
 
-        /** 融合阈值（0~1），相似度 >= 此值归入同一融合组 */
+        /** 融合阈值（0~1） */
         private double threshold = 0.85;
-
-        /** 模糊匹配子配置 */
-        private Fuzzy fuzzy = new Fuzzy();
-
-        @Data
-        public static class Fuzzy {
-            /** 字符 Jaccard 权重 */
-            private double alpha = 0.3;
-
-            /** Bigram Jaccard 权重 */
-            private double beta = 0.5;
-
-            /** 归一化编辑距离权重 */
-            private double gamma = 0.2;
-        }
     }
 
     @Data
     public static class Weight {
-        /** 策略名称：time-decay（默认）/ simple-average */
+        /** 策略名称：time-decay / simple-average / ewma（未来） */
         private String strategy = "time-decay";
-
-        /** 时间衰减子配置 */
-        private TimeDecay timeDecay = new TimeDecay();
-
-        @Data
-        public static class TimeDecay {
-            /** 月衰减因子（0~1） */
-            private double factor = 0.9;
-        }
     }
 
     @Data

@@ -1,6 +1,6 @@
 package com.graphnexus.application.graph.fusion.strategy;
 
-import com.graphnexus.application.graph.fusion.config.FusionProperties;
+import com.graphnexus.application.graph.fusion.config.TimeDecayProperties;
 import com.graphnexus.application.graph.fusion.model.TestedRecord;
 import com.graphnexus.application.graph.fusion.model.WeightResult;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TimeDecayStrategy implements WeightCalculationStrategy {
 
-    private final FusionProperties fusionProperties;
+    private final TimeDecayProperties timeDecayProperties;
 
     @Override
     public WeightResult calculate(List<TestedRecord> records) {
@@ -45,7 +45,7 @@ public class TimeDecayStrategy implements WeightCalculationStrategy {
         Map<LocalDate, List<TestedRecord>> byDate = valid.stream()
                 .collect(Collectors.groupingBy(TestedRecord::examDate));
 
-        double factor = fusionProperties.getWeight().getTimeDecay().getFactor();
+        double factor = timeDecayProperties.getFactor();
         LocalDate now = LocalDate.now();
 
         double numerator = 0.0;

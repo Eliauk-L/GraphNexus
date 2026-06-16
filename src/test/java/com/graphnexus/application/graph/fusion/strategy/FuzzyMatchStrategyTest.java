@@ -1,6 +1,6 @@
 package com.graphnexus.application.graph.fusion.strategy;
 
-import com.graphnexus.application.graph.fusion.config.FusionProperties;
+import com.graphnexus.application.graph.fusion.config.FuzzyMatchProperties;
 import com.graphnexus.application.graph.fusion.model.KpCandidate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,11 +21,10 @@ class FuzzyMatchStrategyTest {
 
     @BeforeEach
     void setUp() {
-        FusionProperties props = new FusionProperties();
-        props.getMatching().setThreshold(0.85);
-        props.getMatching().getFuzzy().setAlpha(0.3);
-        props.getMatching().getFuzzy().setBeta(0.5);
-        props.getMatching().getFuzzy().setGamma(0.2);
+        FuzzyMatchProperties props = new FuzzyMatchProperties();
+        props.setAlpha(0.3);
+        props.setBeta(0.5);
+        props.setGamma(0.2);
         strategy = new FuzzyMatchStrategy(props);
     }
 
