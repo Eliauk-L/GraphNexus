@@ -137,9 +137,22 @@ fusion.strategy.time-decay:
   factor: 0.9                   # 月衰减因子（0~1）
 
 # ---------------------------------------------------------------------------
+# MinerU PDF 解析（开发环境）
+# ---------------------------------------------------------------------------
+mineru:
+  enabled: true
+  api:
+    token: ${MINERU_API_TOKEN:}
+  parse:
+    enable-formula: true
+    enable-table: true
+    language: ch
+
+# ---------------------------------------------------------------------------
 # 日志
 # ---------------------------------------------------------------------------
 logging:
   level:
     com.graphnexus: DEBUG
     com.graphnexus.infra: INFO
+    com.graphnexus.infrastructure.mineru: DEBUG

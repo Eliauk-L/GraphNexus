@@ -62,6 +62,22 @@ management:
       prometheus:
         enabled: true
 
+# ---------------------------------------------------------------------------
+# MinerU PDF 解析
+# ---------------------------------------------------------------------------
+mineru:
+  enabled: true
+  api:
+    base-url: https://mineru.net
+    token: ${MINERU_API_TOKEN:}
+    model-version: vlm
+    poll-timeout: 300s
+    poll-interval: 3s
+  parse:
+    enable-formula: true
+    enable-table: true
+    language: ch
+
 logging:
   level:
     com.graphnexus: INFO
