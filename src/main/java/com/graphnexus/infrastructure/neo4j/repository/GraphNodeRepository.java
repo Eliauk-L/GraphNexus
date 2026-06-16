@@ -303,44 +303,45 @@ public class GraphNodeRepository {
 
     /**
      * 边重定向：将源 KP 节点的边迁移到目标 KP 节点。
+     *
+     * <p>分别处理入边（a→fromKpId 改为 a→toKpId）和出边（fromKpId→b 改为 toKpId→b）。
+     * 未匹配到边的类型静默跳过（可能不存在该类型边）。</p>
      */
     public void redirectEdges(String fromKpId, String toKpId) {
-        // 入边重定向：其他节点 → fromKpId → 改为 → toKpId
-        neo4jClient.query(
-                "MATCH (a)-[r]->(b:KnowledgePoint {id: $fromId}) " +
-                "WHERE type(r) <> 'MASTERS' " +
-                "CREATE (a)-[r2:" + "REL" + "]->(c:KnowledgePoint {id: $toId}) " +
-                "SET r2 = properties(r) " +
-                "DELETE r"
-        ).bindAll(Map.of("fromId", fromKpId, "toId", toKpId)).run();
+        // 入边模板 + 出边模板：{type, cypherSnippet}
+        record EdgeRedirect(String type, String cypher) {}
+        EdgeRedirect[] redirects = {
+                // 入边：其他节点 → fromKpId → 改为 → toKpId
+                new EdgeRedirect("ALIGNED_TO",
+                        "MATCH (a)-[r:ALIGNED_TO]->(b:KnowledgePoint {id: $fromId}) " +
+                        "CREATE (a)-[r2:ALIGNED_TO]->(c:KnowledgePoint {id: $toId}) SET r2 = properties(r) DELETE r"),
+                new EdgeRedirect("TESTED",
+                        "MATCH (a)-[r:TESTED]->(b:KnowledgePoint {id: $fromId}) " +
+                        "CREATE (a)-[r2:TESTED]->(c:KnowledgePoint {id: $toId}) SET r2 = properties(r) DELETE r"),
+                new EdgeRedirect("PREREQUISITE_OF",
+                        "MATCH (a)-[r:PREREQUISITE_OF]->(b:KnowledgePoint {id: $fromId}) " +
+                        "CREATE (a)-[r2:PREREQUISITE_OF]->(c:KnowledgePoint {id: $toId}) SET r2 = properties(r) DELETE r"),
+                new EdgeRedirect("CHILD_OF",
+                        "MATCH (a)-[r:CHILD_OF]->(b:KnowledgePoint {id: $fromId}) " +
+                        "CREATE (a)-[r2:CHILD_OF]->(c:KnowledgePoint {id: $toId}) SET r2 = properties(r) DELETE r"),
+                // 出边：fromKpId → 其他节点 → 改为 toKpId → 其他节点
+                new EdgeRedirect("BELONGS_TO-out",
+                        "MATCH (a:KnowledgePoint {id: $fromId})-[r:BELONGS_TO]->(b) " +
+                        "CREATE (c:KnowledgePoint {id: $toId})-[r2:BELONGS_TO]->(b) SET r2 = properties(r) DELETE r"),
+                new EdgeRedirect("PREREQUISITE_OF-out",
+                        "MATCH (a:KnowledgePoint {id: $fromId})-[r:PREREQUISITE_OF]->(b) " +
+                        "CREATE (c:KnowledgePoint {id: $toId})-[r2:PREREQUISITE_OF]->(b) SET r2 = properties(r) DELETE r"),
+                new EdgeRedirect("CHILD_OF-out",
+                        "MATCH (a:KnowledgePoint {id: $fromId})-[r:CHILD_OF]->(b) " +
+                        "CREATE (c:KnowledgePoint {id: $toId})-[r2:CHILD_OF]->(b) SET r2 = properties(r) DELETE r"),
+        };
 
-        // 实际用动态关系类型：分别处理每种入边
-        String[] inTypes = {"ALIGNED_TO", "BELONGS_TO", "TESTED", "PREREQUISITE_OF", "CHILD_OF"};
-        for (String type : inTypes) {
+        for (EdgeRedirect redir : redirects) {
             try {
-                neo4jClient.query(
-                        "MATCH (a)-[r:" + type + "]->(b:KnowledgePoint {id: $fromId}) " +
-                        "CREATE (a)-[r2:" + type + "]->(c:KnowledgePoint {id: $toId}) " +
-                        "SET r2 = properties(r) " +
-                        "DELETE r"
-                ).bindAll(Map.of("fromId", fromKpId, "toId", toKpId)).run();
+                neo4jClient.query(redir.cypher())
+                        .bindAll(Map.of("fromId", fromKpId, "toId", toKpId)).run();
             } catch (Exception e) {
-                log.debug("重定向入边 {} 时无匹配边（from={} → to={}）: {}", type, fromKpId, toKpId, e.getMessage());
-            }
-        }
-
-        // 出边重定向：fromKpId → 其他节点 → 改为 toKpId → 其他节点
-        String[] outTypes = {"PREREQUISITE_OF", "BELONGS_TO", "CHILD_OF"};
-        for (String type : outTypes) {
-            try {
-                neo4jClient.query(
-                        "MATCH (a:KnowledgePoint {id: $fromId})-[r:" + type + "]->(b) " +
-                        "CREATE (c:KnowledgePoint {id: $toId})-[r2:" + type + "]->(b) " +
-                        "SET r2 = properties(r) " +
-                        "DELETE r"
-                ).bindAll(Map.of("fromId", fromKpId, "toId", toKpId)).run();
-            } catch (Exception e) {
-                log.debug("重定向出边 {} 时无匹配边（from={} → to={}）: {}", type, fromKpId, toKpId, e.getMessage());
+                log.debug("重定向边 {} 时无匹配: {}", redir.type(), e.getMessage());
             }
         }
         log.debug("边重定向完成: {} → {}", fromKpId, toKpId);
