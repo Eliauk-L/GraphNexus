@@ -77,6 +77,10 @@ public class CsvGradeParser implements FileParser {
         // ① 读取全部字节，尝试 UTF-8 → GBK 回退
         byte[] rawBytes = inputStream.readAllBytes();
         String content = tryDecode(rawBytes);
+        // 去除 UTF-8 BOM（Excel 导出的 CSV 首字符常为 ﻿）
+        if (!content.isEmpty() && content.charAt(0) == '﻿') {
+            content = content.substring(1);
+        }
 
         // ② 使用 Commons CSV 解析
         CSVParser parser = CSVParser.parse(content, CSVFormat.DEFAULT.withTrim());
