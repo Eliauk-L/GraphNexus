@@ -1,5 +1,7 @@
 package com.graphnexus.common.exception;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDateTime;
 
 /**
@@ -17,11 +19,11 @@ import java.time.LocalDateTime;
  * @date 2026/06/11
  */
 public record ErrorResponse(
-        String errorCode,
-        String errorMessage,
-        String userTip,
-        String traceId,
-        LocalDateTime timestamp
+        @Schema(description = "5位错误码，A=用户端/B=系统/C=第三方+4位数字", example = "A0001") String errorCode,
+        @Schema(description = "开发者可读的错误描述", example = "请求的资源不存在，请检查参数") String errorMessage,
+        @Schema(description = "面向用户的提示信息", example = "请求的资源不存在，请检查参数") String userTip,
+        @Schema(description = "全链路追踪 ID", example = "a1b2c3d4e5f6") String traceId,
+        @Schema(description = "错误发生时间", example = "2026-06-17T10:30:00") LocalDateTime timestamp
 ) {
 
     /**

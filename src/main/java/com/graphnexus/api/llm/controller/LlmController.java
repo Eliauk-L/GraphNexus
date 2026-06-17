@@ -2,6 +2,7 @@ package com.graphnexus.api.llm.controller;
 
 import com.graphnexus.api.llm.dto.LlmDebugRequest;
 import com.graphnexus.application.llmgateway.service.LlmGateway;
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
  * @date 2026/06/15
  */
 @Slf4j
+@Hidden
 @RestController
 @RequestMapping("/api/v1/llm")
 @RequiredArgsConstructor

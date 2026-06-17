@@ -1,6 +1,7 @@
 package com.graphnexus.api.graph.dto;
 
 import com.graphnexus.application.graph.metrics.model.MetricResultBO;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
@@ -10,11 +11,19 @@ import lombok.Data;
  * @date 2026/06/17
  */
 @Data
+@Schema(description = "图指标计算结果视图（PageRank / 度中心性共用结构）")
 public class MetricResultVO {
 
+    @Schema(description = "节点 ID（Neo4j elementId）", example = "4:abc123:0")
     private String nodeId;
+
+    @Schema(description = "节点类型标签", example = "KnowledgePoint")
     private String nodeType;
+
+    @Schema(description = "指标名称：PageRank / inDegree / outDegree", example = "PageRank")
     private String metricName;
+
+    @Schema(description = "指标数值", example = "0.0234")
     private Double metricValue;
 
     /**

@@ -1,6 +1,7 @@
 package com.graphnexus.common;
 
 import com.graphnexus.common.exception.ErrorResponse;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 统一 API 响应体（不可变 record）。
@@ -18,11 +19,11 @@ import com.graphnexus.common.exception.ErrorResponse;
  * @date 2026/06/11
  */
 public record ApiResponse<T>(
-        int code,
-        String message,
-        T data,
-        String traceId,
-        long timestamp
+        @Schema(description = "HTTP 状态码", example = "200") int code,
+        @Schema(description = "提示信息", example = "success") String message,
+        @Schema(description = "业务数据（可为 null）") T data,
+        @Schema(description = "全链路追踪 ID", example = "a1b2c3d4e5f6") String traceId,
+        @Schema(description = "响应时间戳（毫秒）", example = "1718000000000") long timestamp
 ) {
 
     /** 成功 HTTP 状态码 */
