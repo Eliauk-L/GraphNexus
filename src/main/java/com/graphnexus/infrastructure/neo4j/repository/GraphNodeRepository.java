@@ -497,6 +497,139 @@ public class GraphNodeRepository {
     /** MASTERS 批量写入的边数据 record */
     public record MastersEdgeData(String studentId, String kpId, double weight, String description) {}
 
+    // ======================== 智能问答只读查询（intelligent-qa T07） ========================
+
+    /**
+     * 按姓名模糊匹配 Student 节点。
+     *
+     * @param name 学生姓名（支持部分匹配）
+     * @return 匹配的学生列表（含 id/studentNo/name/className/grade）
+     */
+    public List<Map<String, Object>> findStudentByName(String name) {
+        try {
+            return new ArrayList<>(neo4jClient.query(
+                    "MATCH (s:Student) WHERE s.name CONTAINS $name " +
+                    "RETURN s.id AS id, s.studentNo AS studentNo, s.name AS name, " +
+                    "s.className AS className, s.grade AS grade"
+            ).bindAll(Map.of("name", name)).fetch().all());
+        } catch (Exception e) {
+            log.warn("按姓名查询 Student 失败: name={}, {}", name, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 按学号精确查找 Student 节点。
+     *
+     * @param studentNo 学号（唯一标识）
+     * @return Optional 包裹的学生属性 Map（id/studentNo/name/className/grade）
+     */
+    public Optional<Map<String, Object>> findStudentByNo(String studentNo) {
+        try {
+            var rows = neo4jClient.query(
+                    "MATCH (s:Student {studentNo: $studentNo}) " +
+                    "RETURN s.id AS id, s.studentNo AS studentNo, s.name AS name, " +
+                    "s.className AS className, s.grade AS grade"
+            ).bindAll(Map.of("studentNo", studentNo)).fetch().all();
+            if (rows.isEmpty()) {
+                return Optional.empty();
+            }
+            return Optional.of(new HashMap<>(rows.iterator().next()));
+        } catch (Exception e) {
+            log.warn("按学号查询 Student 失败: studentNo={}, {}", studentNo, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * 查询学生指定学科的所有 MASTERS 边。
+     *
+     * @param studentNodeId Student 节点的 Neo4j id
+     * @param subject       学科
+     * @return KP 列表（含 kp.id/kp.name/kp.description/kp.gradeLevel/m.weight/m.description）
+     */
+    public List<Map<String, Object>> findMastersByStudentAndSubject(String studentNodeId, String subject) {
+        try {
+            return new ArrayList<>(neo4jClient.query(
+                    "MATCH (s:Student {id: $sid})-[m:MASTERS]->(kp:KnowledgePoint {subject: $subject}) " +
+                    "RETURN kp.id AS kpId, kp.name AS kpName, kp.description AS kpDescription, " +
+                    "kp.gradeLevel AS kpGradeLevel, m.weight AS weight, m.description AS description"
+            ).bindAll(Map.of("sid", studentNodeId, "subject", subject)).fetch().all());
+        } catch (Exception e) {
+            log.warn("查询 MASTERS 边失败: sid={}, subject={}, {}", studentNodeId, subject, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 查询学生指定学科下所有考试覆盖的知识点（MASTERS 降级用）。
+     *
+     * <p>当 MASTERS 边不存在时（融合未执行），通过 TESTED 路径获取原始成绩关联。</p>
+     *
+     * @param studentNo 学号
+     * @param subject   学科
+     * @return KP 列表（含 kpName）
+     */
+    public List<Map<String, Object>> findTestedKpsByStudentAndSubject(String studentNo, String subject) {
+        try {
+            return new ArrayList<>(neo4jClient.query(
+                    "MATCH (s:Student {studentNo: $studentNo})-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint {subject: $subject}) " +
+                    "RETURN DISTINCT kp.id AS kpId, kp.name AS kpName"
+            ).bindAll(Map.of("studentNo", studentNo, "subject", subject)).fetch().all());
+        } catch (Exception e) {
+            log.warn("查询 TESTED 路径失败: studentNo={}, subject={}, {}", studentNo, subject, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 展开前置依赖链（上游方向）。
+     *
+     * <p>从指定 KP 出发，沿 PREREQUISITE_OF 边向上游遍历（当前 KP 依赖的前置 KP），最多 maxHops 跳。</p>
+     *
+     * @param kpIds   起始 KnowledgePoint 的 Neo4j id 列表
+     * @param maxHops 最大遍历跳数（1~3）
+     * @return 前置依赖关系列表（含 fromKpId/toKpId/toKpName/hops）
+     */
+    public List<Map<String, Object>> findPrerequisitesUpstream(List<String> kpIds, int maxHops) {
+        if (kpIds == null || kpIds.isEmpty()) return Collections.emptyList();
+        int hops = Math.max(1, Math.min(maxHops, 3));
+        try {
+            String cypher = String.format(
+                    "MATCH (kp:KnowledgePoint)-[:PREREQUISITE_OF*1..%d]->(pre:KnowledgePoint) " +
+                    "WHERE kp.id IN $ids " +
+                    "RETURN DISTINCT kp.id AS fromKpId, pre.id AS toKpId, pre.name AS toKpName, " +
+                    "length(path) AS hops " +
+                    "LIMIT 200", hops);
+            return new ArrayList<>(neo4jClient.query(cypher)
+                    .bindAll(Map.of("ids", kpIds)).fetch().all());
+        } catch (Exception e) {
+            log.warn("查询 PREREQUISITE_OF 链失败: kpIds={}, maxHops={}, {}", kpIds, maxHops, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 查询指定 Student 对一批 KP 的 MASTERS 边。
+     *
+     * @param studentNodeId Student 节点的 Neo4j id
+     * @param kpIds         KnowledgePoint 的 Neo4j id 列表
+     * @return MASTERS 边列表（含 kp.id/kp.name/m.weight）
+     */
+    public List<Map<String, Object>> findMastersByStudentAndKpIds(String studentNodeId, List<String> kpIds) {
+        if (kpIds == null || kpIds.isEmpty()) return Collections.emptyList();
+        try {
+            return new ArrayList<>(neo4jClient.query(
+                    "MATCH (s:Student {id: $sid})-[m:MASTERS]->(kp:KnowledgePoint) " +
+                    "WHERE kp.id IN $kpIds " +
+                    "RETURN kp.id AS kpId, kp.name AS kpName, m.weight AS weight"
+            ).bindAll(Map.of("sid", studentNodeId, "kpIds", kpIds)).fetch().all());
+        } catch (Exception e) {
+            log.warn("查询指定 KP 的 MASTERS 边失败: sid={}, {}", studentNodeId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     // ======================== 内部类 ========================
     private static class SimpleGraphEdge extends GraphEdge {
         SimpleGraphEdge() {

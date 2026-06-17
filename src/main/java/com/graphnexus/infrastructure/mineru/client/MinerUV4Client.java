@@ -102,7 +102,7 @@ class MinerUV4Client implements MinerUApiClient {
         Duration pollInterval = properties.getApi().getPollInterval();
         Duration pollTimeout = properties.getApi().getPollTimeout();
         long startTime = System.currentTimeMillis();
-        String pollUri = properties.getApi().getPollPathTemplate().replace("{taskId}", taskId);
+        String pollUri = properties.getApi().getPollPathTemplate().replace("{batch_id}", taskId);
 
         log.info("MinerU v4 开始轮询: batchId={}, timeout={}s", taskId, pollTimeout.toSeconds());
 
