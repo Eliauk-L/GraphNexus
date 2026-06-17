@@ -7,6 +7,7 @@ import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mineru.config.MinerUProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.io.ByteArrayInputStream;
@@ -24,12 +25,11 @@ import java.util.zip.ZipInputStream;
 /**
  * MinerU v4 精准解析 API 客户端（需 Token，≤200MB / ≤200 页，vlm 模型）。
  *
- * <p>全链路：submitTask(batch) → uploadFile(外部) → pollTaskResult → downloadResult(zip解压)</p>
- *
  * @author Jay
  * @date 2026/06/17
  */
 @Slf4j
+@Component
 class MinerUV4Client implements MinerUApiClient {
 
     private final RestClient client;
@@ -43,6 +43,11 @@ class MinerUV4Client implements MinerUApiClient {
                 .baseUrl(properties.getApi().getBaseUrl())
                 .defaultHeader("Authorization", "Bearer " + properties.getApi().getToken())
                 .build();
+    }
+
+    @Override
+    public String getVersion() {
+        return "v4";
     }
 
     @Override
@@ -65,7 +70,7 @@ class MinerUV4Client implements MinerUApiClient {
             log.debug("MinerU v4 request: {}", jsonBody);
 
             String response = client.post()
-                    .uri("/api/v4/file-urls/batch")
+                    .uri(properties.getApi().getSubmitPath())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(jsonBody)
                     .retrieve()
@@ -97,17 +102,15 @@ class MinerUV4Client implements MinerUApiClient {
         Duration pollInterval = properties.getApi().getPollInterval();
         Duration pollTimeout = properties.getApi().getPollTimeout();
         long startTime = System.currentTimeMillis();
+        String pollUri = properties.getApi().getPollPathTemplate().replace("{taskId}", taskId);
 
         log.info("MinerU v4 开始轮询: batchId={}, timeout={}s", taskId, pollTimeout.toSeconds());
 
         while (System.currentTimeMillis() - startTime < pollTimeout.toMillis()) {
             try {
-                String response = client.get()
-                        .uri("/api/v4/extract-results/batch/{batchId}", taskId)
-                        .retrieve()
-                        .body(String.class);
-
+                String response = client.get().uri(pollUri).retrieve().body(String.class);
                 JsonNode root = objectMapper.readTree(response);
+
                 if (root.path("code").asInt(-1) != 0) {
                     throw new BusinessException(ErrorCode.C0001,
                             "MinerU 查询失败: " + root.path("msg").asText("未知错误"), "");

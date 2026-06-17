@@ -66,7 +66,7 @@ class MinerUDocumentParserTest {
         ParseResult result = parser.parse(new byte[]{1, 2, 3});
 
         assertThat(result.textContent()).isEqualTo("# Markdown\n\n$E=mc^2$");
-        assertThat(result.metadata()).containsEntry("parser", "mineru-v4");
+        assertThat(result.metadata()).containsEntry("parser", "mineru-v1");
         assertThat(result.metadata()).containsEntry("model", "vlm");
         verify(minerUClient).submitTask(anyString());
         verify(minerUClient).uploadFile(anyString(), any(byte[].class));

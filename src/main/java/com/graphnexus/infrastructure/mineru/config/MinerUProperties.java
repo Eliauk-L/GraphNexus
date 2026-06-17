@@ -34,8 +34,14 @@ public class MinerUProperties {
         /** MinerU API 基础 URL */
         private String baseUrl = "https://mineru.net";
 
-        /** API 版本：v1（Agent 轻量，免 Token，默认）/ v4（精准解析，需 Token） */
+        /** API 版本：v1（Agent 轻量，免 Token，默认）/ v4（精准解析，需 Token）/ custom（自部署） */
         private String version = "v1";
+
+        /** 任务提交路径（v1: /api/v1/agent/parse/file，v4: /api/v4/file-urls/batch） */
+        private String submitPath = "/api/v1/agent/parse/file";
+
+        /** 轮询路径模板，{taskId} 占位符（v1: /api/v1/agent/parse/{taskId}，v4: /api/v4/extract-results/batch/{taskId}） */
+        private String pollPathTemplate = "/api/v1/agent/parse/{taskId}";
 
         /** v4 API Token（Bearer 认证） */
         private String token;
@@ -44,13 +50,13 @@ public class MinerUProperties {
         private String modelVersion = "vlm";
 
         /** 解析器标识名（写入 metadata.parser） */
-        private String parserName = "mineru-v4";
+        private String parserName = "mineru-v1";
 
         /** 轮询超时 */
-        private Duration pollTimeout = Duration.ofSeconds(600);
+        private Duration pollTimeout = Duration.ofSeconds(300);
 
         /** 轮询间隔 */
-        private Duration pollInterval = Duration.ofSeconds(6);
+        private Duration pollInterval = Duration.ofSeconds(3);
     }
 
     @Data

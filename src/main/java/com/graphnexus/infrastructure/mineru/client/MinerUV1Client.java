@@ -7,6 +7,7 @@ import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mineru.config.MinerUProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
@@ -16,12 +17,11 @@ import java.util.Map;
 /**
  * MinerU v1 Agent API 客户端（免 Token，IP 限频，≤10MB / ≤20 页）。
  *
- * <p>全链路：submitTask → uploadFile(外部) → pollTaskResult → downloadResult(纯文本)</p>
- *
  * @author Jay
  * @date 2026/06/17
  */
 @Slf4j
+@Component
 class MinerUV1Client implements MinerUApiClient {
 
     private final RestClient client;
@@ -32,6 +32,11 @@ class MinerUV1Client implements MinerUApiClient {
         this.properties = properties;
         this.objectMapper = objectMapper;
         this.client = builder.baseUrl(properties.getApi().getBaseUrl()).build();
+    }
+
+    @Override
+    public String getVersion() {
+        return "v1";
     }
 
     @Override
@@ -49,7 +54,7 @@ class MinerUV1Client implements MinerUApiClient {
             log.debug("MinerU v1 request: {}", jsonBody);
 
             String response = client.post()
-                    .uri("/api/v1/agent/parse/file")
+                    .uri(properties.getApi().getSubmitPath())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(jsonBody)
                     .retrieve()
@@ -79,16 +84,13 @@ class MinerUV1Client implements MinerUApiClient {
         Duration pollInterval = properties.getApi().getPollInterval();
         Duration pollTimeout = properties.getApi().getPollTimeout();
         long startTime = System.currentTimeMillis();
+        String pollUri = properties.getApi().getPollPathTemplate().replace("{taskId}", taskId);
 
         log.info("MinerU v1 开始轮询: taskId={}, timeout={}s", taskId, pollTimeout.toSeconds());
 
         while (System.currentTimeMillis() - startTime < pollTimeout.toMillis()) {
             try {
-                String response = client.get()
-                        .uri("/api/v1/agent/parse/{taskId}", taskId)
-                        .retrieve()
-                        .body(String.class);
-
+                String response = client.get().uri(pollUri).retrieve().body(String.class);
                 JsonNode data = objectMapper.readTree(response).path("data");
                 String state = data.path("state").asText();
                 log.debug("MinerU v1 state: {}", state);

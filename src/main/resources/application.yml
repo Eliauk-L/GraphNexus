@@ -70,9 +70,11 @@ mineru:
   api:
     base-url: https://mineru.net
     version: v1
+    submit-path: /api/v1/agent/parse/file
+    poll-path-template: /api/v1/agent/parse/{taskId}
     token: ${MINERU_API_TOKEN:}
     model-version: vlm
-    parser-name: mineru-v4
+    parser-name: mineru-v1
     poll-timeout: 300s
     poll-interval: 3s
   parse:

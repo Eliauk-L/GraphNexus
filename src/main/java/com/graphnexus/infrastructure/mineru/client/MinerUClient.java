@@ -1,6 +1,5 @@
 package com.graphnexus.infrastructure.mineru.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mineru.config.MinerUProperties;
@@ -9,12 +8,36 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * MinerU 统一客户端入口。
  *
- * <p>根据 {@code mineru.api.version} 配置选择 v1 或 v4 实现策略。
- * 文件上传（PUT 到 OSS 签名 URL）为 v1/v4 共用逻辑。</p>
+ * <p>自动发现所有 {@link MinerUApiClient} Bean，根据 {@code mineru.api.version}
+ * 匹配对应的实现。新增 API 版本只需实现接口并注册为 Spring Bean，零代码改动。</p>
+ *
+ * <p>扩展方式：</p>
+ * <pre>{@code
+ * @Component
+ * class MinerUCustomClient implements MinerUApiClient {
+ *     public String getVersion() { return "custom"; }
+ *     public TaskSubmitResult submitTask(String fileName) { ... }
+ *     public TaskPollResult pollTaskResult(String taskId) { ... }
+ *     public String downloadResult(String resultUrl) { ... }
+ * }
+ * }</pre>
+ * <p>然后在 {@code application.yml} 中配置：</p>
+ * <pre>
+ * mineru:
+ *   api:
+ *     version: custom
+ *     base-url: https://my-mineru.example.com
+ *     submit-path: /api/v2/parse
+ *     poll-path-template: /api/v2/parse/{taskId}
+ * </pre>
  *
  * @author Jay
  * @date 2026/06/16
@@ -25,35 +48,29 @@ public class MinerUClient {
 
     private final MinerUApiClient apiClient;
 
-    public MinerUClient(RestClient.Builder restClientBuilder, MinerUProperties properties, ObjectMapper objectMapper) {
+    public MinerUClient(MinerUProperties properties, List<MinerUApiClient> allClients) {
         String version = properties.getApi().getVersion();
-        log.info("MinerU 初始化: version={}", version);
 
-        this.apiClient = switch (version) {
-            case "v4" -> new MinerUV4Client(restClientBuilder, properties, objectMapper);
-            default -> new MinerUV1Client(restClientBuilder, properties, objectMapper);
-        };
+        Map<String, MinerUApiClient> clientMap = allClients.stream()
+                .collect(Collectors.toMap(MinerUApiClient::getVersion, Function.identity()));
+
+        this.apiClient = clientMap.get(version);
+        if (this.apiClient == null) {
+            log.error("MinerU 版本 '{}' 无对应实现，可用版本: {}", version, clientMap.keySet());
+            throw new IllegalStateException(
+                    "未找到 MinerU 版本 '" + version + "' 的实现，请检查 mineru.api.version 配置。" +
+                    "可用版本: " + clientMap.keySet());
+        }
+
+        log.info("MinerU 初始化: version={}, client={}", version, apiClient.getClass().getSimpleName());
     }
 
-    /**
-     * 提交文件上传任务。
-     *
-     * @param fileName 文件名（含扩展名）
-     * @return 包含 taskId 和 fileUrl 的结果
-     */
     public MinerUApiClient.TaskSubmitResult submitTask(String fileName) {
         return apiClient.submitTask(fileName);
     }
 
-    /**
-     * 上传 PDF 文件到 MinerU OSS 预签名 URL（v1/v4 共用）。
-     *
-     * @param fileUrl  OSS 预签名上传 URL
-     * @param pdfBytes PDF 文件字节数组
-     */
     public void uploadFile(String fileUrl, byte[] pdfBytes) {
         log.info("MinerU 开始上传文件: size={} bytes", pdfBytes.length);
-
         try {
             RestClient uploadClient = RestClient.builder()
                     .requestInterceptor((req, body, exec) -> {
@@ -68,7 +85,6 @@ public class MinerUClient {
                     .retrieve()
                     .toBodilessEntity();
             log.info("MinerU 文件上传成功: httpStatus={}", putResponse.getStatusCode());
-
         } catch (Exception e) {
             log.error("MinerU 文件上传失败", e);
             throw new BusinessException(ErrorCode.C0001, "MinerU 文件上传失败: " + e.getMessage(),
@@ -76,22 +92,10 @@ public class MinerUClient {
         }
     }
 
-    /**
-     * 轮询任务解析结果。
-     *
-     * @param taskId 任务 ID
-     * @return 解析结果
-     */
     public MinerUApiClient.TaskPollResult pollTaskResult(String taskId) {
         return apiClient.pollTaskResult(taskId);
     }
 
-    /**
-     * 下载解析结果 Markdown 文本。
-     *
-     * @param resultUrl 结果文件 URL
-     * @return Markdown 文本内容
-     */
     public String downloadMarkdown(String resultUrl) {
         return apiClient.downloadResult(resultUrl);
     }

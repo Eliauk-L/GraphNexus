@@ -12,13 +12,14 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 /**
- * MinerUClient 单元测试 — v1 Agent API 全链路。
+ * MinerUClient + MinerUV1Client 单元测试。
  *
  * @author Jay
  * @date 2026/06/16
@@ -44,7 +45,9 @@ class MinerUClientTest {
 
         RestClient.Builder builder = RestClient.builder();
         mockServer = MockRestServiceServer.bindTo(builder).build();
-        minerUClient = new MinerUClient(builder, properties, objectMapper);
+
+        MinerUV1Client v1Client = new MinerUV1Client(builder, properties, objectMapper);
+        minerUClient = new MinerUClient(properties, List.of(v1Client));
     }
 
     @Test
