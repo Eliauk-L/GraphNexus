@@ -1,6 +1,5 @@
 package com.graphnexus.infrastructure.mineru.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphnexus.common.exception.BusinessException;
@@ -124,7 +123,7 @@ public class MinerUClient {
      * @param pdfBytes PDF 文件字节数组
      */
     public void uploadFile(String fileUrl, byte[] pdfBytes) {
-        log.info("MinerU 开始上传文件: url={}, size={} bytes", fileUrl, pdfBytes.length);
+        log.info("MinerU 开始上传文件: size={} bytes", pdfBytes.length);
 
         try {
             // 干净 RestClient：不设任何默认头，OSS 签名已包含认证
@@ -135,13 +134,13 @@ public class MinerUClient {
                         return exec.execute(req, body);
                     })
                     .build();
-            String putResponse = uploadClient.put()
+            var putResponse = uploadClient.put()
                     .uri(URI.create(fileUrl))
                     .body(pdfBytes)
                     .retrieve()
-                    .body(String.class);
+                    .toBodilessEntity();
 
-            log.info("MinerU 文件上传成功: responseLength={}", putResponse != null ? putResponse.length() : 0);
+            log.info("MinerU 文件上传成功: httpStatus={}", putResponse.getStatusCode());
 
         } catch (Exception e) {
             log.error("MinerU 文件上传失败", e);
@@ -199,6 +198,8 @@ public class MinerUClient {
                     case "running":
                     case "pending":
                     case "converting":
+                    case "waiting-file":
+                    case "uploading":
                         // 输出进度
                         if (data.has("extract_progress")) {
                             JsonNode progress = data.path("extract_progress");
