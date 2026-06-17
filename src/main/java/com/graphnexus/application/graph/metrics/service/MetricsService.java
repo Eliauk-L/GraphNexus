@@ -1,0 +1,38 @@
+package com.graphnexus.application.graph.metrics.service;
+
+import com.graphnexus.application.graph.metrics.model.MetricResultBO;
+
+import java.util.List;
+import java.util.Set;
+
+/**
+ * 图指标计算服务接口 —— 指标查询 + 缓存管理。
+ *
+ * @author Jay
+ * @date 2026/06/17
+ */
+public interface MetricsService {
+
+    /**
+     * 查询 PageRank 值。
+     *
+     * @param nodeTypes 节点类型标签集合（空 = 全类型）
+     * @param edgeTypes 边类型集合（空 = 全类型）
+     * @return 按值降序排列的 PageRank 结果
+     */
+    List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes);
+
+    /**
+     * 查询度中心性（含 inDegree + outDegree）。
+     *
+     * @param nodeTypes 节点类型标签集合（空 = 全类型）
+     * @param edgeTypes 边类型集合（空 = 全类型）
+     * @return 每个节点两条记录：inDegree + outDegree
+     */
+    List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes);
+
+    /**
+     * 清空所有指标缓存（图谱变更时由事件监听器调用）。
+     */
+    void clearCache();
+}
