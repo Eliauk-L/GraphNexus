@@ -25,7 +25,7 @@ public class MetricsQueryRequest {
     private List<String> edgeTypes = Collections.emptyList();
 
     /**
-     * 转为大写去重的 Set（空列表 → 空 Set）。
+     * 去重的 Set（空列表 → 空 Set，保留原始大小写，由 MetricsServiceImpl 归一化为规范标签）。
      */
     public Set<String> nodeTypeSet() {
         if (nodeTypes == null || nodeTypes.isEmpty()) {
@@ -38,7 +38,7 @@ public class MetricsQueryRequest {
     }
 
     /**
-     * 转为大写去重的 Set（空列表 → 空 Set）。
+     * 去重的 Set（空列表 → 空 Set，保留原始大小写，由 MetricsServiceImpl 归一化为规范标签）。
      */
     public Set<String> edgeTypeSet() {
         if (edgeTypes == null || edgeTypes.isEmpty()) {
