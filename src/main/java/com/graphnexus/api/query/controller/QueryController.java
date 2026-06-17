@@ -47,6 +47,15 @@ public class QueryController {
     }
 
     /**
+     * 智能对话 — 接受原始自然语言问题，自动提取学生姓名、学科等信息后执行诊断。
+     */
+    @PostMapping("/chat")
+    public ApiResponse<QueryAskResponse> chat(@RequestBody @Valid QueryChatRequest request) {
+        QueryResultBO result = queryService.chat(request.question());
+        return ApiResponse.success(QueryAskResponse.from(result));
+    }
+
+    /**
      * 查询异步问答结果。
      */
     @GetMapping("/result/{taskId}")

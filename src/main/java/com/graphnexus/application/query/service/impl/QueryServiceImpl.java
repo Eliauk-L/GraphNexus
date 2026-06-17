@@ -242,6 +242,55 @@ public class QueryServiceImpl implements QueryService {
         }
     }
 
+    // ======================== 智能对话（chat） ========================
+
+    /** 支持的学科关键词 */
+    private static final List<String> KNOWN_SUBJECTS = List.of(
+            "数学", "语文", "英语", "物理", "化学", "生物", "历史", "地理", "政治");
+
+    /** 提取学生姓名：匹配 "学生XXX"、"XXX的数学/物理..." 等模式 */
+    private static final java.util.regex.Pattern STUDENT_NAME_PATTERN =
+            java.util.regex.Pattern.compile("学生(.+?)(?:的|数学|语文|英语|物理|化学|生物|历史|地理|政治|薄弱|掌握|诊断|分析|$)");
+
+    /** 提取学科 */
+    private static final java.util.regex.Pattern SUBJECT_PATTERN =
+            java.util.regex.Pattern.compile("(数学|语文|英语|物理|化学|生物|历史|地理|政治)");
+
+    @Override
+    public QueryResultBO chat(String question) {
+        if (question == null || question.isBlank()) {
+            throw new BusinessException(ErrorCode.A0002, "问题不能为空");
+        }
+        String subject = extractSubject(question);
+        if (subject == null) {
+            throw new BusinessException(ErrorCode.A0019,
+                    "无法从问题中识别学科，请明确提及学科名称（如数学、物理等）。示例：分析学生张三的数学薄弱点");
+        }
+        String studentName = extractStudentName(question);
+        if (studentName == null || studentName.isBlank()) {
+            throw new BusinessException(ErrorCode.A0019,
+                    "无法从问题中识别学生姓名，请以\"学生XXX\"格式描述。示例：分析学生张三的数学薄弱点");
+        }
+        log.info("chat 实体提取: question={}, studentName={}, subject={}", question, studentName, subject);
+        return ask(question, studentName.trim(), null, subject);
+    }
+
+    String extractSubject(String question) {
+        var matcher = SUBJECT_PATTERN.matcher(question);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    String extractStudentName(String question) {
+        var matcher = STUDENT_NAME_PATTERN.matcher(question);
+        if (matcher.find()) {
+            String name = matcher.group(1).trim();
+            if (name.length() >= 2 && name.length() <= 10 && !KNOWN_SUBJECTS.contains(name)) {
+                return name;
+            }
+        }
+        return null;
+    }
+
     // ======================== 意图识别 ========================
 
     QueryIntent recognizeIntent(String question) {

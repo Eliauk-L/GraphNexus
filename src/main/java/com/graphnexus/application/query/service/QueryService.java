@@ -44,4 +44,13 @@ public interface QueryService {
      * @return 剪枝后的子图
      */
     PrunedSubgraph getSubgraph(String taskId);
+
+    /**
+     * 智能对话 — 接受用户原始提问，自动提取学生姓名、学科等实体信息，
+     * 然后复用 {@link #ask} 链路完成分析。
+     *
+     * @param question 用户原始自然语言问题
+     * @return 问答结果（含 LLM 答案或错误信息）
+     */
+    QueryResultBO chat(String question);
 }
