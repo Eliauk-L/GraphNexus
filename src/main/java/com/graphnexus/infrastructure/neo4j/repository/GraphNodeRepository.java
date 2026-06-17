@@ -502,13 +502,13 @@ public class GraphNodeRepository {
     /**
      * 按姓名模糊匹配 Student 节点。
      *
-     * @param name 学生姓名（支持部分匹配）
+     * @param name 学生姓名
      * @return 匹配的学生列表（含 id/studentNo/name/className/grade）
      */
     public List<Map<String, Object>> findStudentByName(String name) {
         try {
             return new ArrayList<>(neo4jClient.query(
-                    "MATCH (s:Student) WHERE s.name CONTAINS $name " +
+                    "MATCH (s:Student) WHERE s.name = $name " +
                     "RETURN s.id AS id, s.studentNo AS studentNo, s.name AS name, " +
                     "s.className AS className, s.grade AS grade"
             ).bindAll(Map.of("name", name)).fetch().all());
@@ -596,7 +596,7 @@ public class GraphNodeRepository {
         int hops = Math.max(1, Math.min(maxHops, 3));
         try {
             String cypher = String.format(
-                    "MATCH (kp:KnowledgePoint)-[:PREREQUISITE_OF*1..%d]->(pre:KnowledgePoint) " +
+                    "MATCH path = (kp:KnowledgePoint)-[:PREREQUISITE_OF*1..%d]->(pre:KnowledgePoint) " +
                     "WHERE kp.id IN $ids " +
                     "RETURN DISTINCT kp.id AS fromKpId, pre.id AS toKpId, pre.name AS toKpName, " +
                     "length(path) AS hops " +
