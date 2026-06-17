@@ -38,8 +38,8 @@ public class OpenApiConfig {
                                 - **图分析** — 剪枝子图可视化数据查询
 
                                 ### 通用约定
-                                - 统一响应体：`ApiResponse<T>`（code/message/data/traceId/timestamp）
-                                - 分页响应体：`PageResult<T>`（list/total/pageNum/pageSize）嵌套在 ApiResponse 中
+                                - 统一响应体：`ApiResult<T>`（code/message/data/traceId/timestamp）
+                                - 分页响应体：`PageResult<T>`（list/total/pageNum/pageSize）嵌套在 ApiResult 中
                                 - 错误响应体：`ErrorResponse`（errorCode/errorMessage/userTip/traceId/timestamp）
                                 - 所有时间字段格式：ISO 8601（`yyyy-MM-ddTHH:mm:ss`）
                                 - 分页页码从 1 开始

@@ -1,6 +1,6 @@
 package com.graphnexus.api.graph.controller;
 
-import com.graphnexus.common.ApiResponse;
+import com.graphnexus.common.ApiResult;
 import com.graphnexus.api.graph.dto.FusionExecuteVO;
 import com.graphnexus.api.graph.dto.FusionStatusVO;
 import com.graphnexus.api.graph.dto.FusionRollbackVO;

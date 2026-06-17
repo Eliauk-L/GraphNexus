@@ -18,7 +18,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @author Jay
  * @date 2026/06/11
  */
-public record ApiResponse<T>(
+public record ApiResult<T>(
         @Schema(description = "HTTP 状态码", example = "200") int code,
         @Schema(description = "提示信息", example = "success") String message,
         @Schema(description = "业务数据（可为 null）") T data,
@@ -36,10 +36,10 @@ public record ApiResponse<T>(
      *
      * @param data 业务数据
      * @param <T>  数据类型
-     * @return ApiResponse（code=200, message="success"）
+     * @return ApiResult（code=200, message="success"）
      */
-    public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(
+    public static <T> ApiResult<T> success(T data) {
+        return new ApiResult<>(
                 SUCCESS_CODE,
                 SUCCESS_MESSAGE,
                 data,
@@ -54,10 +54,10 @@ public record ApiResponse<T>(
      * @param error      错误详情（来自 GlobalExceptionHandler）
      * @param httpStatus HTTP 状态码
      * @param <T>        数据类型（通常为 null）
-     * @return ApiResponse（data=null）
+     * @return ApiResult（data=null）
      */
-    public static <T> ApiResponse<T> error(ErrorResponse error, int httpStatus) {
-        return new ApiResponse<>(
+    public static <T> ApiResult<T> error(ErrorResponse error, int httpStatus) {
+        return new ApiResult<>(
                 httpStatus,
                 error.errorMessage(),
                 null,

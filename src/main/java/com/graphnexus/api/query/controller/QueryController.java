@@ -3,9 +3,10 @@ package com.graphnexus.api.query.controller;
 import com.graphnexus.api.query.dto.*;
 import com.graphnexus.application.query.model.QueryResultBO;
 import com.graphnexus.application.query.service.QueryService;
-import com.graphnexus.common.ApiResponse;
+import com.graphnexus.common.ApiResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -33,17 +34,17 @@ public class QueryController {
      */
     @Operation(summary = "同步问答", description = "提交问题后同步等待 LLM 分析结果（≤ 30s 超时）。需显式指定 studentName/studentNo/subject 参数。系统执行：意图识别(STUDENT_DIAGNOSIS) → 图剪枝(Student Diagnosis Strategy) → LLM 分析生成 → 返回 Markdown 结论")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "分析完成，返回 Markdown 格式结论 + token 用量"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "A0002 参数校验失败 / A0019 无法识别查询意图"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "A0020 存在多个同名 Student，需使用学号精确指定"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "B0001 系统内部异常 / C0001 LLM API 调用失败")
+            @ApiResponse(responseCode = "200", description = "分析完成，返回 Markdown 格式结论 + token 用量"),
+            @ApiResponse(responseCode = "400", description = "A0002 参数校验失败 / A0019 无法识别查询意图"),
+            @ApiResponse(responseCode = "409", description = "A0020 存在多个同名 Student，需使用学号精确指定"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常 / C0001 LLM API 调用失败")
     })
     @PostMapping("/ask")
-    public ApiResponse<QueryAskResponse> ask(@RequestBody @Valid QueryAskRequest request) {
+    public ApiResult<QueryAskResponse> ask(@RequestBody @Valid QueryAskRequest request) {
         QueryResultBO result = queryService.ask(
                 request.question(), request.studentName(),
                 request.studentNo(), request.subject());
-        return ApiResponse.success(QueryAskResponse.from(result));
+        return ApiResult.success(QueryAskResponse.from(result));
     }
 
     /**
@@ -51,16 +52,16 @@ public class QueryController {
      */
     @Operation(summary = "异步问答", description = "提交复杂问题后立即返回 taskId（状态 PENDING），后台异步执行图剪枝 + LLM 分析。通过 GET /result/{taskId} 轮询获取结果。适用于耗时可能超过 30s 的复杂查询")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "任务已提交，返回 taskId 供轮询"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "A0002 参数校验失败 / A0019 无法识别查询意图"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+            @ApiResponse(responseCode = "200", description = "任务已提交，返回 taskId 供轮询"),
+            @ApiResponse(responseCode = "400", description = "A0002 参数校验失败 / A0019 无法识别查询意图"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @PostMapping("/ask-async")
-    public ApiResponse<QueryAsyncResponse> askAsync(@RequestBody @Valid QueryAskRequest request) {
+    public ApiResult<QueryAsyncResponse> askAsync(@RequestBody @Valid QueryAskRequest request) {
         String taskId = queryService.askAsync(
                 request.question(), request.studentName(),
                 request.studentNo(), request.subject());
-        return ApiResponse.success(new QueryAsyncResponse(taskId, "PENDING", LocalDateTime.now()));
+        return ApiResult.success(new QueryAsyncResponse(taskId, "PENDING", LocalDateTime.now()));
     }
 
     /**
@@ -68,14 +69,14 @@ public class QueryController {
      */
     @Operation(summary = "智能对话", description = "仅需提供自然语言问题，系统自动提取实体（LLM-first 实体提取 + 正则 fallback）：studentName/studentNo/subject，然后执行诊断分析。比 /ask 更智能但稍慢（多一次 LLM 实体提取调用）")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "分析完成"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "A0002 问题不能为空 / A0019 无法识别查询意图"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "B0001 系统内部异常 / C0001 LLM API 调用失败")
+            @ApiResponse(responseCode = "200", description = "分析完成"),
+            @ApiResponse(responseCode = "400", description = "A0002 问题不能为空 / A0019 无法识别查询意图"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常 / C0001 LLM API 调用失败")
     })
     @PostMapping("/chat")
-    public ApiResponse<QueryAskResponse> chat(@RequestBody @Valid QueryChatRequest request) {
+    public ApiResult<QueryAskResponse> chat(@RequestBody @Valid QueryChatRequest request) {
         QueryResultBO result = queryService.chat(request.question());
-        return ApiResponse.success(QueryAskResponse.from(result));
+        return ApiResult.success(QueryAskResponse.from(result));
     }
 
     /**
@@ -83,15 +84,15 @@ public class QueryController {
      */
     @Operation(summary = "查询异步结果", description = "轮询异步问答任务的执行状态和结果。status 枚举：PENDING（排队中）→ PROCESSING（执行中）→ COMPLETED（完成，answer 有值）或 FAILED（失败，errorMessage 有值）。前端建议轮询间隔 1-2 秒")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "任务当前状态和结果"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "A0021 任务不存在或已过期"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+            @ApiResponse(responseCode = "200", description = "任务当前状态和结果"),
+            @ApiResponse(responseCode = "404", description = "A0021 任务不存在或已过期"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @GetMapping("/result/{taskId}")
-    public ApiResponse<QueryResultResponse> getResult(
+    public ApiResult<QueryResultResponse> getResult(
             @Parameter(description = "任务 ID（UUID 格式）", required = true, example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String taskId) {
         QueryResultBO result = queryService.getResult(taskId);
-        return ApiResponse.success(QueryResultResponse.from(result));
+        return ApiResult.success(QueryResultResponse.from(result));
     }
 }
