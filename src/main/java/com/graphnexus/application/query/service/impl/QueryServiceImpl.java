@@ -244,47 +244,74 @@ public class QueryServiceImpl implements QueryService {
 
     // ======================== 智能对话（chat） ========================
 
-    /** 支持的学科关键词 */
-    private static final List<String> KNOWN_SUBJECTS = List.of(
-            "数学", "语文", "英语", "物理", "化学", "生物", "历史", "地理", "政治");
-
-    /** 提取学生姓名：匹配 "学生XXX"、"XXX的数学/物理..." 等模式 */
-    private static final java.util.regex.Pattern STUDENT_NAME_PATTERN =
-            java.util.regex.Pattern.compile("学生(.+?)(?:的|数学|语文|英语|物理|化学|生物|历史|地理|政治|薄弱|掌握|诊断|分析|$)");
-
-    /** 提取学科 */
-    private static final java.util.regex.Pattern SUBJECT_PATTERN =
-            java.util.regex.Pattern.compile("(数学|语文|英语|物理|化学|生物|历史|地理|政治)");
+    /** 学科列表缓存（从 Neo4j KnowledgePoint 查询，volatile 保证可见性） */
+    private volatile List<String> cachedSubjects;
 
     @Override
     public QueryResultBO chat(String question) {
         if (question == null || question.isBlank()) {
             throw new BusinessException(ErrorCode.A0002, "问题不能为空");
         }
-        String subject = extractSubject(question);
+
+        // 1. 从数据库获取实际学科列表
+        List<String> subjects = getKnownSubjects();
+        if (subjects.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0019,
+                    "系统中暂无学科数据，请先导入考试记录或文档图谱");
+        }
+
+        // 2. 构建动态正则（按长度降序：长学科名优先匹配，如"信息技术"优先于"数学"）
+        List<String> sorted = subjects.stream()
+                .sorted((a, b) -> b.length() - a.length()).toList();
+        String subjectOr = String.join("|", sorted);
+        java.util.regex.Pattern subjectRegex = java.util.regex.Pattern.compile("(" + subjectOr + ")");
+        String boundaryTokens = subjectOr + "|薄弱|掌握|诊断|分析|的";
+
+        // 3. 提取学科
+        String subject = extractSubject(question, subjectRegex);
         if (subject == null) {
             throw new BusinessException(ErrorCode.A0019,
-                    "无法从问题中识别学科，请明确提及学科名称（如数学、物理等）。示例：分析学生张三的数学薄弱点");
+                    "无法从问题中识别学科，当前系统已有学科：" + String.join("、", subjects)
+                    + "。示例：分析学生张三的数学薄弱点");
         }
-        String studentName = extractStudentName(question);
+
+        // 4. 提取学生姓名
+        String studentName = extractStudentName(question, boundaryTokens, subjects);
         if (studentName == null || studentName.isBlank()) {
             throw new BusinessException(ErrorCode.A0019,
-                    "无法从问题中识别学生姓名，请以\"学生XXX\"格式描述。示例：分析学生张三的数学薄弱点");
+                    "无法从问题中识别学生姓名，请以\"学生XXX\"格式描述。示例：分析学生张三的" + subject + "薄弱点");
         }
-        log.info("chat 实体提取: question={}, studentName={}, subject={}", question, studentName, subject);
+
+        log.info("chat 实体提取: question={}, studentName={}, subject={} (subjects from db: {})",
+                question, studentName, subject, subjects);
         return ask(question, studentName.trim(), null, subject);
     }
 
-    String extractSubject(String question) {
-        var matcher = SUBJECT_PATTERN.matcher(question);
+    /** 从 Neo4j KnowledgePoint 获取学科列表（带缓存） */
+    List<String> getKnownSubjects() {
+        if (cachedSubjects == null || cachedSubjects.isEmpty()) {
+            synchronized (this) {
+                if (cachedSubjects == null || cachedSubjects.isEmpty()) {
+                    cachedSubjects = graphNodeRepository.findDistinctSubjects();
+                    log.info("从 Neo4j 加载学科列表: {}", cachedSubjects);
+                }
+            }
+        }
+        return cachedSubjects;
+    }
+
+    String extractSubject(String question, java.util.regex.Pattern pattern) {
+        var matcher = pattern.matcher(question);
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    String extractStudentName(String question) {
-        var matcher = STUDENT_NAME_PATTERN.matcher(question);
+    String extractStudentName(String question, String boundaryTokens, List<String> subjects) {
+        java.util.regex.Pattern namePattern = java.util.regex.Pattern.compile(
+                "学生(.+?)(?:" + boundaryTokens + ")");
+        var matcher = namePattern.matcher(question);
         if (matcher.find()) {
             String name = matcher.group(1).trim();
-            if (name.length() >= 2 && name.length() <= 10 && !KNOWN_SUBJECTS.contains(name)) {
+            if (name.length() >= 2 && name.length() <= 10 && !subjects.contains(name)) {
                 return name;
             }
         }

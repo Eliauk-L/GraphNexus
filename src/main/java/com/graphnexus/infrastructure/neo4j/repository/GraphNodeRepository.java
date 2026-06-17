@@ -630,6 +630,26 @@ public class GraphNodeRepository {
         }
     }
 
+    /**
+     * 查询图谱中所有不重复的学科（从 KnowledgePoint.subject 聚合）。
+     *
+     * @return 学科名称列表（如 ["数学", "物理", "英语"]）
+     */
+    public List<String> findDistinctSubjects() {
+        try {
+            return neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint) WHERE kp.subject IS NOT NULL " +
+                    "RETURN DISTINCT kp.subject AS subject ORDER BY subject"
+            ).fetch().all().stream()
+                    .map(row -> (String) row.get("subject"))
+                    .filter(s -> s != null && !s.isBlank())
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("查询学科列表失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     // ======================== 内部类 ========================
     private static class SimpleGraphEdge extends GraphEdge {
         SimpleGraphEdge() {
