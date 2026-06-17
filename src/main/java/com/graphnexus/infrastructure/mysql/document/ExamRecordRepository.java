@@ -48,4 +48,24 @@ public interface ExamRecordRepository extends JpaRepository<ExamRecordDO, Long> 
      */
     @Query("SELECT e FROM ExamRecordDO e WHERE e.studentNo = :studentNo AND e.subject = :subject AND e.isDeleted = 0")
     List<ExamRecordDO> findByStudentNoAndSubject(String studentNo, String subject);
+
+    /**
+     * 查询所有不重复的学科（从 exam_record.subject 聚合）。
+     */
+    @Query("SELECT DISTINCT e.subject FROM ExamRecordDO e WHERE e.isDeleted = 0 AND e.subject IS NOT NULL ORDER BY e.subject")
+    List<String> findDistinctSubjects();
+
+    /**
+     * 按姓名模糊匹配学生（返回不重复的 studentNo/name/className）。
+     */
+    @Query("SELECT DISTINCT e.studentNo AS studentNo, e.name AS name, e.className AS className " +
+           "FROM ExamRecordDO e WHERE e.name LIKE %:name% AND e.isDeleted = 0")
+    List<Object[]> findStudentByName(String name);
+
+    /**
+     * 按学号精确查找学生。
+     */
+    @Query("SELECT DISTINCT e.studentNo AS studentNo, e.name AS name, e.className AS className " +
+           "FROM ExamRecordDO e WHERE e.studentNo = :studentNo AND e.isDeleted = 0")
+    List<Object[]> findStudentByNo(String studentNo);
 }

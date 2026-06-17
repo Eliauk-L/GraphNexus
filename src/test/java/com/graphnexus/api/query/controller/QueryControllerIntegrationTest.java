@@ -3,6 +3,8 @@ package com.graphnexus.api.query.controller;
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.analysis.model.PrunedSubgraph.PruningMeta;
 import com.graphnexus.api.query.dto.QueryAskRequest;
+import com.graphnexus.infrastructure.mysql.document.ExamRecordDO;
+import com.graphnexus.infrastructure.mysql.document.ExamRecordRepository;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskDO;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskRepository;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskStatus;
@@ -62,6 +64,9 @@ class QueryControllerIntegrationTest {
     private QueryTaskRepository queryTaskRepository;
 
     @Autowired
+    private ExamRecordRepository examRecordRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     /** 测试学生学号 */
@@ -92,7 +97,19 @@ class QueryControllerIntegrationTest {
     // ======================== 测试数据准备 ========================
 
     void createTestData() {
-        // 创建 Student
+        // MySQL exam_record: 学生身份数据（resolveStudent 的权威来源）
+        ExamRecordDO examRecord = ExamRecordDO.builder()
+                .studentNo(TEST_STUDENT_NO)
+                .name(TEST_STUDENT_NAME)
+                .className("测试班")
+                .subject(TEST_SUBJECT)
+                .examNo("QA-EXAM-001")
+                .examName("集成测试考试")
+                .isDeleted(0)
+                .build();
+        examRecordRepository.save(examRecord);
+
+        // Neo4j: 图数据
         neo4jClient.query(
                 "MERGE (s:Student {studentNo: $studentNo}) " +
                 "SET s.name = $name, s.className = $className, s.grade = $grade, " +
@@ -165,6 +182,11 @@ class QueryControllerIntegrationTest {
         queryTaskRepository.findAll().stream()
                 .filter(t -> t.getStudentNo() != null && t.getStudentNo().equals(TEST_STUDENT_NO))
                 .forEach(queryTaskRepository::delete);
+
+        // 清理 MySQL exam_record 测试数据
+        examRecordRepository.findAll().stream()
+                .filter(r -> r.getStudentNo() != null && r.getStudentNo().equals(TEST_STUDENT_NO))
+                .forEach(examRecordRepository::delete);
     }
 
     // ======================== AC-1: 同步问答端到端（需 LLM） ========================

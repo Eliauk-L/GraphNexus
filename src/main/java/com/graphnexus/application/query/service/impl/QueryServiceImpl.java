@@ -19,6 +19,7 @@ import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskDO;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskRepository;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskStatus;
+import com.graphnexus.infrastructure.mysql.document.ExamRecordRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ import java.util.stream.Collectors;
 public class QueryServiceImpl implements QueryService {
 
     private final GraphNodeRepository graphNodeRepository;
+    private final ExamRecordRepository examRecordRepository;
     private final StudentDiagnosisStrategy diagnosisStrategy;
     private final PromptTemplateService promptTemplateService;
     private final LlmGateway llmGateway;
@@ -347,13 +349,13 @@ public class QueryServiceImpl implements QueryService {
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    /** 从 Neo4j KnowledgePoint 获取学科列表（带缓存） */
+    /** 从 MySQL exam_record 获取学科列表（带缓存） */
     List<String> getKnownSubjects() {
         if (cachedSubjects == null || cachedSubjects.isEmpty()) {
             synchronized (this) {
                 if (cachedSubjects == null || cachedSubjects.isEmpty()) {
-                    cachedSubjects = graphNodeRepository.findDistinctSubjects();
-                    log.info("从 Neo4j 加载学科列表: {}", cachedSubjects);
+                    cachedSubjects = examRecordRepository.findDistinctSubjects();
+                    log.info("从 MySQL exam_record 加载学科列表: {}", cachedSubjects);
                 }
             }
         }
@@ -397,24 +399,52 @@ public class QueryServiceImpl implements QueryService {
     // ======================== 实体解析 ========================
 
     StudentNode resolveStudent(String studentName, String studentNo) {
+        // 1. MySQL 查找学生身份（exam_record 是学生数据的权威来源）
         if (studentNo != null && !studentNo.isBlank()) {
-            var row = graphNodeRepository.findStudentByNo(studentNo)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "未找到学生，学号: " + studentNo));
-            return buildStudentNode(row);
+            return resolveByStudentNo(studentNo);
         }
         if (studentName != null && !studentName.isBlank()) {
-            var rows = graphNodeRepository.findStudentByName(studentName);
-            if (rows.isEmpty()) {
-                throw new BusinessException(ErrorCode.A0006, "未找到学生: " + studentName);
-            }
-            if (rows.size() > 1) {
-                List<Map<String, String>> candidates = rows.stream()
+            return resolveByStudentName(studentName);
+        }
+        throw new BusinessException(ErrorCode.A0002, "请提供学生姓名或学号");
+    }
+
+    /** 按学号从 MySQL 精确查找，再从 Neo4j 获取图节点 */
+    private StudentNode resolveByStudentNo(String studentNo) {
+        List<Object[]> mysqlRows = examRecordRepository.findStudentByNo(studentNo);
+        if (mysqlRows.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0006, "未找到学生，学号: " + studentNo);
+        }
+        Object[] row = mysqlRows.get(0);
+        String name = (String) row[1];
+        String className = (String) row[2];
+
+        // 从 Neo4j 获取 StudentNode（用于后续 MASTERS 剪枝）
+        var neo4jRow = graphNodeRepository.findStudentByNo(studentNo);
+        if (neo4jRow.isPresent()) {
+            return buildStudentNode(neo4jRow.get());
+        }
+        // Neo4j 中不存在（融合未执行或 CSV 未导入图谱），构建最小 StudentNode
+        return new StudentNode(studentNo, name, className, null);
+    }
+
+    /** 按姓名从 MySQL 模糊查找，再从 Neo4j 获取图节点 */
+    private StudentNode resolveByStudentName(String studentName) {
+        List<Object[]> mysqlRows = examRecordRepository.findStudentByName(studentName);
+        if (mysqlRows.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0006, "未找到学生: " + studentName);
+        }
+        if (mysqlRows.size() > 1) {
+            // 检查是否所有匹配行都是同一个 studentNo（同一人多次考试）
+            long distinctCount = mysqlRows.stream().map(r -> (String) r[0]).distinct().count();
+            if (distinctCount > 1) {
+                List<Map<String, String>> candidates = mysqlRows.stream()
                         .map(r -> Map.of(
-                                "studentNo", (String) r.get("studentNo"),
-                                "name", (String) r.get("name"),
-                                "className", (String) r.get("className"),
-                                "grade", (String) r.get("grade")
+                                "studentNo", (String) r[0],
+                                "name", (String) r[1],
+                                "className", (String) r[2]
                         ))
+                        .distinct()
                         .collect(Collectors.toList());
                 try {
                     throw new BusinessException(ErrorCode.A0020,
@@ -423,9 +453,18 @@ public class QueryServiceImpl implements QueryService {
                     throw new BusinessException(ErrorCode.A0020, "存在多个同名或相似学生");
                 }
             }
-            return buildStudentNode(rows.get(0));
         }
-        throw new BusinessException(ErrorCode.A0002, "请提供学生姓名或学号");
+        // 取第一个匹配的 studentNo
+        Object[] row = mysqlRows.get(0);
+        String studentNo = (String) row[0];
+        String name = (String) row[1];
+        String className = (String) row[2];
+
+        var neo4jRow = graphNodeRepository.findStudentByNo(studentNo);
+        if (neo4jRow.isPresent()) {
+            return buildStudentNode(neo4jRow.get());
+        }
+        return new StudentNode(studentNo, name, className, null);
     }
 
     // ======================== 子图序列化 ========================
