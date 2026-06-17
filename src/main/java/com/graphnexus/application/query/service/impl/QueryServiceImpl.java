@@ -65,7 +65,6 @@ public class QueryServiceImpl implements QueryService {
     // ======================== 公共 API ========================
 
     @Override
-    @Transactional
     public QueryResultBO ask(String question, String studentName, String studentNo, String subject) {
         long startTime = System.currentTimeMillis();
         String taskId = UUID.randomUUID().toString();
@@ -153,7 +152,6 @@ public class QueryServiceImpl implements QueryService {
     }
 
     @Override
-    @Transactional
     public String askAsync(String question, String studentName, String studentNo, String subject) {
         String taskId = UUID.randomUUID().toString();
         persistTask(taskId, question, studentName, studentNo, subject, null,
