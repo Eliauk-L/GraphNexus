@@ -43,6 +43,11 @@ public class Langchain4jLlmGateway implements LlmGateway {
 
     @PostConstruct
     public void init() {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("LLM API Key 未设置，LlmGateway 将不可用。请设置环境变量 LLM_API_KEY");
+            this.chatModel = null;
+            return;
+        }
         this.chatModel = OpenAiChatModel.builder()
                 .baseUrl(baseUrl + "/v1")
                 .apiKey(apiKey)
@@ -58,6 +63,10 @@ public class Langchain4jLlmGateway implements LlmGateway {
 
     @Override
     public String chat(String systemPrompt, String userMessage) {
+        if (chatModel == null) {
+            throw new BusinessException(ErrorCode.C0001,
+                    "LLM 网关不可用：API Key 未配置，请设置环境变量 LLM_API_KEY");
+        }
         log.debug("调用 LLM 模型 {}，systemPrompt={}chars, userMessage={}chars", model,
                 systemPrompt.length(), userMessage.length());
 

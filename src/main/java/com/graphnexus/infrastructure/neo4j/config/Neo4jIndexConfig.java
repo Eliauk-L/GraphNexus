@@ -60,6 +60,9 @@ public class Neo4jIndexConfig {
                     "CREATE INDEX kpcat_id IF NOT EXISTS FOR (n:KnowledgeCategory) ON (n.id)"
             ).run();
             log.info("各节点类型 id 索引就绪");
+        } catch (Exception e) {
+            log.warn("创建索引 graphnode_id 失败（可能已存在）: {}", e.getMessage());
+        }
 
         // Student 与 KnowledgePoint 查询索引（intelligent-qa T14）
         try {
@@ -72,8 +75,6 @@ public class Neo4jIndexConfig {
             log.info("QA 查询索引就绪（Student.studentNo, KnowledgePoint.subject）");
         } catch (Exception e) {
             log.warn("创建 QA 索引失败（可能已存在）: {}", e.getMessage());
-        } catch (Exception e) {
-            log.warn("创建索引 graphnode_id 失败（可能已存在）: {}", e.getMessage());
         }
 
         log.info("Neo4j 索引初始化完成");

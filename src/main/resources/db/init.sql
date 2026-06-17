@@ -80,3 +80,22 @@ CREATE TABLE IF NOT EXISTS fusion_log (
 
 -- down: 删除 fusion_log 表
 -- DROP TABLE IF EXISTS fusion_log;
+-- ======================== intelligent-qa query_task 表 ========================
+CREATE TABLE IF NOT EXISTS query_task (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    task_id VARCHAR(36) NOT NULL UNIQUE COMMENT '任务UUID',
+    question TEXT NOT NULL COMMENT '用户原始问题',
+    student_name VARCHAR(128) COMMENT '目标学生姓名',
+    student_no VARCHAR(64) COMMENT '目标学生学号',
+    subject VARCHAR(32) COMMENT '学科',
+    intent VARCHAR(32) COMMENT '识别意图类型',
+    status VARCHAR(20) NOT NULL COMMENT '任务状态 PENDING/PROCESSING/COMPLETED/FAILED',
+    answer MEDIUMTEXT COMMENT 'LLM生成的分析答案(Markdown)',
+    subgraph_json MEDIUMTEXT COMMENT '剪枝子图JSON',
+    token_usage_json JSON COMMENT 'Token用量JSON',
+    error_message TEXT COMMENT '失败时错误信息',
+    retry_count INT DEFAULT 0 COMMENT 'LLM调用重试次数',
+    elapsed_ms BIGINT COMMENT '任务总耗时(毫秒)',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='智能问答任务记录表(日志类表，不设逻辑删除)';
