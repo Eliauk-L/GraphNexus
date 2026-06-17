@@ -22,12 +22,12 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 /**
- * MinerUClient 单元测试 — 使用 MockRestServiceServer 模拟 MinerU v4 API。
+ * MinerUClient 单元测试 — v1 上传 + v4 解析。
  *
  * @author Jay
  * @date 2026/06/16
  */
-@DisplayName("MinerUClient v4 API 调用")
+@DisplayName("MinerUClient v1上传 + v4解析")
 class MinerUClientTest {
 
     private MinerUClient minerUClient;
@@ -52,119 +52,109 @@ class MinerUClientTest {
     }
 
     @Test
-    @DisplayName("submitBatch 成功返回 batchId 和 fileUrl")
-    void submitBatchShouldReturnBatchIdAndFileUrl() {
-        mockServer.expect(requestTo("https://mineru.net/api/v4/file-urls/batch"))
+    @DisplayName("submitTask 成功返回 taskId 和 fileUrl（v1，无需 Token）")
+    void submitTaskShouldReturnTaskIdAndFileUrl() {
+        mockServer.expect(requestTo("https://mineru.net/api/v1/agent/parse/file"))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(header("Authorization", "Bearer test-token"))
                 .andRespond(withSuccess("""
                         {
                           "code": 0,
                           "msg": "ok",
                           "data": {
-                            "batch_id": "batch-123",
-                            "file_urls": ["https://oss.example.com/upload/doc.pdf?sign=abc"]
+                            "task_id": "task-abc-123",
+                            "file_url": "https://oss.example.com/upload/doc.pdf?sign=abc"
                           }
                         }""", MediaType.APPLICATION_JSON));
 
-        MinerUClient.BatchSubmitResult result = minerUClient.submitBatch("test.pdf");
+        MinerUClient.TaskSubmitResult result = minerUClient.submitTask("test.pdf");
 
-        assertThat(result.batchId()).isEqualTo("batch-123");
+        assertThat(result.taskId()).isEqualTo("task-abc-123");
         assertThat(result.fileUrl()).contains("oss.example.com");
         mockServer.verify();
     }
 
     @Test
-    @DisplayName("submitBatch API 返回错误码时抛 BusinessException")
-    void submitBatchShouldThrowOnApiError() {
-        mockServer.expect(requestTo("https://mineru.net/api/v4/file-urls/batch"))
+    @DisplayName("submitTask API 返回错误码时抛 BusinessException")
+    void submitTaskShouldThrowOnApiError() {
+        mockServer.expect(requestTo("https://mineru.net/api/v1/agent/parse/file"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("""
                         {
-                          "code": -60005,
-                          "msg": "文件大小超出限制"
+                          "code": -30001,
+                          "msg": "文件大小超出轻量接口限制"
                         }""", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> minerUClient.submitBatch("large.pdf"))
+        assertThatThrownBy(() -> minerUClient.submitTask("large.pdf"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("MinerU 批量申请失败");
+                .hasMessageContaining("MinerU 提交任务失败");
         mockServer.verify();
     }
 
     @Test
-    @DisplayName("submitBatch 网络异常时抛 BusinessException C0001")
-    void submitBatchShouldThrowOnNetworkError() {
-        mockServer.expect(requestTo("https://mineru.net/api/v4/file-urls/batch"))
+    @DisplayName("submitTask 网络异常时抛 BusinessException C0001")
+    void submitTaskShouldThrowOnNetworkError() {
+        mockServer.expect(requestTo("https://mineru.net/api/v1/agent/parse/file"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withServerError());
 
-        assertThatThrownBy(() -> minerUClient.submitBatch("test.pdf"))
+        assertThatThrownBy(() -> minerUClient.submitTask("test.pdf"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("MinerU API 调用失败");
     }
 
     @Test
-    @DisplayName("pollBatchResult 轮询到 done 返回 fullZipUrl")
-    void pollBatchResultShouldReturnFullZipUrlWhenDone() {
+    @DisplayName("pollTaskResult 轮询到 done 返回 fullZipUrl（v4）")
+    void pollTaskResultShouldReturnFullZipUrlWhenDone() {
         // 第一次返回 running，第二次返回 done
-        mockServer.expect(requestTo("https://mineru.net/api/v4/extract-results/batch/batch-123"))
+        mockServer.expect(requestTo("https://mineru.net/api/v4/extract/task/task-123"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         {
                           "code": 0,
                           "data": {
-                            "batch_id": "batch-123",
-                            "extract_result": [{
-                              "file_name": "test.pdf",
-                              "state": "running",
-                              "extract_progress": {
-                                "extracted_pages": 1,
-                                "total_pages": 3
-                              }
-                            }]
+                            "task_id": "task-123",
+                            "state": "running",
+                            "extract_progress": {
+                              "extracted_pages": 1,
+                              "total_pages": 3
+                            }
                           }
                         }""", MediaType.APPLICATION_JSON));
 
-        mockServer.expect(requestTo("https://mineru.net/api/v4/extract-results/batch/batch-123"))
+        mockServer.expect(requestTo("https://mineru.net/api/v4/extract/task/task-123"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         {
                           "code": 0,
                           "data": {
-                            "batch_id": "batch-123",
-                            "extract_result": [{
-                              "file_name": "test.pdf",
-                              "state": "done",
-                              "full_zip_url": "https://cdn.example.com/result.zip"
-                            }]
+                            "task_id": "task-123",
+                            "state": "done",
+                            "full_zip_url": "https://cdn.example.com/result.zip"
                           }
                         }""", MediaType.APPLICATION_JSON));
 
-        MinerUClient.BatchPollResult result = minerUClient.pollBatchResult("batch-123");
+        MinerUClient.TaskPollResult result = minerUClient.pollTaskResult("task-123");
 
         assertThat(result.isDone()).isTrue();
         assertThat(result.fullZipUrl()).isEqualTo("https://cdn.example.com/result.zip");
     }
 
     @Test
-    @DisplayName("pollBatchResult 返回 failed 时不抛异常，标记 isFailed")
-    void pollBatchResultShouldReturnFailedState() {
-        mockServer.expect(requestTo("https://mineru.net/api/v4/extract-results/batch/batch-123"))
+    @DisplayName("pollTaskResult 返回 failed 时标记 isFailed")
+    void pollTaskResultShouldReturnFailedState() {
+        mockServer.expect(requestTo("https://mineru.net/api/v4/extract/task/task-123"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         {
                           "code": 0,
                           "data": {
-                            "batch_id": "batch-123",
-                            "extract_result": [{
-                              "file_name": "test.pdf",
-                              "state": "failed",
-                              "err_msg": "解析失败：文件损坏"
-                            }]
+                            "task_id": "task-123",
+                            "state": "failed",
+                            "err_msg": "解析失败：文件损坏"
                           }
                         }""", MediaType.APPLICATION_JSON));
 
-        MinerUClient.BatchPollResult result = minerUClient.pollBatchResult("batch-123");
+        MinerUClient.TaskPollResult result = minerUClient.pollTaskResult("task-123");
 
         assertThat(result.isFailed()).isTrue();
         assertThat(result.errMsg()).contains("文件损坏");
@@ -173,7 +163,6 @@ class MinerUClientTest {
     @Test
     @DisplayName("downloadAndExtractMarkdown 下载 zip 并提取 full.md")
     void downloadAndExtractMarkdownShouldExtractFullMd() throws Exception {
-        // 创建测试 zip（含 full.md）
         byte[] zipBytes = createTestZip("full.md", "# Test Markdown\n\n$E=mc^2$");
 
         mockServer.expect(requestTo("https://cdn.example.com/result.zip"))
@@ -190,7 +179,6 @@ class MinerUClientTest {
     @Test
     @DisplayName("downloadAndExtractMarkdown zip 中无 full.md 时抛异常")
     void downloadAndExtractMarkdownShouldThrowWhenNoFullMd() throws Exception {
-        // 创建不含 full.md 的 zip
         byte[] zipBytes = createTestZip("other.txt", "not markdown");
 
         mockServer.expect(requestTo("https://cdn.example.com/result.zip"))
@@ -204,9 +192,6 @@ class MinerUClientTest {
 
     // ======================== 工具方法 ========================
 
-    /**
-     * 创建包含指定文件的 zip 字节数组。
-     */
     private byte[] createTestZip(String entryName, String content) throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {

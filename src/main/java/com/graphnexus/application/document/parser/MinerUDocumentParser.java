@@ -20,7 +20,7 @@ import java.util.Map;
  * 所有异常向上抛 {@link BusinessException}，由调用方
  * {@code DocumentServiceImpl} 统一 catch 后 fallback 到 {@link PdfBoxDocumentParser}。</p>
  *
- * <p>v4 API 调用链：submitBatch → uploadFile → pollBatchResult → downloadAndExtractMarkdown</p>
+ * <p>API 调用链：v1 submitTask → PUT 文件 → v4 pollTaskResult → downloadAndExtractMarkdown</p>
  *
  * @author Jay
  * @date 2026/06/16
@@ -56,20 +56,20 @@ public class MinerUDocumentParser implements DocumentParser {
         long startTime = System.currentTimeMillis();
         log.info("MinerU v4 开始解析: fileSize={} bytes", pdfBytes.length);
 
-        // ① 申请上传链接
+        // ① v1: 提交上传任务（免 Token）
         String fileName = "document-" + System.currentTimeMillis() + ".pdf";
-        MinerUClient.BatchSubmitResult submitResult = minerUClient.submitBatch(fileName);
+        MinerUClient.TaskSubmitResult submitResult = minerUClient.submitTask(fileName);
 
         // ② 上传文件到 MinerU OSS
         minerUClient.uploadFile(submitResult.fileUrl(), pdfBytes);
 
-        // ③ 轮询等待解析完成
-        MinerUClient.BatchPollResult pollResult = minerUClient.pollBatchResult(submitResult.batchId());
+        // ③ v4: 轮询等待解析完成（需 Token）
+        MinerUClient.TaskPollResult pollResult = minerUClient.pollTaskResult(submitResult.taskId());
 
         if (pollResult.isFailed()) {
             long elapsed = System.currentTimeMillis() - startTime;
-            log.error("MinerU v4 解析失败: batchId={}, errMsg={}, elapsed={}ms",
-                    submitResult.batchId(), pollResult.errMsg(), elapsed);
+            log.error("MinerU v4 解析失败: taskId={}, errMsg={}, elapsed={}ms",
+                    submitResult.taskId(), pollResult.errMsg(), elapsed);
             throw new BusinessException(ErrorCode.C0001,
                     "MinerU 解析失败: " + pollResult.errMsg(),
                     "MinerU 无法解析该文档，将尝试 PDFBox 兜底");
@@ -82,11 +82,11 @@ public class MinerUDocumentParser implements DocumentParser {
         Map<String, String> metadata = new LinkedHashMap<>();
         metadata.put("parser", properties.getApi().getParserName());
         metadata.put("model", properties.getApi().getModelVersion());
-        metadata.put("batchId", submitResult.batchId());
+        metadata.put("taskId", submitResult.taskId());
 
         long elapsed = System.currentTimeMillis() - startTime;
-        log.info("MinerU v4 解析完成: batchId={}, textLength={}, elapsed={}ms",
-                submitResult.batchId(), markdown.length(), elapsed);
+        log.info("MinerU v4 解析完成: taskId={}, textLength={}, elapsed={}ms",
+                submitResult.taskId(), markdown.length(), elapsed);
 
         // pageCount 从 MinerU zip 中不易直接获取，设为 0（调用方以 textContent 为主）
         return new ParseResult(markdown, 0, metadata);

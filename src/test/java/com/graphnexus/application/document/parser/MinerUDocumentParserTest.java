@@ -54,10 +54,10 @@ class MinerUDocumentParserTest {
     @Test
     @DisplayName("正常解析流程：submit → upload → poll → download 全部成功")
     void parseShouldCompleteFullFlow() {
-        when(minerUClient.submitBatch(anyString()))
-                .thenReturn(new MinerUClient.BatchSubmitResult("batch-1", "https://oss.example.com/up"));
-        when(minerUClient.pollBatchResult("batch-1"))
-                .thenReturn(new MinerUClient.BatchPollResult("test.pdf", "done",
+        when(minerUClient.submitTask(anyString()))
+                .thenReturn(new MinerUClient.TaskSubmitResult("task-1", "https://oss.example.com/up"));
+        when(minerUClient.pollTaskResult("task-1"))
+                .thenReturn(new MinerUClient.TaskPollResult("done",
                         "https://cdn.example.com/result.zip", null));
         when(minerUClient.downloadAndExtractMarkdown("https://cdn.example.com/result.zip"))
                 .thenReturn("# Markdown\n\n$E=mc^2$");
@@ -67,9 +67,9 @@ class MinerUDocumentParserTest {
         assertThat(result.textContent()).isEqualTo("# Markdown\n\n$E=mc^2$");
         assertThat(result.metadata()).containsEntry("parser", "mineru-v4");
         assertThat(result.metadata()).containsEntry("model", "vlm");
-        verify(minerUClient).submitBatch(anyString());
+        verify(minerUClient).submitTask(anyString());
         verify(minerUClient).uploadFile(anyString(), any(byte[].class));
-        verify(minerUClient).pollBatchResult("batch-1");
+        verify(minerUClient).pollTaskResult("task-1");
         verify(minerUClient).downloadAndExtractMarkdown("https://cdn.example.com/result.zip");
     }
 
@@ -81,7 +81,7 @@ class MinerUDocumentParserTest {
         assertThatThrownBy(() -> parser.parse(new byte[]{1, 2, 3}))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("MinerU 已禁用");
-        verify(minerUClient, never()).submitBatch(anyString());
+        verify(minerUClient, never()).submitTask(anyString());
     }
 
     @Test
@@ -93,12 +93,12 @@ class MinerUDocumentParserTest {
     }
 
     @Test
-    @DisplayName("pollBatchResult 返回 failed 时抛异常")
+    @DisplayName("pollTaskResult 返回 failed 时抛异常")
     void parseShouldThrowWhenPollReturnsFailed() {
-        when(minerUClient.submitBatch(anyString()))
-                .thenReturn(new MinerUClient.BatchSubmitResult("batch-1", "https://oss.example.com/up"));
-        when(minerUClient.pollBatchResult("batch-1"))
-                .thenReturn(new MinerUClient.BatchPollResult("test.pdf", "failed",
+        when(minerUClient.submitTask(anyString()))
+                .thenReturn(new MinerUClient.TaskSubmitResult("batch-1", "https://oss.example.com/up"));
+        when(minerUClient.pollTaskResult("batch-1"))
+                .thenReturn(new MinerUClient.TaskPollResult("failed",
                         null, "文件损坏无法解析"));
 
         assertThatThrownBy(() -> parser.parse(new byte[]{1, 2, 3}))
@@ -108,15 +108,15 @@ class MinerUDocumentParserTest {
     }
 
     @Test
-    @DisplayName("submitBatch 异常直接向上传播")
+    @DisplayName("submitTask 异常直接向上传播")
     void parseShouldPropagateSubmitException() {
-        when(minerUClient.submitBatch(anyString()))
+        when(minerUClient.submitTask(anyString()))
                 .thenThrow(new BusinessException(ErrorCode.C0001, "网络异常", "连接超时"));
 
         assertThatThrownBy(() -> parser.parse(new byte[]{1, 2, 3}))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("网络异常");
-        verify(minerUClient, never()).pollBatchResult(anyString());
+        verify(minerUClient, never()).pollTaskResult(anyString());
     }
 
     @Test

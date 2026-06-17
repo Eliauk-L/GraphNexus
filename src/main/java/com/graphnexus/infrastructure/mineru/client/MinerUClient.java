@@ -14,22 +14,19 @@ import org.springframework.web.client.RestClient;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
- * MinerU v4 API 客户端。
+ * MinerU API 客户端（v1 上传 + v4 解析）。
  *
- * <p>封装 MinerU v4 精准解析 API 的完整调用链：申请上传链接 → PUT 文件 → 轮询结果 → 下载并解压 Markdown。
- * 使用 Spring 6.1 {@link RestClient}（同步 HTTP 客户端，无需额外依赖）。</p>
- *
- * <p>v4 API 文档：docs/mineru-api.md</p>
+ * <p>上传使用 v1 Agent API（免 Token），解析使用 v4 精准解析 API。</p>
+ * <p>调用链：v1 submitTask → PUT 文件 → v4 pollTask → 下载解压 Markdown</p>
  *
  * @author Jay
  * @date 2026/06/16
@@ -38,92 +35,108 @@ import java.util.zip.ZipInputStream;
 @Service
 public class MinerUClient {
 
-    private final RestClient restClient;
-    private final RestClient.Builder restClientBuilder;
+    /** v4 API 客户端（带 Bearer Token，用于查询和下载） */
+    private final RestClient v4Client;
+
+    /** v1 API 客户端（免 Token，仅用于提交上传任务） */
+    private final RestClient v1Client;
+
     private final MinerUProperties properties;
     private final ObjectMapper objectMapper;
 
     public MinerUClient(RestClient.Builder restClientBuilder, MinerUProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
         this.objectMapper = objectMapper;
-        this.restClientBuilder = restClientBuilder;
-        this.restClient = restClientBuilder
+
+        String token = properties.getApi().getToken();
+        this.v4Client = restClientBuilder
                 .baseUrl(properties.getApi().getBaseUrl())
-                .defaultHeader("Authorization", "Bearer " + properties.getApi().getToken())
+                .defaultHeader("Authorization", "Bearer " + token)
+                .build();
+
+        // v1 Agent API 无需 Token
+        this.v1Client = restClientBuilder
+                .baseUrl(properties.getApi().getBaseUrl())
                 .build();
     }
 
     /**
-     * 提交单个文件的批量上传申请。
+     * 提交文件上传任务（v1 Agent API）。
      *
-     * <p>调用 {@code POST /api/v4/file-urls/batch}，MinerU 返回预签名上传 URL，
-     * 上传完成后系统自动提交解析任务。</p>
+     * <p>调用 {@code POST /api/v1/agent/parse/file}，无需 Token，
+     * 返回 task_id + OSS 预签名上传 URL。</p>
      *
-     * @param fileName 文件名（含扩展名，如 demo.pdf）
-     * @return 包含 batchId 和 fileUrl 的结果
+     * @param fileName 文件名（含扩展名）
+     * @return 包含 taskId 和 fileUrl 的结果
      */
-    public BatchSubmitResult submitBatch(String fileName) {
+    public TaskSubmitResult submitTask(String fileName) {
         Map<String, Object> requestBody = new HashMap<>();
-        List<Map<String, Object>> files = new ArrayList<>();
-        Map<String, Object> fileInfo = new HashMap<>();
-        fileInfo.put("name", fileName);
-        files.add(fileInfo);
-        requestBody.put("files", files);
-        requestBody.put("model_version", properties.getApi().getModelVersion());
+        requestBody.put("file_name", fileName);
         requestBody.put("enable_formula", properties.getParse().isEnableFormula());
         requestBody.put("enable_table", properties.getParse().isEnableTable());
         requestBody.put("language", properties.getParse().getLanguage());
 
-        log.info("MinerU 提交批量上传申请: fileName={}, model={}", fileName, properties.getApi().getModelVersion());
+        log.info("MinerU v1 提交上传任务: fileName={}", fileName);
 
         try {
             String jsonBody = objectMapper.writeValueAsString(requestBody);
-            log.debug("MinerU batch request body: {}", jsonBody);
-            String response = restClient.post()
-                    .uri("/api/v4/file-urls/batch")
+            log.debug("MinerU v1 request body: {}", jsonBody);
+
+            String response = v1Client.post()
+                    .uri("/api/v1/agent/parse/file")
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(jsonBody)
                     .retrieve()
                     .body(String.class);
+
+            log.debug("MinerU v1 response: {}", response);
+
             JsonNode root = objectMapper.readTree(response);
             int code = root.path("code").asInt(-1);
             if (code != 0) {
                 String msg = root.path("msg").asText("未知错误");
-                throw new BusinessException(ErrorCode.C0001, "MinerU 批量申请失败: " + msg,
-                        "MinerU API 返回 code=" + code + ", msg=" + msg);
+                throw new BusinessException(ErrorCode.C0001, "MinerU 提交任务失败: " + msg,
+                        "MinerU v1 API 返回 code=" + code + ", msg=" + msg);
             }
 
             JsonNode data = root.path("data");
-            String batchId = data.path("batch_id").asText();
-            String fileUrl = data.path("file_urls").get(0).asText();
+            String taskId = data.path("task_id").asText();
+            String fileUrl = data.path("file_url").asText();
 
-            log.info("MinerU 批量申请成功: batchId={}", batchId);
-            return new BatchSubmitResult(batchId, fileUrl);
+            log.info("MinerU v1 任务创建成功: taskId={}", taskId);
+            return new TaskSubmitResult(taskId, fileUrl);
 
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            log.error("MinerU 批量申请异常", e);
+            log.error("MinerU v1 提交任务异常", e);
             throw new BusinessException(ErrorCode.C0001, "MinerU API 调用失败: " + e.getMessage(),
-                    "MinerU 批量上传申请网络异常，请稍后重试");
+                    "MinerU 任务提交网络异常，请稍后重试");
         }
     }
 
     /**
      * 上传 PDF 文件到 MinerU OSS 预签名 URL。
      *
+     * <p>不设置任何请求头（Content-Type / Authorization），OSS 签名已包含完整认证。</p>
+     *
      * @param fileUrl  MinerU 返回的预签名上传 URL
      * @param pdfBytes PDF 文件字节数组
      */
     public void uploadFile(String fileUrl, byte[] pdfBytes) {
-        log.info("MinerU 开始上传文件: size={} bytes", pdfBytes.length);
+        log.info("MinerU 开始上传文件: url={}, size={} bytes", fileUrl, pdfBytes.length);
 
         try {
-            // 使用独立的 RestClient（不带 Authorization 头，OSS 签名已包含认证；
-            // 不设置 Content-Type，OSS 签名校验时 Content-Type 必须为空或完全匹配签名时的值）
-            RestClient uploadClient = RestClient.create();
+            // 干净 RestClient：不设任何默认头，OSS 签名已包含认证
+            RestClient uploadClient = RestClient.builder()
+                    .requestInterceptor((req, body, exec) -> {
+                        req.getHeaders().clear();
+                        req.getHeaders().setContentLength(body.length);
+                        return exec.execute(req, body);
+                    })
+                    .build();
             String putResponse = uploadClient.put()
-                    .uri(fileUrl)
+                    .uri(URI.create(fileUrl))
                     .body(pdfBytes)
                     .retrieve()
                     .body(String.class);
@@ -138,24 +151,24 @@ public class MinerUClient {
     }
 
     /**
-     * 轮询批量解析结果，直到 {@code state=done} 或 {@code state=failed} 或超时。
+     * 轮询任务解析结果（v4 单任务查询），直到 state=done/failed 或超时。
      *
-     * @param batchId 批量任务 ID
+     * @param taskId 任务 ID
      * @return 解析结果（含 fullZipUrl）
      */
-    public BatchPollResult pollBatchResult(String batchId) {
+    public TaskPollResult pollTaskResult(String taskId) {
         Duration pollInterval = properties.getApi().getPollInterval();
         Duration pollTimeout = properties.getApi().getPollTimeout();
         long startTime = System.currentTimeMillis();
         long timeoutMs = pollTimeout.toMillis();
 
-        log.info("MinerU 开始轮询解析结果: batchId={}, timeout={}s, interval={}s",
-                batchId, pollTimeout.toSeconds(), pollInterval.toSeconds());
+        log.info("MinerU v4 开始轮询解析结果: taskId={}, timeout={}s, interval={}s",
+                taskId, pollTimeout.toSeconds(), pollInterval.toSeconds());
 
         while (System.currentTimeMillis() - startTime < timeoutMs) {
             try {
-                String response = restClient.get()
-                        .uri("/api/v4/extract-results/batch/{batchId}", batchId)
+                String response = v4Client.get()
+                        .uri("/api/v4/extract/task/{taskId}", taskId)
                         .retrieve()
                         .body(String.class);
 
@@ -164,40 +177,31 @@ public class MinerUClient {
                 if (code != 0) {
                     String msg = root.path("msg").asText("未知错误");
                     throw new BusinessException(ErrorCode.C0001, "MinerU 查询结果失败: " + msg,
-                            "MinerU API 返回 code=" + code);
+                            "MinerU v4 API 返回 code=" + code);
                 }
 
                 JsonNode data = root.path("data");
-                if (!data.has("extract_result") || data.path("extract_result").isEmpty()) {
-                    log.debug("MinerU 批量结果为空，等待中...");
-                    Thread.sleep(pollInterval.toMillis());
-                    continue;
-                }
+                String state = data.path("state").asText();
 
-                JsonNode result = data.path("extract_result").get(0);
-                String state = result.path("state").asText();
-                String fileName = result.path("file_name").asText();
-
-                log.debug("MinerU 轮询状态: fileName={}, state={}", fileName, state);
+                log.debug("MinerU 轮询状态: taskId={}, state={}", taskId, state);
 
                 switch (state) {
                     case "done":
-                        String fullZipUrl = result.path("full_zip_url").asText();
-                        log.info("MinerU 解析完成: batchId={}, fullZipUrl={}", batchId, fullZipUrl);
-                        return new BatchPollResult(fileName, "done", fullZipUrl, null);
+                        String fullZipUrl = data.path("full_zip_url").asText();
+                        log.info("MinerU 解析完成: taskId={}, fullZipUrl={}", taskId, fullZipUrl);
+                        return new TaskPollResult("done", fullZipUrl, null);
 
                     case "failed":
-                        String errMsg = result.path("err_msg").asText("解析失败");
-                        log.warn("MinerU 解析失败: batchId={}, errMsg={}", batchId, errMsg);
-                        return new BatchPollResult(fileName, "failed", null, errMsg);
+                        String errMsg = data.path("err_msg").asText("解析失败");
+                        log.warn("MinerU 解析失败: taskId={}, errMsg={}", taskId, errMsg);
+                        return new TaskPollResult("failed", null, errMsg);
 
                     case "running":
                     case "pending":
-                    case "waiting-file":
                     case "converting":
-                        // 继续轮询
-                        if (result.has("extract_progress")) {
-                            JsonNode progress = result.path("extract_progress");
+                        // 输出进度
+                        if (data.has("extract_progress")) {
+                            JsonNode progress = data.path("extract_progress");
                             log.debug("MinerU 解析进度: {}/{} pages",
                                     progress.path("extracted_pages").asInt(),
                                     progress.path("total_pages").asInt());
@@ -238,10 +242,9 @@ public class MinerUClient {
         log.info("MinerU 开始下载解析结果: url={}", fullZipUrl);
 
         try {
-            // 下载 zip（无须 Token，CDN 公开链接）
-            RestClient downloadClient = restClientBuilder.baseUrl("").build();
+            RestClient downloadClient = v4Client;
             byte[] zipBytes = downloadClient.get()
-                    .uri(fullZipUrl)
+                    .uri(URI.create(fullZipUrl))
                     .retrieve()
                     .body(byte[].class);
 
@@ -252,7 +255,6 @@ public class MinerUClient {
 
             log.info("MinerU 下载完成: size={} bytes", zipBytes.length);
 
-            // 解压提取 full.md
             String markdown = extractFullMd(zipBytes);
             log.info("MinerU Markdown 提取完成: length={} chars", markdown.length());
             return markdown;
@@ -291,14 +293,14 @@ public class MinerUClient {
     // ======================== 内部结果类 ========================
 
     /**
-     * 批量提交结果。
+     * 任务提交结果（v1）。
      */
-    public record BatchSubmitResult(String batchId, String fileUrl) {}
+    public record TaskSubmitResult(String taskId, String fileUrl) {}
 
     /**
-     * 批量轮询结果。
+     * 任务轮询结果（v4）。
      */
-    public record BatchPollResult(String fileName, String state, String fullZipUrl, String errMsg) {
+    public record TaskPollResult(String state, String fullZipUrl, String errMsg) {
         public boolean isDone() {
             return "done".equals(state);
         }
