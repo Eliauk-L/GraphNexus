@@ -3,6 +3,7 @@ package com.graphnexus.application.document.parser;
 import com.graphnexus.application.document.model.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
+import com.graphnexus.infrastructure.mineru.client.MinerUApiClient;
 import com.graphnexus.infrastructure.mineru.client.MinerUClient;
 import com.graphnexus.infrastructure.mineru.config.MinerUProperties;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,11 +56,11 @@ class MinerUDocumentParserTest {
     @DisplayName("正常解析流程：submit → upload → poll → download 全部成功")
     void parseShouldCompleteFullFlow() {
         when(minerUClient.submitTask(anyString()))
-                .thenReturn(new MinerUClient.TaskSubmitResult("task-1", "https://oss.example.com/up"));
+                .thenReturn(new MinerUApiClient.TaskSubmitResult("task-1", "https://oss.example.com/up"));
         when(minerUClient.pollTaskResult("task-1"))
-                .thenReturn(new MinerUClient.TaskPollResult("done",
-                        "https://cdn.example.com/result.zip", null));
-        when(minerUClient.downloadMarkdown("https://cdn.example.com/result.zip"))
+                .thenReturn(new MinerUApiClient.TaskPollResult("done",
+                        "https://cdn.example.com/result.md", null));
+        when(minerUClient.downloadMarkdown("https://cdn.example.com/result.md"))
                 .thenReturn("# Markdown\n\n$E=mc^2$");
 
         ParseResult result = parser.parse(new byte[]{1, 2, 3});
@@ -70,7 +71,7 @@ class MinerUDocumentParserTest {
         verify(minerUClient).submitTask(anyString());
         verify(minerUClient).uploadFile(anyString(), any(byte[].class));
         verify(minerUClient).pollTaskResult("task-1");
-        verify(minerUClient).downloadMarkdown("https://cdn.example.com/result.zip");
+        verify(minerUClient).downloadMarkdown("https://cdn.example.com/result.md");
     }
 
     @Test
@@ -96,9 +97,9 @@ class MinerUDocumentParserTest {
     @DisplayName("pollTaskResult 返回 failed 时抛异常")
     void parseShouldThrowWhenPollReturnsFailed() {
         when(minerUClient.submitTask(anyString()))
-                .thenReturn(new MinerUClient.TaskSubmitResult("batch-1", "https://oss.example.com/up"));
+                .thenReturn(new MinerUApiClient.TaskSubmitResult("batch-1", "https://oss.example.com/up"));
         when(minerUClient.pollTaskResult("batch-1"))
-                .thenReturn(new MinerUClient.TaskPollResult("failed",
+                .thenReturn(new MinerUApiClient.TaskPollResult("failed",
                         null, "文件损坏无法解析"));
 
         assertThatThrownBy(() -> parser.parse(new byte[]{1, 2, 3}))

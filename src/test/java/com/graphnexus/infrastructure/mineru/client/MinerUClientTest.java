@@ -62,7 +62,7 @@ class MinerUClientTest {
                           }
                         }""", MediaType.APPLICATION_JSON));
 
-        MinerUClient.TaskSubmitResult result = minerUClient.submitTask("test.pdf");
+        MinerUApiClient.TaskSubmitResult result = minerUClient.submitTask("test.pdf");
 
         assertThat(result.taskId()).isEqualTo("task-abc-123");
         assertThat(result.fileUrl()).contains("oss.example.com");
@@ -124,10 +124,10 @@ class MinerUClientTest {
                           }
                         }""", MediaType.APPLICATION_JSON));
 
-        MinerUClient.TaskPollResult result = minerUClient.pollTaskResult("task-123");
+        MinerUApiClient.TaskPollResult result = minerUClient.pollTaskResult("task-123");
 
         assertThat(result.isDone()).isTrue();
-        assertThat(result.markdownUrl()).isEqualTo("https://cdn.example.com/result.md");
+        assertThat(result.resultUrl()).isEqualTo("https://cdn.example.com/result.md");
     }
 
     @Test
@@ -145,7 +145,7 @@ class MinerUClientTest {
                           }
                         }""", MediaType.APPLICATION_JSON));
 
-        MinerUClient.TaskPollResult result = minerUClient.pollTaskResult("task-123");
+        MinerUApiClient.TaskPollResult result = minerUClient.pollTaskResult("task-123");
 
         assertThat(result.isFailed()).isTrue();
         assertThat(result.errMsg()).contains("文件损坏");

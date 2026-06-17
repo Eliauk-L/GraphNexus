@@ -34,6 +34,9 @@ public class MinerUProperties {
         /** MinerU API 基础 URL */
         private String baseUrl = "https://mineru.net";
 
+        /** API 版本：v1（Agent 轻量，免 Token，默认）/ v4（精准解析，需 Token） */
+        private String version = "v1";
+
         /** v4 API Token（Bearer 认证） */
         private String token;
 
@@ -44,10 +47,10 @@ public class MinerUProperties {
         private String parserName = "mineru-v4";
 
         /** 轮询超时 */
-        private Duration pollTimeout = Duration.ofSeconds(300);
+        private Duration pollTimeout = Duration.ofSeconds(600);
 
         /** 轮询间隔 */
-        private Duration pollInterval = Duration.ofSeconds(3);
+        private Duration pollInterval = Duration.ofSeconds(6);
     }
 
     @Data

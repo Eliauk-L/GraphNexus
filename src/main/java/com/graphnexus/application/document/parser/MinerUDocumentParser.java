@@ -3,6 +3,7 @@ package com.graphnexus.application.document.parser;
 import com.graphnexus.application.document.model.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
+import com.graphnexus.infrastructure.mineru.client.MinerUApiClient;
 import com.graphnexus.infrastructure.mineru.client.MinerUClient;
 import com.graphnexus.infrastructure.mineru.config.MinerUProperties;
 import lombok.RequiredArgsConstructor;
@@ -58,13 +59,13 @@ public class MinerUDocumentParser implements DocumentParser {
 
         // ① v1: 提交上传任务（免 Token）
         String fileName = "document-" + System.currentTimeMillis() + ".pdf";
-        MinerUClient.TaskSubmitResult submitResult = minerUClient.submitTask(fileName);
+        MinerUApiClient.TaskSubmitResult submitResult = minerUClient.submitTask(fileName);
 
         // ② 上传文件到 MinerU OSS
         minerUClient.uploadFile(submitResult.fileUrl(), pdfBytes);
 
         // ③ v4: 轮询等待解析完成（需 Token）
-        MinerUClient.TaskPollResult pollResult = minerUClient.pollTaskResult(submitResult.taskId());
+        MinerUApiClient.TaskPollResult pollResult = minerUClient.pollTaskResult(submitResult.taskId());
 
         if (pollResult.isFailed()) {
             long elapsed = System.currentTimeMillis() - startTime;
@@ -76,7 +77,7 @@ public class MinerUDocumentParser implements DocumentParser {
         }
 
         // ④ 下载并解压 Markdown
-        String markdown = minerUClient.downloadMarkdown(pollResult.markdownUrl());
+        String markdown = minerUClient.downloadMarkdown(pollResult.resultUrl());
 
         // ⑤ 构建返回结果
         Map<String, String> metadata = new LinkedHashMap<>();

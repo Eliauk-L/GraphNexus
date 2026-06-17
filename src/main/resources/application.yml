@@ -69,6 +69,7 @@ mineru:
   enabled: true
   api:
     base-url: https://mineru.net
+    version: v1
     token: ${MINERU_API_TOKEN:}
     model-version: vlm
     parser-name: mineru-v4
