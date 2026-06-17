@@ -6,6 +6,7 @@ import com.graphnexus.application.graph.fusion.config.FusionProperties;
 import com.graphnexus.application.graph.fusion.model.*;
 import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.application.graph.fusion.strategy.KpMatchingStrategy;
+import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.fusion.FusionLogDO;
@@ -13,6 +14,7 @@ import com.graphnexus.infrastructure.mysql.fusion.FusionLogRepository;
 import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -42,6 +44,7 @@ public class FusionServiceImpl implements FusionService {
     private final FusionGroupBuilder groupBuilder;
     private final MastersRecalculationService mastersService;
     private final FusionRollbackService rollbackService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ======================== 全量融合 ========================
 
@@ -79,6 +82,10 @@ public class FusionServiceImpl implements FusionService {
 
             log.info("全量融合完成: {} 组 KP 合并, {} 条 MASTERS 边, fusionLogId={}",
                     allGroups.size(), totalMasters, logEntry.getId());
+
+            // 图谱变更事件 — 触发指标缓存失效（见 ADR-013 §4）
+            eventPublisher.publishEvent(new GraphChangedEvent(this));
+
             return new FusionExecuteResult(logEntry.getId(), allGroups.size(), totalMasters);
 
         } catch (BusinessException e) {
@@ -123,6 +130,9 @@ public class FusionServiceImpl implements FusionService {
 
             String detailJson = buildFusionDetailJson(groups);
             updateLogCompleted(logEntry, groups.size(), totalMasters, detailJson, startTime);
+
+            // 图谱变更事件 — 触发指标缓存失效（见 ADR-013 §4）
+            eventPublisher.publishEvent(new GraphChangedEvent(this));
 
             return new FusionExecuteResult(logEntry.getId(), groups.size(), totalMasters);
 

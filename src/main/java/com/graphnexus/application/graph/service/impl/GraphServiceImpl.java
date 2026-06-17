@@ -5,6 +5,7 @@ import com.graphnexus.application.graph.model.ExtractionResultBO;
 import com.graphnexus.application.graph.model.GraphSubgraphBO;
 import com.graphnexus.application.graph.service.GraphService;
 import com.graphnexus.application.graph.fusion.service.FusionService;
+import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.document.DocumentDO;
@@ -16,6 +17,7 @@ import com.graphnexus.infrastructure.neo4j.node.GraphNode;
 import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -38,6 +40,7 @@ public class GraphServiceImpl implements GraphService {
     private final ExtractionService extractionService;
     private final GraphNodeRepository graphNodeRepository;
     private final FusionService fusionService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -108,6 +111,9 @@ public class GraphServiceImpl implements GraphService {
             log.error("增量融合失败（文档抽取后），documentId={}, kps={}，可手动全量融合修复",
                     documentId, affectedKpNames, e);
         }
+
+        // 图谱变更事件 — 触发指标缓存失效（见 ADR-013 §4）
+        eventPublisher.publishEvent(new GraphChangedEvent(this));
 
         return result;
     }

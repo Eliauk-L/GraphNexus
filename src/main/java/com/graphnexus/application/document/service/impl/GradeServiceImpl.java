@@ -18,12 +18,14 @@ import com.graphnexus.application.document.parser.FileParseRequest;
 import com.graphnexus.application.document.parser.FileParserRegistry;
 import com.graphnexus.application.document.service.GradeService;
 import com.graphnexus.application.graph.fusion.service.FusionService;
+import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.common.util.Md5Utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -53,6 +55,7 @@ public class GradeServiceImpl implements GradeService {
     private final FileParserRegistry fileParserRegistry;
     private final ObjectMapper objectMapper;
     private final FusionService fusionService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ======================== 上传 ========================
 
@@ -165,6 +168,9 @@ public class GradeServiceImpl implements GradeService {
             log.error("增量融合失败（CSV 上传后），examNo={}, kps={}，可手动全量融合修复",
                     payload.examNo(), payload.knowledgePoints(), e);
         }
+
+        // 图谱变更事件 — 触发指标缓存失效（见 ADR-013 §4）
+        eventPublisher.publishEvent(new GraphChangedEvent(this));
 
         return GradeUploadResultBO.builder()
                 .examNo(payload.examNo())
