@@ -159,7 +159,7 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-7" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="410" y="476" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-8" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图剪枝" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-8" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅实体对齐" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="426" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-9" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图谱度量" vertex="1">
@@ -195,10 +195,10 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-19" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="Doubao" vertex="1">
           <mxGeometry height="32.5" width="70" x="880" y="646" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-21" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="边权更新" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-21" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅边权更新" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="476" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-22" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="实体对齐" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-22" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="图剪枝" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="526" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-23" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="运营管理" vertex="1">

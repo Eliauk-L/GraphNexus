@@ -180,14 +180,14 @@ public class GdsAdapter {
     }
 
     /**
-     * 构建 GDS 关系投影 Map。
+     * 构建 GDS 关系投影。
      *
-     * <p>空集合 → 通配符 {@code {'*': {orientation: 'NATURAL'}}}。
+     * <p>空集合 → 通配符字符串 {@code '*'}（GDS 2.x 不支持 Map 中的 '*' key）。
      * 否则每条边类型按 DESIGN §2.3 映射 orientation（ALIGNED_TO/MASTERS → UNDIRECTED，其他 → NATURAL）。</p>
      */
     private String buildRelationshipProjection(Set<String> edgeTypes) {
         if (edgeTypes == null || edgeTypes.isEmpty()) {
-            return "{'*': {orientation: 'NATURAL'}}";
+            return "'*'";
         }
         String entries = edgeTypes.stream()
                 .sorted()

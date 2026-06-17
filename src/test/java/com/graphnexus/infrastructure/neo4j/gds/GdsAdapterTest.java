@@ -81,7 +81,7 @@ class GdsAdapterTest {
     }
 
     @Test
-    @DisplayName("空 edgeTypes 使用 '*' 通配符")
+    @DisplayName("空 edgeTypes 使用 '*' 通配符字符串（GDS 2.x compat）")
     void testProjection_AllEdgesWildcard() {
         MetricsQuery query = new MetricsQuery(
                 Set.of("KnowledgePoint"), Collections.emptySet(), "pagerank");
@@ -92,8 +92,9 @@ class GdsAdapterTest {
         String projectCypher = captor.getAllValues().stream()
                 .filter(c -> c.contains("gds.graph.project"))
                 .findFirst().orElse("");
+        // GDS 2.x: 空 edgeTypes → '*' 字符串，非 {'*': ...} map
         assertTrue(projectCypher.contains("'*'"),
-                "空 edgeTypes 应使用 '*' 通配符: " + projectCypher);
+                "GDS 2.x 空边类型应使用 '*' 字符串: " + projectCypher);
     }
 
     @Test

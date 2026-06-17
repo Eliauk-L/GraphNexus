@@ -34,7 +34,6 @@ public class MetricsQueryRequest {
         return nodeTypes.stream()
                 .filter(s -> s != null && !s.isBlank())
                 .map(String::trim)
-                .map(String::toUpperCase)
                 .collect(Collectors.toSet());
     }
 
@@ -48,7 +47,6 @@ public class MetricsQueryRequest {
         return edgeTypes.stream()
                 .filter(s -> s != null && !s.isBlank())
                 .map(String::trim)
-                .map(String::toUpperCase)
                 .collect(Collectors.toSet());
     }
 }

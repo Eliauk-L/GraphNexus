@@ -53,9 +53,12 @@ public class MetricsServiceImpl implements MetricsService {
     @Override
     public List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes) {
         validateParams(nodeTypes, edgeTypes);
-        MetricsQuery query = new MetricsQuery(nodeTypes, edgeTypes, "pagerank");
+        Set<String> normalizedNodes = normalizeNodeTypes(nodeTypes);
+        Set<String> normalizedEdges = normalizeEdgeTypes(edgeTypes);
+
+        MetricsQuery query = new MetricsQuery(normalizedNodes, normalizedEdges, "pagerank");
         return cache.get(query.toCacheKey(), key -> {
-            log.debug("缓存未命中，执行 PageRank 计算（nodeTypes={}, edgeTypes={}）", nodeTypes, edgeTypes);
+            log.debug("缓存未命中，执行 PageRank 计算（nodeTypes={}, edgeTypes={}）", normalizedNodes, normalizedEdges);
             return gdsAdapter.calculate(query);
         });
     }
@@ -63,10 +66,11 @@ public class MetricsServiceImpl implements MetricsService {
     @Override
     public List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes) {
         validateParams(nodeTypes, edgeTypes);
+        Set<String> normalizedNodes = normalizeNodeTypes(nodeTypes);
+        Set<String> normalizedEdges = normalizeEdgeTypes(edgeTypes);
 
-        // 度中心性需要两类结果：inDegree + outDegree
-        MetricsQuery inQuery = new MetricsQuery(nodeTypes, edgeTypes, "inDegree");
-        MetricsQuery outQuery = new MetricsQuery(nodeTypes, edgeTypes, "outDegree");
+        MetricsQuery inQuery = new MetricsQuery(normalizedNodes, normalizedEdges, "inDegree");
+        MetricsQuery outQuery = new MetricsQuery(normalizedNodes, normalizedEdges, "outDegree");
 
         List<MetricResultBO> results = new ArrayList<>();
         results.addAll(cache.get(inQuery.toCacheKey(),
@@ -83,10 +87,7 @@ public class MetricsServiceImpl implements MetricsService {
     }
 
     /**
-     * 校验节点类型和边类型的合法性。
-     *
-     * <p>利用既有 {@link NodeType#fromLabel(String)} 和 {@link EdgeType#fromType(String)} 枚举方法。
-     * 空集合跳过校验（全图默认）。</p>
+     * 校验节点类型和边类型的合法性。空集合跳过校验（全图默认）。
      */
     private void validateParams(Set<String> nodeTypes, Set<String> edgeTypes) {
         if (nodeTypes != null && !nodeTypes.isEmpty()) {
@@ -113,5 +114,25 @@ public class MetricsServiceImpl implements MetricsService {
                         String.format("无效的边类型: %s，有效值: %s", invalid, validValues));
             }
         }
+    }
+
+    /**
+     * 将用户输入的节点类型归一化为枚举规范 label（Neo4j label 大小写敏感）。
+     */
+    private Set<String> normalizeNodeTypes(Set<String> nodeTypes) {
+        if (nodeTypes == null || nodeTypes.isEmpty()) return Collections.emptySet();
+        return nodeTypes.stream()
+                .map(t -> NodeType.fromLabel(t).getLabel())
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * 将用户输入的边类型归一化为枚举规范 relationshipType。
+     */
+    private Set<String> normalizeEdgeTypes(Set<String> edgeTypes) {
+        if (edgeTypes == null || edgeTypes.isEmpty()) return Collections.emptySet();
+        return edgeTypes.stream()
+                .map(t -> EdgeType.fromType(t).getRelationshipType())
+                .collect(Collectors.toSet());
     }
 }

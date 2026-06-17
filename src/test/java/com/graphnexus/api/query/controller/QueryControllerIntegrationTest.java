@@ -11,6 +11,9 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.neo4j.core.Neo4jClient;
@@ -49,6 +52,9 @@ class QueryControllerIntegrationTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
+    /** LLM 调用可能超过 30s，使用长超时 RestTemplate */
+    private RestTemplate longTimeoutRestTemplate;
+
     @Autowired
     private Neo4jClient neo4jClient;
 
@@ -70,6 +76,11 @@ class QueryControllerIntegrationTest {
     @BeforeEach
     void setUp() {
         baseUrl = "http://localhost:" + port + "/api/v1/query";
+        // LLM 调用长超时 RestTemplate（120s）
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(120000);
+        longTimeoutRestTemplate = new RestTemplate(factory);
         createTestData();
     }
 
@@ -170,7 +181,7 @@ class QueryControllerIntegrationTest {
                 "分析学生" + TEST_STUDENT_NAME + "的" + TEST_SUBJECT + "薄弱点",
                 TEST_STUDENT_NAME, TEST_STUDENT_NO, TEST_SUBJECT);
 
-        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> response = longTimeoutRestTemplate.exchange(
                 baseUrl + "/ask",
                 org.springframework.http.HttpMethod.POST,
                 new org.springframework.http.HttpEntity<>(request),
@@ -207,7 +218,7 @@ class QueryControllerIntegrationTest {
                 TEST_STUDENT_NAME, TEST_STUDENT_NO, TEST_SUBJECT);
 
         // 提交异步任务
-        ResponseEntity<Map<String, Object>> asyncResp = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> asyncResp = longTimeoutRestTemplate.exchange(
                 baseUrl + "/ask-async",
                 org.springframework.http.HttpMethod.POST,
                 new org.springframework.http.HttpEntity<>(request),
@@ -223,7 +234,7 @@ class QueryControllerIntegrationTest {
         boolean completed = false;
         for (int i = 0; i < 60; i++) {
             Thread.sleep(2000);
-            ResponseEntity<Map<String, Object>> resultResp = restTemplate.exchange(
+            ResponseEntity<Map<String, Object>> resultResp = longTimeoutRestTemplate.exchange(
                     baseUrl + "/result/" + taskId,
                     org.springframework.http.HttpMethod.GET,
                     null,

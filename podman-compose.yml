@@ -87,6 +87,7 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/graphnexus123
       - NEO4J_server_threads_worker\_count=2
+      - NEO4J_PLUGINS=["graph-data-science"]
     healthcheck:
       test: ["CMD-SHELL", "cypher-shell -u neo4j -p graphnexus123 'RETURN 1' || exit 1"]
       interval: 30s
