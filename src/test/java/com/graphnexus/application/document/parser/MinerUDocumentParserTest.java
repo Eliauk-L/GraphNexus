@@ -59,7 +59,7 @@ class MinerUDocumentParserTest {
         when(minerUClient.pollTaskResult("task-1"))
                 .thenReturn(new MinerUClient.TaskPollResult("done",
                         "https://cdn.example.com/result.zip", null));
-        when(minerUClient.downloadAndExtractMarkdown("https://cdn.example.com/result.zip"))
+        when(minerUClient.downloadMarkdown("https://cdn.example.com/result.zip"))
                 .thenReturn("# Markdown\n\n$E=mc^2$");
 
         ParseResult result = parser.parse(new byte[]{1, 2, 3});
@@ -70,7 +70,7 @@ class MinerUDocumentParserTest {
         verify(minerUClient).submitTask(anyString());
         verify(minerUClient).uploadFile(anyString(), any(byte[].class));
         verify(minerUClient).pollTaskResult("task-1");
-        verify(minerUClient).downloadAndExtractMarkdown("https://cdn.example.com/result.zip");
+        verify(minerUClient).downloadMarkdown("https://cdn.example.com/result.zip");
     }
 
     @Test
@@ -104,7 +104,7 @@ class MinerUDocumentParserTest {
         assertThatThrownBy(() -> parser.parse(new byte[]{1, 2, 3}))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("MinerU 解析失败");
-        verify(minerUClient, never()).downloadAndExtractMarkdown(anyString());
+        verify(minerUClient, never()).downloadMarkdown(anyString());
     }
 
     @Test

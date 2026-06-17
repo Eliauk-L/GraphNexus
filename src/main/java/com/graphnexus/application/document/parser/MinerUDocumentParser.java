@@ -20,7 +20,7 @@ import java.util.Map;
  * 所有异常向上抛 {@link BusinessException}，由调用方
  * {@code DocumentServiceImpl} 统一 catch 后 fallback 到 {@link PdfBoxDocumentParser}。</p>
  *
- * <p>API 调用链：v1 submitTask → PUT 文件 → v4 pollTaskResult → downloadAndExtractMarkdown</p>
+ * <p>API 调用链：v1 submitTask → PUT 文件 → v1 pollTaskResult → downloadMarkdown</p>
  *
  * @author Jay
  * @date 2026/06/16
@@ -76,7 +76,7 @@ public class MinerUDocumentParser implements DocumentParser {
         }
 
         // ④ 下载并解压 Markdown
-        String markdown = minerUClient.downloadAndExtractMarkdown(pollResult.fullZipUrl());
+        String markdown = minerUClient.downloadMarkdown(pollResult.markdownUrl());
 
         // ⑤ 构建返回结果
         Map<String, String> metadata = new LinkedHashMap<>();

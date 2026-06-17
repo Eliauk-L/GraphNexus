@@ -11,23 +11,19 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 /**
- * MinerUClient 单元测试 — v1 上传 + v4 解析。
+ * MinerUClient 单元测试 — v1 Agent API 全链路。
  *
  * @author Jay
  * @date 2026/06/16
  */
-@DisplayName("MinerUClient v1上传 + v4解析")
+@DisplayName("MinerUClient v1 Agent API")
 class MinerUClientTest {
 
     private MinerUClient minerUClient;
@@ -52,7 +48,7 @@ class MinerUClientTest {
     }
 
     @Test
-    @DisplayName("submitTask 成功返回 taskId 和 fileUrl（v1，无需 Token）")
+    @DisplayName("submitTask 成功返回 taskId 和 fileUrl")
     void submitTaskShouldReturnTaskIdAndFileUrl() {
         mockServer.expect(requestTo("https://mineru.net/api/v1/agent/parse/file"))
                 .andExpect(method(HttpMethod.POST))
@@ -103,25 +99,20 @@ class MinerUClientTest {
     }
 
     @Test
-    @DisplayName("pollTaskResult 轮询到 done 返回 fullZipUrl（v4）")
-    void pollTaskResultShouldReturnFullZipUrlWhenDone() {
-        // 第一次返回 running，第二次返回 done
-        mockServer.expect(requestTo("https://mineru.net/api/v4/extract/task/task-123"))
+    @DisplayName("pollTaskResult 轮询到 done 返回 markdownUrl")
+    void pollTaskResultShouldReturnMarkdownUrlWhenDone() {
+        mockServer.expect(requestTo("https://mineru.net/api/v1/agent/parse/task-123"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         {
                           "code": 0,
                           "data": {
                             "task_id": "task-123",
-                            "state": "running",
-                            "extract_progress": {
-                              "extracted_pages": 1,
-                              "total_pages": 3
-                            }
+                            "state": "running"
                           }
                         }""", MediaType.APPLICATION_JSON));
 
-        mockServer.expect(requestTo("https://mineru.net/api/v4/extract/task/task-123"))
+        mockServer.expect(requestTo("https://mineru.net/api/v1/agent/parse/task-123"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         {
@@ -129,20 +120,20 @@ class MinerUClientTest {
                           "data": {
                             "task_id": "task-123",
                             "state": "done",
-                            "full_zip_url": "https://cdn.example.com/result.zip"
+                            "markdown_url": "https://cdn.example.com/result.md"
                           }
                         }""", MediaType.APPLICATION_JSON));
 
         MinerUClient.TaskPollResult result = minerUClient.pollTaskResult("task-123");
 
         assertThat(result.isDone()).isTrue();
-        assertThat(result.fullZipUrl()).isEqualTo("https://cdn.example.com/result.zip");
+        assertThat(result.markdownUrl()).isEqualTo("https://cdn.example.com/result.md");
     }
 
     @Test
     @DisplayName("pollTaskResult 返回 failed 时标记 isFailed")
     void pollTaskResultShouldReturnFailedState() {
-        mockServer.expect(requestTo("https://mineru.net/api/v4/extract/task/task-123"))
+        mockServer.expect(requestTo("https://mineru.net/api/v1/agent/parse/task-123"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         {
@@ -161,45 +152,28 @@ class MinerUClientTest {
     }
 
     @Test
-    @DisplayName("downloadAndExtractMarkdown 下载 zip 并提取 full.md")
-    void downloadAndExtractMarkdownShouldExtractFullMd() throws Exception {
-        byte[] zipBytes = createTestZip("full.md", "# Test Markdown\n\n$E=mc^2$");
-
-        mockServer.expect(requestTo("https://cdn.example.com/result.zip"))
+    @DisplayName("downloadMarkdown 下载 Markdown 文本")
+    void downloadMarkdownShouldReturnText() {
+        mockServer.expect(requestTo("https://cdn.example.com/result.md"))
                 .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(zipBytes, MediaType.APPLICATION_OCTET_STREAM));
+                .andRespond(withSuccess("# Markdown\n\n$E=mc^2$", MediaType.TEXT_PLAIN));
 
-        String markdown = minerUClient.downloadAndExtractMarkdown("https://cdn.example.com/result.zip");
+        String markdown = minerUClient.downloadMarkdown("https://cdn.example.com/result.md");
 
-        assertThat(markdown).contains("# Test Markdown");
+        assertThat(markdown).contains("# Markdown");
         assertThat(markdown).contains("$E=mc^2$");
         mockServer.verify();
     }
 
     @Test
-    @DisplayName("downloadAndExtractMarkdown zip 中无 full.md 时抛异常")
-    void downloadAndExtractMarkdownShouldThrowWhenNoFullMd() throws Exception {
-        byte[] zipBytes = createTestZip("other.txt", "not markdown");
-
-        mockServer.expect(requestTo("https://cdn.example.com/result.zip"))
+    @DisplayName("downloadMarkdown 返回空文本时抛异常")
+    void downloadMarkdownShouldThrowWhenEmpty() {
+        mockServer.expect(requestTo("https://cdn.example.com/empty.md"))
                 .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(zipBytes, MediaType.APPLICATION_OCTET_STREAM));
+                .andRespond(withSuccess("", MediaType.TEXT_PLAIN));
 
-        assertThatThrownBy(() -> minerUClient.downloadAndExtractMarkdown("https://cdn.example.com/result.zip"))
+        assertThatThrownBy(() -> minerUClient.downloadMarkdown("https://cdn.example.com/empty.md"))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("full.md");
-    }
-
-    // ======================== 工具方法 ========================
-
-    private byte[] createTestZip(String entryName, String content) throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-            ZipEntry entry = new ZipEntry(entryName);
-            zos.putNextEntry(entry);
-            zos.write(content.getBytes(StandardCharsets.UTF_8));
-            zos.closeEntry();
-        }
-        return baos.toByteArray();
+                .hasMessageContaining("MinerU 下载结果为空");
     }
 }
