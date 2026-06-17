@@ -248,7 +248,7 @@ public class QueryServiceImpl implements QueryService {
     private volatile List<String> cachedSubjects;
 
     /** LLM 实体提取结果 */
-    private record ExtractedEntities(String studentName, String subject) {}
+    private record ExtractedEntities(String studentName, String studentNo, String subject) {}
 
     @Override
     public QueryResultBO chat(String question) {
@@ -271,36 +271,36 @@ public class QueryServiceImpl implements QueryService {
             entities = extractViaRegex(question, subjects);
         }
 
-        if (entities == null || entities.subject() == null || entities.studentName() == null) {
+        if (entities == null || entities.subject() == null
+                || (entities.studentName() == null && entities.studentNo() == null)) {
             throw new BusinessException(ErrorCode.A0019,
-                    "无法从问题中识别学生姓名和学科，当前系统已有学科：" + String.join("、", subjects)
-                    + "。示例：分析学生张三的数学薄弱点");
+                    "无法从问题中识别学生（姓名或学号）和学科，当前系统已有学科：" + String.join("、", subjects)
+                    + "。示例：分析学生张三的数学薄弱点 或 查询S2024001的数学掌握情况");
         }
 
-        log.info("chat 实体提取完成: question={}, studentName={}, subject={}",
-                question, entities.studentName(), entities.subject());
-        return ask(question, entities.studentName().trim(), null, entities.subject());
+        log.info("chat 实体提取完成: studentName={}, studentNo={}, subject={}",
+                entities.studentName(), entities.studentNo(), entities.subject());
+        return ask(question, entities.studentName(), entities.studentNo(), entities.subject());
     }
 
-    /** LLM 提取：调用大模型从问题中抽取学生姓名和学科，返回 JSON */
+    /** LLM 提取：调用大模型从问题中抽取学生姓名/学号和学科，返回 JSON */
     private ExtractedEntities extractViaLlm(String question, List<String> subjects) {
         String systemPrompt = """
-                你是一个信息提取助手。从用户问题中提取学生姓名和学科名称。
-                仅返回一个 JSON 对象，格式为 {"studentName":"...","subject":"..."}，不要返回其他内容。
-                如果无法确定某个字段，将其设为 null。
-                注意：学科必须是以下之一：%s
+                你是一个信息提取助手。从用户问题中提取学生标识（姓名或学号）和学科名称。
+                仅返回一个 JSON 对象，格式为 {"studentName":"...","studentNo":"...","subject":"..."}，
+                不要返回其他内容。studentName 和 studentNo 至少提取一个，无法确定的字段设为 null。
+                学号通常是字母+数字组合（如 S2024001），姓名通常是2-4个中文字符。
+                学科必须是以下之一：%s
                 """.formatted(String.join("、", subjects));
 
         try {
             String response = llmGateway.chat(systemPrompt, question);
             if (response == null || response.isBlank()) return null;
 
-            // 提取 JSON 片段（去除可能的 markdown 代码块包裹）
             String json = response.trim();
             if (json.startsWith("```")) {
                 json = json.replaceAll("```json?\\s*", "").replaceAll("```\\s*$", "").trim();
             }
-            // 只取第一行 JSON
             if (json.contains("\n")) {
                 json = json.substring(0, json.indexOf('\n')).trim();
             }
@@ -308,13 +308,16 @@ public class QueryServiceImpl implements QueryService {
             var node = objectMapper.readTree(json);
             String studentName = node.has("studentName") && !node.get("studentName").isNull()
                     ? node.get("studentName").asText() : null;
+            String studentNo = node.has("studentNo") && !node.get("studentNo").isNull()
+                    ? node.get("studentNo").asText() : null;
             String subject = node.has("subject") && !node.get("subject").isNull()
                     ? node.get("subject").asText() : null;
 
-            // 验证学科在已知列表中
-            if (subject != null && subjects.contains(subject) && studentName != null && !studentName.isBlank()) {
-                log.debug("LLM 实体提取成功: studentName={}, subject={}", studentName, subject);
-                return new ExtractedEntities(studentName, subject);
+            if (subject != null && subjects.contains(subject)
+                    && (studentName != null || studentNo != null)) {
+                log.debug("LLM 实体提取成功: studentName={}, studentNo={}, subject={}",
+                        studentName, studentNo, subject);
+                return new ExtractedEntities(studentName, studentNo, subject);
             }
         } catch (Exception e) {
             log.warn("LLM 实体提取异常，将降级为规则提取: {}", e.getMessage());
@@ -332,8 +335,16 @@ public class QueryServiceImpl implements QueryService {
 
         String subject = extractSubject(question, subjectRegex);
         String studentName = extractStudentName(question, boundaryTokens, subjects);
-        return (subject != null && studentName != null)
-                ? new ExtractedEntities(studentName, subject) : null;
+        String studentNo = extractStudentNo(question);
+
+        if (subject == null || (studentName == null && studentNo == null)) return null;
+        return new ExtractedEntities(studentName, studentNo, subject);
+    }
+
+    /** 正则提取学号（字母+数字组合，如 S2024001、2024001） */
+    String extractStudentNo(String question) {
+        var matcher = java.util.regex.Pattern.compile("\\b([A-Za-z]?\\d{5,12})\\b").matcher(question);
+        return matcher.find() ? matcher.group(1) : null;
     }
 
     /** 从 Neo4j KnowledgePoint 获取学科列表（带缓存） */
