@@ -143,9 +143,12 @@ mineru:
   enabled: true
   api:
     base-url: https://mineru.net
-    version: v1
-    submit-path: /api/v1/agent/parse/file
-    poll-path-template: /api/v1/agent/parse/{taskId}
+#    version: v1
+#    submit-path: /api/v1/agent/parse/file
+#    poll-path-template: /api/v1/agent/parse/{taskId}
+    version: v4
+    submit-path: /api/v4/file-urls/batch
+    poll-path-template: /api/v4/extract-results/batch/{batch_id}
     token: ${MINERU_API_TOKEN:}
     model-version: vlm
     parser-name: mineru-v1
@@ -155,6 +158,26 @@ mineru:
     enable-formula: true
     enable-table: true
     language: ch
+
+# ---------------------------------------------------------------------------
+# 智能问答配置
+# ---------------------------------------------------------------------------
+query:
+  token-budget:
+    max-input-tokens: 8000
+    chars-per-token: 3
+  pruning:
+    weak-threshold: 0.6
+    max-prerequisite-hops: 2
+  retry:
+    max-retries: 2
+    retry-delay-ms: 1000
+  async:
+    core-pool-size: 2
+    max-pool-size: 5
+    queue-capacity: 10
+  timeout:
+    sync-timeout-seconds: 30
 
 # ---------------------------------------------------------------------------
 # 日志

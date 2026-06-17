@@ -60,6 +60,18 @@ public class Neo4jIndexConfig {
                     "CREATE INDEX kpcat_id IF NOT EXISTS FOR (n:KnowledgeCategory) ON (n.id)"
             ).run();
             log.info("各节点类型 id 索引就绪");
+
+        // Student 与 KnowledgePoint 查询索引（intelligent-qa T14）
+        try {
+            neo4jClient.query(
+                    "CREATE INDEX student_student_no IF NOT EXISTS FOR (s:Student) ON (s.studentNo)"
+            ).run();
+            neo4jClient.query(
+                    "CREATE INDEX kp_subject IF NOT EXISTS FOR (kp:KnowledgePoint) ON (kp.subject)"
+            ).run();
+            log.info("QA 查询索引就绪（Student.studentNo, KnowledgePoint.subject）");
+        } catch (Exception e) {
+            log.warn("创建 QA 索引失败（可能已存在）: {}", e.getMessage());
         } catch (Exception e) {
             log.warn("创建索引 graphnode_id 失败（可能已存在）: {}", e.getMessage());
         }
