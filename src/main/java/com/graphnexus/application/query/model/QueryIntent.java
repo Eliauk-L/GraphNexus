@@ -12,20 +12,42 @@ package com.graphnexus.application.query.model;
  */
 public enum QueryIntent {
 
-    /** 学生薄弱点诊断：分析某学生在指定学科的弱掌握知识点及根因 */
-    STUDENT_DIAGNOSIS,
+    /**
+     * 学生薄弱点诊断：分析某学生在指定学科上的弱掌握知识点，
+     * 沿 PREREQUISITE_OF 链追溯根因，生成 Markdown 格式的诊断报告与学习建议。
+     *
+     * <p>剪枝策略：Student → MASTERS(weight &lt; 阈值) → KnowledgePoint → PREREQUISITE_OF(&le;2跳)</p>
+     */
+    STUDENT_DIAGNOSIS(
+            "学生薄弱点诊断",
+            "分析学生在指定学科上的薄弱知识点，追溯前置依赖根因，生成学习建议"
+    );
 
     // ====== v2 预留 ======
+    // KP_ANALYSIS("知识点分析", "分析某知识点的班级整体掌握度分布与教学风险"),
+    // CLASS_OVERVIEW("班级概览", "按知识模块聚合展示班级整体掌握水平"),
+    // PREREQUISITE_CHAIN("依赖链追溯", "沿 PREREQUISITE_OF 双向遍历，展示完整前置依赖链路"),
+    // GENERAL("通用查询", "LLM 自主判断剪枝路径，适用于无法归类的自由提问");
 
-    /** @deprecated v2 知识点班级掌握度分析 */
-    // KP_ANALYSIS,
+    private final String displayName;
+    private final String description;
 
-    /** @deprecated v2 班级整体概览 */
-    // CLASS_OVERVIEW,
+    QueryIntent(String displayName, String description) {
+        this.displayName = displayName;
+        this.description = description;
+    }
 
-    /** @deprecated v2 前置依赖链追溯 */
-    // PREREQUISITE_CHAIN,
+    /**
+     * 意图的简短中文名称（如"学生薄弱点诊断"），用于日志、API 响应等。
+     */
+    public String getDisplayName() {
+        return displayName;
+    }
 
-    /** @deprecated v2 通用查询（LLM 自主判断剪枝路径） */
-    // GENERAL
+    /**
+     * 意图的详细描述，说明该意图分析什么、如何分析。
+     */
+    public String getDescription() {
+        return description;
+    }
 }
