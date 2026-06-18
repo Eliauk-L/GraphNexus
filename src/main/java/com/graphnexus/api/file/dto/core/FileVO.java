@@ -43,8 +43,11 @@ public class FileVO {
     @Schema(description = "PDF 页数", example = "12")
     private Integer pageCount;
 
-    @Schema(description = "文档状态：UPLOADED → PROCESSING → COMPLETED（成功）或 FAILED（异常）", example = "COMPLETED")
+    @Schema(description = "文档状态：UPLOADED → PARSING → PARSED → EXTRACTING → EXTRACTED → FUSING → COMPLETED（成功）或 FAILED（异常）", example = "COMPLETED")
     private String status;
+
+    @Schema(description = "文件类型（PDF/TXT）", example = "PDF")
+    private String fileType;
 
     @Schema(description = "创建时间", example = "2026-06-17T10:30:00")
     private LocalDateTime createTime;
@@ -65,6 +68,7 @@ public class FileVO {
                 .minioPath(bo.getMinioPath())
                 .pageCount(bo.getPageCount())
                 .status(bo.getStatus())
+                .fileType(bo.getFileType())
                 .createTime(bo.getCreateTime())
                 .updateTime(bo.getUpdateTime())
                 .build();

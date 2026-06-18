@@ -1,6 +1,7 @@
 package com.graphnexus.infrastructure.mysql.file.entity;
 
 import jakarta.persistence.*;
+import com.graphnexus.application.file.parse.model.FileParseType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,7 +23,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "document")
+@Table(name = "file")
 @EntityListeners(AuditingEntityListener.class)
 public class FileDO {
 
@@ -42,6 +43,11 @@ public class FileDO {
     /** 所属学科 MATH/PHYSICS/CHEMISTRY */
     @Column(name = "subject", length = 20, nullable = false)
     private String subject;
+
+    /** 文件类型 */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "file_type", length = 20, nullable = false)
+    private FileParseType fileType;
 
     /** 文件大小（字节） */
     @Column(name = "file_size")

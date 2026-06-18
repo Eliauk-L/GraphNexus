@@ -30,6 +30,7 @@ public class FileBO {
     private String metadataJson;
     private String status;
     private String failReason;
+    private String fileType;
     private Long uploadedBy;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

@@ -34,13 +34,15 @@ public interface FileService {
     ParseResult process(Long documentId);
 
     /**
-     * 分页查询文档列表（仅未删除）。
+     * 分页查询文档列表（条件筛选）。
      *
      * @param pageNum  页码（从 1 开始）
      * @param pageSize 每页大小
+     * @param fileType 文件类型筛选（可选，null 表示不过滤）
+     * @param name     文件名模糊搜索（可选，null 表示不过滤）
      * @return 分页结果
      */
-    Page<FileBO> listDocuments(int pageNum, int pageSize);
+    Page<FileBO> listDocuments(int pageNum, int pageSize, String fileType, String name);
 
     /**
      * 按 ID 查询单个文档。

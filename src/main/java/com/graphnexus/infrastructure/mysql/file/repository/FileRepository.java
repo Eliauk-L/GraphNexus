@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
+import com.graphnexus.application.file.parse.model.FileParseType;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -35,4 +37,15 @@ public interface FileRepository extends JpaRepository<FileDO, Long> {
      */
     @Query("SELECT d.id FROM FileDO d WHERE d.documentNo = :documentNo AND d.subject = :subject AND d.isDeleted = 0 AND d.status <> 'DELETING'")
     Optional<Long> findIdByDocumentNoAndSubjectAndIsDeletedFalse(String documentNo, String subject);
+
+    /**
+     * 条件分页查询：支持按文件类型和文件名筛选。
+     */
+    @Query("SELECT d FROM FileDO d WHERE d.isDeleted = 0 AND d.status <> 'DELETING' "
+         + "AND (:fileType IS NULL OR d.fileType = :fileType) "
+         + "AND (:name IS NULL OR d.name LIKE %:name%) "
+         + "ORDER BY d.createTime DESC")
+    Page<FileDO> findByConditions(@Param("fileType") FileParseType fileType,
+                                  @Param("name") String name,
+                                  Pageable pageable);
 }

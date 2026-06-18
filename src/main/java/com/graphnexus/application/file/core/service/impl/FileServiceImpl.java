@@ -234,9 +234,13 @@ public class FileServiceImpl implements FileService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FileBO> listDocuments(int pageNum, int pageSize) {
+    public Page<FileBO> listDocuments(int pageNum, int pageSize, String fileType, String name) {
+        FileParseType type = null;
+        if (fileType != null && !fileType.isBlank()) {
+            type = FileParseType.valueOf(fileType);
+        }
         return fileRepository
-                .findByIsDeletedFalse(PageRequest.of(pageNum - 1, pageSize))
+                .findByConditions(type, name, PageRequest.of(pageNum - 1, pageSize))
                 .map(this::toBO);
     }
 
@@ -345,6 +349,7 @@ public class FileServiceImpl implements FileService {
                 .metadataJson(doc.getMetadataJson())
                 .status(doc.getStatus() != null ? doc.getStatus().name() : null)
                 .failReason(doc.getFailReason())
+                .fileType(doc.getFileType() != null ? doc.getFileType().name() : null)
                 .uploadedBy(doc.getUploadedBy())
                 .createTime(doc.getCreateTime())
                 .updateTime(doc.getUpdateTime())

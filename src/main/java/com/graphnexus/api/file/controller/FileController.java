@@ -107,9 +107,13 @@ public class FileController {
             @Parameter(description = "页码（从 1 开始）", example = "1")
             @RequestParam(defaultValue = "1") int pageNum,
             @Parameter(description = "每页大小", example = "10")
-            @RequestParam(defaultValue = "10") int pageSize
+            @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "文件类型筛选（可选）", example = "PDF")
+            @RequestParam(required = false) String fileType,
+            @Parameter(description = "文件名模糊搜索（可选）", example = "二次函数")
+            @RequestParam(required = false) String name
     ) {
-        Page<FileBO> page = fileService.listDocuments(pageNum, pageSize);
+        Page<FileBO> page = fileService.listDocuments(pageNum, pageSize, fileType, name);
         return ApiResult.success(PageResult.of(page.map(FileVO::from)));
     }
 
