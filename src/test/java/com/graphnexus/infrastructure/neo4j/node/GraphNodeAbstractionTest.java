@@ -67,7 +67,7 @@ class GraphNodeAbstractionTest {
             assertNotNull(t.getNodeClass(),
                     t.name() + " 的 nodeClass 不应为 null");
         }
-        assertEquals(DocumentNode.class, NodeType.DOCUMENT.getNodeClass());
+        assertEquals(FileNode.class, NodeType.DOCUMENT.getNodeClass());
         assertEquals(EntityNode.class, NodeType.ENTITY.getNodeClass());
         assertEquals(KnowledgePointNode.class, NodeType.KNOWLEDGE_POINT.getNodeClass());
         assertEquals(KnowledgeCategoryNode.class, NodeType.KNOWLEDGE_CATEGORY.getNodeClass());

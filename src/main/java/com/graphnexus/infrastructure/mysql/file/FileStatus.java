@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.document;
+package com.graphnexus.infrastructure.mysql.file;
 
 /**
  * 文档生命周期状态。
@@ -16,7 +16,7 @@ package com.graphnexus.infrastructure.mysql.document;
  * @author Jay
  * @date 2026/06/12
  */
-public enum DocumentStatus {
+public enum FileStatus {
 
     /** 已上传，文件在 MinIO，DB 有记录，等待解析 */
     UPLOADED,
@@ -39,7 +39,7 @@ public enum DocumentStatus {
      * @param target 目标状态
      * @throws IllegalArgumentException 如果转换不合法
      */
-    public void validateTransition(DocumentStatus target) {
+    public void validateTransition(FileStatus target) {
         if (!getAllowedTargets().contains(target)) {
             throw new IllegalArgumentException(
                     String.format("非法状态转换: %s → %s", this, target)
@@ -50,7 +50,7 @@ public enum DocumentStatus {
     /**
      * 获取当前状态允许转换到的目标状态集合。
      */
-    private java.util.Set<DocumentStatus> getAllowedTargets() {
+    private java.util.Set<FileStatus> getAllowedTargets() {
         return switch (this) {
             case UPLOADED   -> java.util.Set.of(PROCESSING, DELETING);
             case PROCESSING -> java.util.Set.of(COMPLETED, FAILED);

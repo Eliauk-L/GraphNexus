@@ -5,7 +5,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 /**
- * EXTRACTS 边 — DocumentNode → EntityNode。
+ * EXTRACTS 边 — FileNode → EntityNode。
  *
  * <p>表示实体是从该文档中抽取出来的。</p>
  *

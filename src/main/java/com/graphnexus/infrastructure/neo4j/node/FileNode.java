@@ -11,7 +11,7 @@ import java.util.Map;
  * Neo4j 文档节点 — 对应已解析的 PDF 文档。
  *
  * <p>每个通过 {@code document-process-pdf-minimal} 处理过的文档在 Neo4j 中有一个对应的
- * DocumentNode，通过 EXTRACTS 边连接到从该文档中抽取出的 EntityNode。</p>
+ * FileNode，通过 EXTRACTS 边连接到从该文档中抽取出的 EntityNode。</p>
  *
  * @author Jay
  * @date 2026/06/13
@@ -20,7 +20,7 @@ import java.util.Map;
 @Node("Document")
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class DocumentNode extends GraphNode {
+public class FileNode extends GraphNode {
 
     /** 文档名称 */
     private String name;
@@ -31,7 +31,7 @@ public class DocumentNode extends GraphNode {
     /** PDF 页数 */
     private Integer pageCount;
 
-    public DocumentNode(String name, String subject, Integer pageCount, String documentId) {
+    public FileNode(String name, String subject, Integer pageCount, String documentId) {
         super(NodeType.DOCUMENT.getLabel());
         this.setDocumentId(documentId);
         this.name = name;

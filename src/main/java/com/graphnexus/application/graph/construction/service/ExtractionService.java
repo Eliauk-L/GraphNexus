@@ -39,7 +39,7 @@ public class ExtractionService {
      * @param docName     文档名称
      * @param subject     学科
      * @param pageCount   页数
-     * @param documentId  文档在 Neo4j 中的 ID（DocumentNode.id）
+     * @param documentId  文档在 Neo4j 中的 ID（FileNode.id）
      * @return 抽取结果（含所有节点和边对象）
      */
     public ExtractionResult extract(String textContent, String docName, String subject,

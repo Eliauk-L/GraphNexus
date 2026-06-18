@@ -1,5 +1,6 @@
 package com.graphnexus.application.file.parse.parser;
 
+import com.graphnexus.application.file.parse.model.FileParseType;
 import com.graphnexus.application.file.parse.model.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * MinerU v4 文档解析器实现。
@@ -19,7 +21,7 @@ import java.util.Map;
  * <p>实现 {@link DocumentParser} 接口，通过 MinerU v4 精准解析 API（vlm 模型）
  * 将 PDF 转换为 Markdown，公式以 LaTeX 格式保留（如 {@code $E=mc^2$}）。
  * 所有异常向上抛 {@link BusinessException}，由调用方
- * {@code DocumentServiceImpl} 统一 catch 后 fallback 到 {@link PdfBoxDocumentParser}。</p>
+ * {@code FileServiceImpl} 统一 catch 后 fallback 到 {@link PdfBoxDocumentParser}。</p>
  *
  * <p>API 调用链：v1 submitTask → PUT 文件 → v1 pollTaskResult → downloadMarkdown</p>
  *
@@ -91,5 +93,15 @@ public class MinerUDocumentParser implements DocumentParser {
 
         // pageCount 从 MinerU zip 中不易直接获取，设为 0（调用方以 textContent 为主）
         return new ParseResult(markdown, 0, metadata);
+    }
+
+    @Override
+    public FileParseType supportedType() {
+        return FileParseType.PDF_DOCUMENT;
+    }
+
+    @Override
+    public Set<String> supportedExtensions() {
+        return Set.of(".pdf");
     }
 }

@@ -3,15 +3,24 @@ package com.graphnexus.application.file.parse.parser;
 import com.graphnexus.application.file.parse.model.FileParseRequest;
 import com.graphnexus.application.file.parse.model.FileParseResult;
 import com.graphnexus.application.file.parse.model.FileParseType;
+
+import java.util.Set;
+
 /**
  * 统一文件解析器接口（策略模式）。
  *
  * <p>所有文件类型的解析器实现此接口，由 {@link FileParserRegistry}
- * 按扩展名自动路由。新增文件类型只需写新实现类，Controller 零改动。
+ * 按扩展名自动路由。新增文件类型只需写新实现类，调用方零改动。
  * 见 DESIGN D12。</p>
  *
- * <p>与 {@link DocumentParser} 的关系：DocumentParser 是 PDF 专用接口
- * （byte[] 入参），本次不改造为 FileParser 实现，留待独立 refactor change。</p>
+ * <p>继承体系：</p>
+ * <pre>
+ * FileParser（通用文件解析）
+ *   ├── DocumentParser（文档解析，如 PDF）
+ *   │     ├── PdfBoxDocumentParser
+ *   │     └── MinerUDocumentParser
+ *   └── CsvGradeParser（CSV 成绩解析，直接实现 FileParser）
+ * </pre>
  *
  * @author Jay
  * @date 2026/06/15
@@ -26,7 +35,7 @@ public interface FileParser {
     /**
      * 返回本解析器处理的文件扩展名集合（含点号，如 {@code ".csv"}、{@code ".pdf"}）。
      */
-    java.util.Set<String> supportedExtensions();
+    Set<String> supportedExtensions();
 
     /**
      * 解析文件内容。

@@ -1,5 +1,6 @@
 package com.graphnexus.application.file.parse.parser;
 
+import com.graphnexus.application.file.parse.model.FileParseType;
 import com.graphnexus.application.file.parse.model.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Apache PDFBox 文档解析器实现。
@@ -87,5 +89,15 @@ public class PdfBoxDocumentParser implements DocumentParser {
         if (value != null && !value.isBlank()) {
             map.put(key, value);
         }
+    }
+
+    @Override
+    public FileParseType supportedType() {
+        return FileParseType.PDF_DOCUMENT;
+    }
+
+    @Override
+    public Set<String> supportedExtensions() {
+        return Set.of(".pdf");
     }
 }

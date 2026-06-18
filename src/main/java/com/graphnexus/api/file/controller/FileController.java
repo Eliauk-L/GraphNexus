@@ -1,18 +1,18 @@
 package com.graphnexus.api.file.controller;
 
 import com.graphnexus.api.file.dto.core.DeleteResultVO;
-import com.graphnexus.api.file.dto.core.DocumentVO;
+import com.graphnexus.api.file.dto.core.FileVO;
 import com.graphnexus.api.file.dto.upload.GradeRecordVO;
 import com.graphnexus.api.file.dto.upload.GradeUploadResultVO;
 import com.graphnexus.api.file.dto.parse.ParseResultVO;
-import com.graphnexus.api.file.dto.core.UpdateDocumentRequest;
+import com.graphnexus.api.file.dto.core.UpdateFileRequest;
 import com.graphnexus.application.file.core.model.DeleteResultBO;
-import com.graphnexus.application.file.core.model.DocumentBO;
+import com.graphnexus.application.file.core.model.FileBO;
 import com.graphnexus.application.file.upload.model.GradeUploadResultBO;
 import com.graphnexus.application.file.parse.parser.FileParserRegistry;
-import com.graphnexus.application.file.core.service.DocumentService;
+import com.graphnexus.application.file.core.service.FileService;
 import com.graphnexus.application.file.parse.model.ParseResult;
-import com.graphnexus.application.file.core.model.UpdateDocumentBO;
+import com.graphnexus.application.file.core.model.UpdateFileBO;
 import com.graphnexus.common.ApiResult;
 import com.graphnexus.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,12 +37,12 @@ import java.util.List;
  * @date 2026/06/12
  */
 @RestController
-@RequestMapping("/api/v1/document")
+@RequestMapping("/api/v1/file/document")
 @RequiredArgsConstructor
 @Tag(name = "文档处理", description = "PDF 教辅上传解析、CSV 成绩导入与成绩查询管理")
-public class DocumentController {
+public class FileController {
 
-    private final DocumentService documentService;
+    private final FileService fileService;
     private final FileParserRegistry fileParserRegistry;
 
     /**
@@ -51,7 +51,7 @@ public class DocumentController {
     @Operation(summary = "上传文件", description = "PDF/CSV 统一上传入口。PDF 上传后返回文档元数据，CSV 上传后自动解析成绩并入库 Neo4j 图 + MySQL exam_record 表。按文件扩展名自动路由到对应处理器")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "上传成功",
-                    content = {@Content(mediaType = "application/json", schema = @Schema(oneOf = {DocumentVO.class, GradeUploadResultVO.class}))}),
+                    content = {@Content(mediaType = "application/json", schema = @Schema(oneOf = {FileVO.class, GradeUploadResultVO.class}))}),
             @ApiResponse(responseCode = "400", description = "A0002 参数校验失败 / A0004 文件类型不支持 / A0011 CSV 格式错误 / A0012 CSV 缺少必要列 / A0013 CSV 编码异常"),
             @ApiResponse(responseCode = "409", description = "A0007 该学科下已存在相同内容文档"),
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
@@ -67,13 +67,13 @@ public class DocumentController {
         var parser = fileParserRegistry.getParser(filename);
 
         if (parser.isPresent() && parser.get().supportedType().name().equals("CSV_GRADE")) {
-            GradeUploadResultBO bo = documentService.uploadGradeCsv(file, subject);
+            GradeUploadResultBO bo = fileService.uploadGradeCsv(file, subject);
             return ApiResult.success(GradeUploadResultVO.from(bo));
         }
 
         // 默认走 PDF 链路
-        DocumentBO bo = documentService.upload(file, subject);
-        return ApiResult.success(DocumentVO.from(bo));
+        FileBO bo = fileService.upload(file, subject);
+        return ApiResult.success(FileVO.from(bo));
     }
 
     /**
@@ -90,7 +90,7 @@ public class DocumentController {
     public ApiResult<ParseResultVO> process(
             @Parameter(description = "文档 ID", required = true, example = "1")
             @PathVariable("id") Long id) {
-        ParseResult result = documentService.process(id);
+        ParseResult result = fileService.process(id);
         return ApiResult.success(ParseResultVO.from(id, result));
     }
 
@@ -103,14 +103,14 @@ public class DocumentController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @GetMapping
-    public ApiResult<PageResult<DocumentVO>> list(
+    public ApiResult<PageResult<FileVO>> list(
             @Parameter(description = "页码（从 1 开始）", example = "1")
             @RequestParam(defaultValue = "1") int pageNum,
             @Parameter(description = "每页大小", example = "10")
             @RequestParam(defaultValue = "10") int pageSize
     ) {
-        Page<DocumentBO> page = documentService.listDocuments(pageNum, pageSize);
-        return ApiResult.success(PageResult.of(page.map(DocumentVO::from)));
+        Page<FileBO> page = fileService.listDocuments(pageNum, pageSize);
+        return ApiResult.success(PageResult.of(page.map(FileVO::from)));
     }
 
     /**
@@ -123,11 +123,11 @@ public class DocumentController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @GetMapping("/{id}")
-    public ApiResult<DocumentVO> get(
+    public ApiResult<FileVO> get(
             @Parameter(description = "文档 ID", required = true, example = "1")
             @PathVariable("id") Long id) {
-        DocumentBO bo = documentService.getDocument(id);
-        return ApiResult.success(DocumentVO.from(bo));
+        FileBO bo = fileService.getDocument(id);
+        return ApiResult.success(FileVO.from(bo));
     }
 
     /**
@@ -141,16 +141,16 @@ public class DocumentController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @PutMapping("/{id}")
-    public ApiResult<DocumentVO> update(
+    public ApiResult<FileVO> update(
             @Parameter(description = "文档 ID", required = true, example = "1")
             @PathVariable("id") Long id,
             @Parameter(description = "更新请求体", required = true)
-            @RequestBody @Valid UpdateDocumentRequest request
+            @RequestBody @Valid UpdateFileRequest request
     ) {
-        UpdateDocumentBO bo = new UpdateDocumentBO();
+        UpdateFileBO bo = new UpdateFileBO();
         bo.setName(request.getName());
-        DocumentBO updated = documentService.updateDocument(id, bo);
-        return ApiResult.success(DocumentVO.from(updated));
+        FileBO updated = fileService.updateDocument(id, bo);
+        return ApiResult.success(FileVO.from(updated));
     }
 
     /**
@@ -166,7 +166,7 @@ public class DocumentController {
     public ApiResult<Void> delete(
             @Parameter(description = "文档 ID", required = true, example = "1")
             @PathVariable("id") Long id) {
-        documentService.deleteDocument(id);
+        fileService.deleteDocument(id);
         return ApiResult.success(null);
     }
 
@@ -186,7 +186,7 @@ public class DocumentController {
             @Parameter(description = "考试编号（来源于 CSV 第 1 行考试编号列）", required = true, example = "E20200041")
             @PathVariable("examNo") String examNo
     ) {
-        var records = documentService.queryGradeByExam(examNo);
+        var records = fileService.queryGradeByExam(examNo);
         List<GradeRecordVO> result = records.stream()
                 .map(GradeRecordVO::from)
                 .toList();
@@ -207,7 +207,7 @@ public class DocumentController {
             @Parameter(description = "考试编号", required = true, example = "E20200041")
             @PathVariable("examNo") String examNo
     ) {
-        DeleteResultBO bo = documentService.deleteGradeByExamNo(examNo);
+        DeleteResultBO bo = fileService.deleteGradeByExamNo(examNo);
         return ApiResult.success(DeleteResultVO.from(bo));
     }
 }

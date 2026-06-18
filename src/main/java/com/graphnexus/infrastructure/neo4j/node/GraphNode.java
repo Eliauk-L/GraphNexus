@@ -42,7 +42,7 @@ public abstract class GraphNode {
     private String nodeType;
 
     /**
-     * 关联的源文档 ID（对应 MySQL document 表的 id，或 Neo4j DocumentNode.id）。
+     * 关联的源文档 ID（对应 MySQL document 表的 id，或 Neo4j FileNode.id）。
      * 所有从同一文档抽取的节点共享此值，用于按文档查询子图。
      */
     private String documentId;

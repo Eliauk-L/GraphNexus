@@ -9,7 +9,7 @@ import lombok.Data;
  * @date 2026/06/12
  */
 @Data
-public class UpdateDocumentBO {
+public class UpdateFileBO {
 
     /** 新文档名称 */
     private String name;

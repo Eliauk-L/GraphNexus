@@ -123,7 +123,7 @@ class MinerUDocumentParserTest {
     @Test
     @DisplayName("null pdfBytes 应抛异常")
     void parseShouldThrowOnNullBytes() {
-        assertThatThrownBy(() -> parser.parse(null))
+        assertThatThrownBy(() -> parser.parse((byte[]) null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("PDF 文件为空");
     }

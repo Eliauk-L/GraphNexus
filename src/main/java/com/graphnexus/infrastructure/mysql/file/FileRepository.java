@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.document;
+package com.graphnexus.infrastructure.mysql.file;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,23 +15,23 @@ import java.util.Optional;
  * @date 2026/06/12
  */
 @Repository
-public interface DocumentRepository extends JpaRepository<DocumentDO, Long> {
+public interface FileRepository extends JpaRepository<FileDO, Long> {
 
     /**
      * 查询未删除的文档（分页）。
      */
-    @Query("SELECT d FROM DocumentDO d WHERE d.isDeleted = 0 AND d.status <> 'DELETING'")
-    Page<DocumentDO> findByIsDeletedFalse(Pageable pageable);
+    @Query("SELECT d FROM FileDO d WHERE d.isDeleted = 0 AND d.status <> 'DELETING'")
+    Page<FileDO> findByIsDeletedFalse(Pageable pageable);
 
     /**
      * 按 ID 查询未删除的文档。
      */
-    @Query("SELECT d FROM DocumentDO d WHERE d.id = :id AND d.isDeleted = 0 AND d.status <> 'DELETING'")
-    Optional<DocumentDO> findByIdAndIsDeletedFalse(Long id);
+    @Query("SELECT d FROM FileDO d WHERE d.id = :id AND d.isDeleted = 0 AND d.status <> 'DELETING'")
+    Optional<FileDO> findByIdAndIsDeletedFalse(Long id);
 
     /**
      * 按内容指纹 + 学科查找未删除的文档 ID（用于去重检查）。
      */
-    @Query("SELECT d.id FROM DocumentDO d WHERE d.documentNo = :documentNo AND d.subject = :subject AND d.isDeleted = 0 AND d.status <> 'DELETING'")
+    @Query("SELECT d.id FROM FileDO d WHERE d.documentNo = :documentNo AND d.subject = :subject AND d.isDeleted = 0 AND d.status <> 'DELETING'")
     Optional<Long> findIdByDocumentNoAndSubjectAndIsDeletedFalse(String documentNo, String subject);
 }

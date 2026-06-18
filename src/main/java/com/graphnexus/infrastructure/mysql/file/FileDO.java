@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.document;
+package com.graphnexus.infrastructure.mysql.file;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Table(name = "document")
 @EntityListeners(AuditingEntityListener.class)
-public class DocumentDO {
+public class FileDO {
 
     /** 技术主键 */
     @Id
@@ -68,7 +68,7 @@ public class DocumentDO {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     @Builder.Default
-    private DocumentStatus status = DocumentStatus.UPLOADED;
+    private FileStatus status = FileStatus.UPLOADED;
 
     /** 失败原因 */
     @Column(name = "fail_reason", length = 512)

@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DocumentBO {
+public class FileBO {
 
     private Long id;
     private String documentNo;

@@ -15,7 +15,7 @@ import lombok.Getter;
 @Getter
 public enum EdgeType {
 
-    /** 文档抽取实体：DocumentNode → EntityNode */
+    /** 文档抽取实体：FileNode → EntityNode */
     EXTRACTS("EXTRACTS"),
 
     /** 实体间引用（含 DERIVES / CONTAINS 语义，通过 ReferencesEdge.referenceType 字段区分） */

@@ -12,7 +12,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "文档更新请求体")
-public class UpdateDocumentRequest {
+public class UpdateFileRequest {
 
     /** 新文档名称（必填，不可为空） */
     @NotBlank(message = "文档名称不能为空")

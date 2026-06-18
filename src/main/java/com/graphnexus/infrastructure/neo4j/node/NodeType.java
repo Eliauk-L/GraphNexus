@@ -16,7 +16,7 @@ import lombok.Getter;
 public enum NodeType {
 
     /** 文档节点 */
-    DOCUMENT("Document", DocumentNode.class),
+    DOCUMENT("Document", FileNode.class),
 
     /** 实体节点（从文档原文中抽取的片段） */
     ENTITY("Entity", EntityNode.class),

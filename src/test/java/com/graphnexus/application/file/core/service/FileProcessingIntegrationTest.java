@@ -1,12 +1,12 @@
 package com.graphnexus.application.file.core.service;
 
-import com.graphnexus.application.file.core.model.DocumentBO;
+import com.graphnexus.application.file.core.model.FileBO;
 import com.graphnexus.application.file.parse.model.ParseResult;
-import com.graphnexus.application.file.core.model.UpdateDocumentBO;
+import com.graphnexus.application.file.core.model.UpdateFileBO;
 import com.graphnexus.common.exception.BusinessException;
-import com.graphnexus.infrastructure.mysql.document.DocumentDO;
-import com.graphnexus.infrastructure.mysql.document.DocumentRepository;
-import com.graphnexus.infrastructure.mysql.document.DocumentStatus;
+import com.graphnexus.infrastructure.mysql.file.FileDO;
+import com.graphnexus.infrastructure.mysql.file.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.FileStatus;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("文档处理集成测试")
-class DocumentProcessingIntegrationTest {
+class FileProcessingIntegrationTest {
 
     @Container
     static GenericContainer<?> mysql = new GenericContainer<>(
@@ -66,10 +66,10 @@ class DocumentProcessingIntegrationTest {
     }
 
     @Autowired
-    private DocumentService documentService;
+    private FileService fileService;
 
     @Autowired
-    private DocumentRepository documentRepository;
+    private FileRepository fileRepository;
 
     private static Long uploadedDocId;
 
@@ -82,17 +82,17 @@ class DocumentProcessingIntegrationTest {
                 "file", "test-integration.pdf", "application/pdf", pdfContent
         );
 
-        DocumentBO result = documentService.upload(file, "MATH");
+        FileBO result = fileService.upload(file, "MATH");
 
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo("test-integration.pdf");
         assertThat(result.getSubject()).isEqualTo("MATH");
-        assertThat(result.getStatus()).isEqualTo(DocumentStatus.UPLOADED);
+        assertThat(result.getStatus()).isEqualTo(FileStatus.UPLOADED);
         assertThat(result.getDocumentNo()).isNotBlank();
         assertThat(result.getMinioPath()).isNotBlank();
 
-        DocumentDO doc = documentRepository.findByIdAndIsDeletedFalse(result.getId()).orElseThrow();
-        assertThat(doc.getStatus()).isEqualTo(DocumentStatus.UPLOADED);
+        FileDO doc = fileRepository.findByIdAndIsDeletedFalse(result.getId()).orElseThrow();
+        assertThat(doc.getStatus()).isEqualTo(FileStatus.UPLOADED);
 
         uploadedDocId = result.getId();
     }
@@ -103,15 +103,15 @@ class DocumentProcessingIntegrationTest {
     void processDocumentShouldSucceed() {
         assertThat(uploadedDocId).isNotNull();
 
-        ParseResult result = documentService.process(uploadedDocId);
+        ParseResult result = fileService.process(uploadedDocId);
 
         assertThat(result).isNotNull();
         assertThat(result.textContent()).isNotBlank();
         assertThat(result.textContent()).contains("GraphNexus");
         assertThat(result.pageCount()).isEqualTo(1);
 
-        DocumentDO doc = documentRepository.findById(uploadedDocId).orElseThrow();
-        assertThat(doc.getStatus()).isEqualTo(DocumentStatus.COMPLETED);
+        FileDO doc = fileRepository.findById(uploadedDocId).orElseThrow();
+        assertThat(doc.getStatus()).isEqualTo(FileStatus.COMPLETED);
         assertThat(doc.getTextContent()).isNotBlank();
     }
 
@@ -119,7 +119,7 @@ class DocumentProcessingIntegrationTest {
     @Order(3)
     @DisplayName("AC-4: 分页查询文档列表")
     void listDocumentsShouldReturnPage() {
-        var page = documentService.listDocuments(1, 10);
+        var page = fileService.listDocuments(1, 10);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(1);
     }
 
@@ -129,10 +129,10 @@ class DocumentProcessingIntegrationTest {
     void updateDocumentShouldSucceed() {
         assertThat(uploadedDocId).isNotNull();
 
-        UpdateDocumentBO bo = new UpdateDocumentBO();
+        UpdateFileBO bo = new UpdateFileBO();
         bo.setName("renamed-integration.pdf");
 
-        DocumentBO updated = documentService.updateDocument(uploadedDocId, bo);
+        FileBO updated = fileService.updateDocument(uploadedDocId, bo);
         assertThat(updated.getName()).isEqualTo("renamed-integration.pdf");
     }
 
@@ -144,7 +144,7 @@ class DocumentProcessingIntegrationTest {
                 "file", "test.txt", "text/plain", "not a pdf".getBytes()
         );
         try {
-            documentService.upload(file, "MATH");
+            fileService.upload(file, "MATH");
             Assertions.fail("Should have thrown BusinessException");
         } catch (BusinessException e) {
             assertThat(e.getErrorCode()).isEqualTo("A0004");
@@ -157,11 +157,11 @@ class DocumentProcessingIntegrationTest {
     void deleteDocumentShouldSucceed() {
         assertThat(uploadedDocId).isNotNull();
 
-        documentService.deleteDocument(uploadedDocId);
+        fileService.deleteDocument(uploadedDocId);
 
-        DocumentDO doc = documentRepository.findById(uploadedDocId).orElseThrow();
+        FileDO doc = fileRepository.findById(uploadedDocId).orElseThrow();
         assertThat(doc.getIsDeleted()).isEqualTo(1);
-        assertThat(documentRepository.findByIdAndIsDeletedFalse(uploadedDocId)).isEmpty();
+        assertThat(fileRepository.findByIdAndIsDeletedFalse(uploadedDocId)).isEmpty();
     }
 
     // ======================== 辅助方法 ========================

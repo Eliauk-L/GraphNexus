@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.document;
+package com.graphnexus.infrastructure.mysql.file;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * 考试成绩记录 Repository。
  *
- * <p>延用显式 JPQL 模式（参考 {@link DocumentRepository}），
+ * <p>延用显式 JPQL 模式（参考 {@link FileRepository}），
  * 规避 Hibernate 6.5 Boolean/TINYINT 谓词 bug。
  * 见 DESIGN §0.5.2。</p>
  *

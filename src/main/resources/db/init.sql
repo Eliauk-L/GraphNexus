@@ -4,7 +4,7 @@
 -- 首次执行: mysql -u graphnexus -p graphnexus < init-document.sql
 -- =============================================================================
 
-CREATE TABLE IF NOT EXISTS document (
+CREATE TABLE IF NOT EXISTS file (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '技术主键',
     document_no     CHAR(32)        NOT NULL COMMENT 'MD5(pdf_bytes) 内容指纹',
     name            VARCHAR(255)    NOT NULL COMMENT '文档名称（原始文件名清洗后）',
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS document (
 
 -- =============================================================================
 -- down（回滚）
--- DROP TABLE IF EXISTS document;
+-- DROP TABLE IF EXISTS file;
 -- =============================================================================
 
 -- up: 创建 exam_record 表

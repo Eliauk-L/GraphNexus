@@ -4,7 +4,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
- * MD5 计算工具 — 从 DocumentServiceImpl 提取为公共方法。
+ * MD5 计算工具 — 从 FileServiceImpl 提取为公共方法。
  *
  * <p>PDF 上传和 CSV 上传均使用 MD5 做内容判重。见 DESIGN §0.5.2。</p>
  *

@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.document;
+package com.graphnexus.infrastructure.mysql.file;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,96 +11,96 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author Jay
  * @date 2026/06/12
  */
-@DisplayName("DocumentStatus 状态机")
-class DocumentStatusTest {
+@DisplayName("FileStatus 状态机")
+class FileStatusTest {
 
     @Test
     @DisplayName("UPLOADED → PROCESSING 合法")
     void uploadedToProcessingShouldPass() {
-        assertDoesNotThrow(() -> DocumentStatus.UPLOADED.validateTransition(DocumentStatus.PROCESSING));
+        assertDoesNotThrow(() -> FileStatus.UPLOADED.validateTransition(FileStatus.PROCESSING));
     }
 
     @Test
     @DisplayName("PROCESSING → COMPLETED 合法")
     void processingToCompletedShouldPass() {
-        assertDoesNotThrow(() -> DocumentStatus.PROCESSING.validateTransition(DocumentStatus.COMPLETED));
+        assertDoesNotThrow(() -> FileStatus.PROCESSING.validateTransition(FileStatus.COMPLETED));
     }
 
     @Test
     @DisplayName("PROCESSING → FAILED 合法")
     void processingToFailedShouldPass() {
-        assertDoesNotThrow(() -> DocumentStatus.PROCESSING.validateTransition(DocumentStatus.FAILED));
+        assertDoesNotThrow(() -> FileStatus.PROCESSING.validateTransition(FileStatus.FAILED));
     }
 
     @Test
     @DisplayName("COMPLETED → PROCESSING 合法（重新解析）")
     void completedToProcessingShouldPass() {
-        assertDoesNotThrow(() -> DocumentStatus.COMPLETED.validateTransition(DocumentStatus.PROCESSING));
+        assertDoesNotThrow(() -> FileStatus.COMPLETED.validateTransition(FileStatus.PROCESSING));
     }
 
     @Test
     @DisplayName("FAILED → PROCESSING 合法（重试）")
     void failedToProcessingShouldPass() {
-        assertDoesNotThrow(() -> DocumentStatus.FAILED.validateTransition(DocumentStatus.PROCESSING));
+        assertDoesNotThrow(() -> FileStatus.FAILED.validateTransition(FileStatus.PROCESSING));
     }
 
     @Test
     @DisplayName("UPLOADED → COMPLETED 非法（跳过 PROCESSING）")
     void uploadedToCompletedShouldFail() {
         assertThrows(IllegalArgumentException.class,
-                () -> DocumentStatus.UPLOADED.validateTransition(DocumentStatus.COMPLETED));
+                () -> FileStatus.UPLOADED.validateTransition(FileStatus.COMPLETED));
     }
 
     @Test
     @DisplayName("COMPLETED → UPLOADED 非法（禁止回退）")
     void completedToUploadedShouldFail() {
         assertThrows(IllegalArgumentException.class,
-                () -> DocumentStatus.COMPLETED.validateTransition(DocumentStatus.UPLOADED));
+                () -> FileStatus.COMPLETED.validateTransition(FileStatus.UPLOADED));
     }
 
     @Test
     @DisplayName("FAILED → UPLOADED 非法（禁止回退）")
     void failedToUploadedShouldFail() {
         assertThrows(IllegalArgumentException.class,
-                () -> DocumentStatus.FAILED.validateTransition(DocumentStatus.UPLOADED));
+                () -> FileStatus.FAILED.validateTransition(FileStatus.UPLOADED));
     }
 
     @Test
     @DisplayName("UPLOADED → FAILED 非法（禁止跳跃）")
     void uploadedToFailedShouldFail() {
         assertThrows(IllegalArgumentException.class,
-                () -> DocumentStatus.UPLOADED.validateTransition(DocumentStatus.FAILED));
+                () -> FileStatus.UPLOADED.validateTransition(FileStatus.FAILED));
     }
 
     @Test
     @DisplayName("UPLOADED → DELETING 合法")
     void uploadedToDeletingShouldPass() {
-        assertDoesNotThrow(() -> DocumentStatus.UPLOADED.validateTransition(DocumentStatus.DELETING));
+        assertDoesNotThrow(() -> FileStatus.UPLOADED.validateTransition(FileStatus.DELETING));
     }
 
     @Test
     @DisplayName("COMPLETED → DELETING 合法")
     void completedToDeletingShouldPass() {
-        assertDoesNotThrow(() -> DocumentStatus.COMPLETED.validateTransition(DocumentStatus.DELETING));
+        assertDoesNotThrow(() -> FileStatus.COMPLETED.validateTransition(FileStatus.DELETING));
     }
 
     @Test
     @DisplayName("FAILED → DELETING 合法")
     void failedToDeletingShouldPass() {
-        assertDoesNotThrow(() -> DocumentStatus.FAILED.validateTransition(DocumentStatus.DELETING));
+        assertDoesNotThrow(() -> FileStatus.FAILED.validateTransition(FileStatus.DELETING));
     }
 
     @Test
     @DisplayName("DELETING → 任何状态 非法（终态不可再转换）")
     void deletingCannotTransition() {
         assertThrows(IllegalArgumentException.class,
-                () -> DocumentStatus.DELETING.validateTransition(DocumentStatus.UPLOADED));
+                () -> FileStatus.DELETING.validateTransition(FileStatus.UPLOADED));
     }
 
     @Test
     @DisplayName("PROCESSING → DELETING 非法（处理中不可删除）")
     void processingToDeletingShouldFail() {
         assertThrows(IllegalArgumentException.class,
-                () -> DocumentStatus.PROCESSING.validateTransition(DocumentStatus.DELETING));
+                () -> FileStatus.PROCESSING.validateTransition(FileStatus.DELETING));
     }
 }

@@ -19,7 +19,7 @@ import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskDO;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskRepository;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskStatus;
-import com.graphnexus.infrastructure.mysql.document.ExamRecordRepository;
+import com.graphnexus.infrastructure.mysql.file.ExamRecordRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

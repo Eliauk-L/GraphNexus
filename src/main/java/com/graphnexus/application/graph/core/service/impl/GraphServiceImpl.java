@@ -8,11 +8,11 @@ import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import com.graphnexus.infrastructure.mysql.document.DocumentDO;
-import com.graphnexus.infrastructure.mysql.document.DocumentRepository;
-import com.graphnexus.infrastructure.mysql.document.DocumentStatus;
+import com.graphnexus.infrastructure.mysql.file.FileDO;
+import com.graphnexus.infrastructure.mysql.file.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.FileStatus;
 import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
-import com.graphnexus.infrastructure.neo4j.node.DocumentNode;
+import com.graphnexus.infrastructure.neo4j.node.FileNode;
 import com.graphnexus.infrastructure.neo4j.node.GraphNode;
 import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GraphServiceImpl implements GraphService {
 
-    private final DocumentRepository documentRepository;
+    private final FileRepository fileRepository;
     private final ExtractionService extractionService;
     private final GraphNodeRepository graphNodeRepository;
     private final FusionService fusionService;
@@ -46,11 +46,11 @@ public class GraphServiceImpl implements GraphService {
     @Transactional
     public ExtractionResultBO extract(Long documentId) {
         // 1. 查询文档
-        DocumentDO doc = documentRepository.findByIdAndIsDeletedFalse(documentId)
+        FileDO doc = fileRepository.findByIdAndIsDeletedFalse(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: " + documentId));
 
         // 2. 校验状态
-        if (doc.getStatus() != DocumentStatus.COMPLETED) {
+        if (doc.getStatus() != FileStatus.COMPLETED) {
             throw new BusinessException(ErrorCode.A0009,
                     String.format("文档状态为 %s，需先完成解析", doc.getStatus()));
         }
@@ -60,9 +60,9 @@ public class GraphServiceImpl implements GraphService {
             throw new BusinessException(ErrorCode.A0008, "文档文本内容为空");
         }
 
-        // 4. 构建 DocumentNode
+        // 4. 构建 FileNode
         String neo4jDocumentId = String.valueOf(documentId);
-        DocumentNode documentNode = new DocumentNode(
+        FileNode documentNode = new FileNode(
                 doc.getName(), doc.getSubject(),
                 doc.getPageCount(), neo4jDocumentId);
 
@@ -74,7 +74,7 @@ public class GraphServiceImpl implements GraphService {
         // 6. 事务内：删旧子图 + 写新子图
         graphNodeRepository.deleteByDocumentId(neo4jDocumentId);
         graphNodeRepository.save(documentNode);
-        // 建立 EXTRACTS 边：DocumentNode → 每个 EntityNode
+        // 建立 EXTRACTS 边：FileNode → 每个 EntityNode
         for (var entity : extracted.entities()) {
             graphNodeRepository.save(entity);
             graphNodeRepository.saveEdge(

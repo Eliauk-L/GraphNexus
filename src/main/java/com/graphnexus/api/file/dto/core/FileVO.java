@@ -1,6 +1,6 @@
 package com.graphnexus.api.file.dto.core;
 
-import com.graphnexus.application.file.core.model.DocumentBO;
+import com.graphnexus.application.file.core.model.FileBO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "文档元数据视图")
-public class DocumentVO {
+public class FileVO {
 
     @Schema(description = "文档 ID", example = "1")
     private Long documentId;
@@ -55,8 +55,8 @@ public class DocumentVO {
     /**
      * 从 BO 构造 VO。
      */
-    public static DocumentVO from(DocumentBO bo) {
-        return DocumentVO.builder()
+    public static FileVO from(FileBO bo) {
+        return FileVO.builder()
                 .documentId(bo.getId())
                 .documentNo(bo.getDocumentNo())
                 .name(bo.getName())

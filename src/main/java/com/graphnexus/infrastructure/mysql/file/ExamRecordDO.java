@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.document;
+package com.graphnexus.infrastructure.mysql.file;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

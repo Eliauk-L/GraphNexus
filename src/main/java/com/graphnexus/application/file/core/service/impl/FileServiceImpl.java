@@ -1,22 +1,22 @@
 package com.graphnexus.application.file.core.service.impl;
 
-import com.graphnexus.application.file.core.model.DocumentBO;
+import com.graphnexus.application.file.core.model.FileBO;
 import com.graphnexus.application.file.core.model.DeleteResultBO;
 import com.graphnexus.application.file.upload.model.GradeRecordBO;
 import com.graphnexus.application.file.upload.model.GradeUploadResultBO;
 import com.graphnexus.application.file.parse.model.ParseResult;
-import com.graphnexus.application.file.core.model.UpdateDocumentBO;
+import com.graphnexus.application.file.core.model.UpdateFileBO;
 import com.graphnexus.application.file.parse.parser.MinerUDocumentParser;
 import com.graphnexus.application.file.parse.parser.PdfBoxDocumentParser;
-import com.graphnexus.application.file.core.service.DocumentService;
+import com.graphnexus.application.file.core.service.FileService;
 import com.graphnexus.application.file.upload.service.GradeService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.common.util.Md5Utils;
 import com.graphnexus.application.file.parse.parser.mineru.config.MinerUProperties;
-import com.graphnexus.infrastructure.mysql.document.DocumentDO;
-import com.graphnexus.infrastructure.mysql.document.DocumentRepository;
-import com.graphnexus.infrastructure.mysql.document.DocumentStatus;
+import com.graphnexus.infrastructure.mysql.file.FileDO;
+import com.graphnexus.infrastructure.mysql.file.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.FileStatus;
 import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import lombok.extern.slf4j.Slf4j;
@@ -45,12 +45,12 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
-public class DocumentServiceImpl implements DocumentService {
+public class FileServiceImpl implements FileService {
 
     private static final String PDF_MIME_TYPE = "application/pdf";
     private static final long MAX_FILE_SIZE = 50L * 1024 * 1024; // 50MB
 
-    private final DocumentRepository documentRepository;
+    private final FileRepository fileRepository;
     private final FileStorageService fileStorageService;
     private final MinerUDocumentParser minerUDocumentParser;
     private final PdfBoxDocumentParser pdfBoxDocumentParser;
@@ -58,14 +58,14 @@ public class DocumentServiceImpl implements DocumentService {
     private final GraphNodeRepository graphNodeRepository;
     private final GradeService gradeService;
 
-    public DocumentServiceImpl(DocumentRepository documentRepository,
+    public FileServiceImpl(FileRepository fileRepository,
                                FileStorageService fileStorageService,
                                MinerUDocumentParser minerUDocumentParser,
                                PdfBoxDocumentParser pdfBoxDocumentParser,
                                MinerUProperties minerUProperties,
                                GraphNodeRepository graphNodeRepository,
                                GradeService gradeService) {
-        this.documentRepository = documentRepository;
+        this.fileRepository = fileRepository;
         this.fileStorageService = fileStorageService;
         this.minerUDocumentParser = minerUDocumentParser;
         this.pdfBoxDocumentParser = pdfBoxDocumentParser;
@@ -78,7 +78,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional
-    public DocumentBO upload(MultipartFile file, String subject) {
+    public FileBO upload(MultipartFile file, String subject) {
         // ① 校验 MIME type
         if (!PDF_MIME_TYPE.equals(file.getContentType())) {
             throw new BusinessException(ErrorCode.A0004, "不支持的文件类型: " + file.getContentType());
@@ -101,7 +101,7 @@ public class DocumentServiceImpl implements DocumentService {
         String documentNo = Md5Utils.computeMd5(pdfBytes);
 
         // ④ 去重检查
-        if (documentRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(documentNo, subject).isPresent()) {
+        if (fileRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(documentNo, subject).isPresent()) {
             throw new BusinessException(ErrorCode.A0007,
                     "文档内容重复: subject=" + subject + ", md5=" + documentNo);
         }
@@ -118,16 +118,16 @@ public class DocumentServiceImpl implements DocumentService {
         }
 
         // ⑦ 保存到 MySQL
-        DocumentDO doc = DocumentDO.builder()
+        FileDO doc = FileDO.builder()
                 .documentNo(documentNo)
                 .name(sanitizeFileName(file.getOriginalFilename()))
                 .subject(subject)
                 .fileSize(file.getSize())
                 .minioPath(minioPath)
-                .status(DocumentStatus.UPLOADED)
+                .status(FileStatus.UPLOADED)
                 .uploadedBy(null) // v1 无用户体系
                 .build();
-        doc = documentRepository.save(doc);
+        doc = fileRepository.save(doc);
 
         log.info("文档上传成功: id={}, name={}, subject={}, md5={}", doc.getId(), doc.getName(), subject, documentNo);
         return toBO(doc);
@@ -139,14 +139,14 @@ public class DocumentServiceImpl implements DocumentService {
     @Transactional
     public ParseResult process(Long documentId) {
         // ① 查询文档
-        DocumentDO doc = documentRepository.findByIdAndIsDeletedFalse(documentId)
+        FileDO doc = fileRepository.findByIdAndIsDeletedFalse(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + documentId));
 
         // ② 校验并更新状态 → PROCESSING
-        doc.getStatus().validateTransition(DocumentStatus.PROCESSING);
-        doc.setStatus(DocumentStatus.PROCESSING);
-        documentRepository.save(doc);
+        doc.getStatus().validateTransition(FileStatus.PROCESSING);
+        doc.setStatus(FileStatus.PROCESSING);
+        fileRepository.save(doc);
 
         // ③ 从 MinIO 获取文件
         try (InputStream is = fileStorageService.getFile(doc.getMinioPath())) {
@@ -178,13 +178,13 @@ public class DocumentServiceImpl implements DocumentService {
                         log.info("PDFBox 兜底解析成功: docId={}", doc.getId());
                     } catch (Exception pdfBoxEx) {
                         // 两次都失败 → FAILED
-                        doc.setStatus(DocumentStatus.FAILED);
+                        doc.setStatus(FileStatus.FAILED);
                         String failReason = String.format(
                                 "MinerU: %s; PDFBox: %s",
                                 truncate(mineruEx.getMessage(), 200),
                                 truncate(pdfBoxEx.getMessage(), 200));
                         doc.setFailReason(failReason);
-                        documentRepository.save(doc);
+                        fileRepository.save(doc);
                         log.error("MinerU + PDFBox 双失败: docId={}, failReason={}",
                                 doc.getId(), failReason);
                         throw new BusinessException(ErrorCode.A0004,
@@ -204,9 +204,9 @@ public class DocumentServiceImpl implements DocumentService {
             doc.setTextContent(result.textContent());
             doc.setPageCount(result.pageCount());
             doc.setMetadataJson(toJson(parseMetadata));
-            doc.setStatus(DocumentStatus.COMPLETED);
+            doc.setStatus(FileStatus.COMPLETED);
             doc.setFailReason(null);
-            documentRepository.save(doc);
+            fileRepository.save(doc);
 
             log.info("文档解析完成: id={}, parser={}, pages={}, textLength={}",
                     doc.getId(), parserUsed, result.pageCount(),
@@ -215,16 +215,16 @@ public class DocumentServiceImpl implements DocumentService {
 
         } catch (BusinessException e) {
             // 解析失败 → 标记 FAILED
-            doc.setStatus(DocumentStatus.FAILED);
+            doc.setStatus(FileStatus.FAILED);
             doc.setFailReason(e.getMessage());
-            documentRepository.save(doc);
+            fileRepository.save(doc);
             log.error("文档解析失败: id={}", doc.getId(), e);
             throw e;
 
         } catch (IOException e) {
-            doc.setStatus(DocumentStatus.FAILED);
+            doc.setStatus(FileStatus.FAILED);
             doc.setFailReason("文件读取失败: " + e.getMessage());
-            documentRepository.save(doc);
+            fileRepository.save(doc);
             log.error("MinIO 文件读取失败: id={}, minioPath={}", doc.getId(), doc.getMinioPath(), e);
             throw new BusinessException(ErrorCode.B0001, "文件读取失败", "文件存储服务暂时不可用");
         }
@@ -234,16 +234,16 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<DocumentBO> listDocuments(int pageNum, int pageSize) {
-        return documentRepository
+    public Page<FileBO> listDocuments(int pageNum, int pageSize) {
+        return fileRepository
                 .findByIsDeletedFalse(PageRequest.of(pageNum - 1, pageSize))
                 .map(this::toBO);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public DocumentBO getDocument(Long id) {
-        DocumentDO doc = documentRepository.findByIdAndIsDeletedFalse(id)
+    public FileBO getDocument(Long id) {
+        FileDO doc = fileRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
         return toBO(doc);
@@ -253,8 +253,8 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional
-    public DocumentBO updateDocument(Long id, UpdateDocumentBO bo) {
-        DocumentDO doc = documentRepository.findByIdAndIsDeletedFalse(id)
+    public FileBO updateDocument(Long id, UpdateFileBO bo) {
+        FileDO doc = fileRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
 
@@ -262,7 +262,7 @@ public class DocumentServiceImpl implements DocumentService {
             doc.setName(bo.getName().trim());
         }
 
-        doc = documentRepository.save(doc);
+        doc = fileRepository.save(doc);
         log.info("文档已更新: id={}, name={}", doc.getId(), doc.getName());
         return toBO(doc);
     }
@@ -273,7 +273,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Transactional
     public void deleteDocument(Long id) {
         // 幂等：允许 DELETING 状态的文档重复删除，从中断点继续
-        DocumentDO doc = documentRepository.findById(id)
+        FileDO doc = fileRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
 
@@ -284,9 +284,9 @@ public class DocumentServiceImpl implements DocumentService {
         }
 
         // ① 进入/保持 DELETING 状态，标记删除意图
-        if (doc.getStatus() != DocumentStatus.DELETING) {
-            doc.setStatus(DocumentStatus.DELETING);
-            documentRepository.saveAndFlush(doc);
+        if (doc.getStatus() != FileStatus.DELETING) {
+            doc.setStatus(FileStatus.DELETING);
+            fileRepository.saveAndFlush(doc);
             log.info("文档进入 DELETING 状态: id={}", id);
         } else {
             log.info("文档已在 DELETING 状态，从中断点继续: id={}", id);
@@ -305,7 +305,7 @@ public class DocumentServiceImpl implements DocumentService {
 
         // ④ 全部组件清理完成，逻辑删除
         doc.markDeleted();
-        documentRepository.save(doc);
+        fileRepository.save(doc);
 
         log.info("文档已删除: id={}, minioPath={}", doc.getId(), doc.getMinioPath());
     }
@@ -330,10 +330,10 @@ public class DocumentServiceImpl implements DocumentService {
     // ======================== 工具方法 ========================
 
     /**
-     * DocumentDO → DocumentBO 转换。
+     * FileDO → FileBO 转换。
      */
-    private DocumentBO toBO(DocumentDO doc) {
-        return DocumentBO.builder()
+    private FileBO toBO(FileDO doc) {
+        return FileBO.builder()
                 .id(doc.getId())
                 .documentNo(doc.getDocumentNo())
                 .name(doc.getName())

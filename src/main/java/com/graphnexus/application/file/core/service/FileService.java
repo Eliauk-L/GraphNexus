@@ -1,10 +1,10 @@
 package com.graphnexus.application.file.core.service;
 
 import com.graphnexus.application.file.core.model.DeleteResultBO;
-import com.graphnexus.application.file.core.model.DocumentBO;
+import com.graphnexus.application.file.core.model.FileBO;
 import com.graphnexus.application.file.upload.model.GradeUploadResultBO;
 import com.graphnexus.application.file.parse.model.ParseResult;
-import com.graphnexus.application.file.core.model.UpdateDocumentBO;
+import com.graphnexus.application.file.core.model.UpdateFileBO;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
  * @author Jay
  * @date 2026/06/12
  */
-public interface DocumentService {
+public interface FileService {
 
     /**
      * 上传 PDF 文件并存入 MinIO + MySQL。
@@ -23,7 +23,7 @@ public interface DocumentService {
      * @param subject 所属学科
      * @return 文档业务对象
      */
-    DocumentBO upload(MultipartFile file, String subject);
+    FileBO upload(MultipartFile file, String subject);
 
     /**
      * 触发 PDF 解析。
@@ -40,7 +40,7 @@ public interface DocumentService {
      * @param pageSize 每页大小
      * @return 分页结果
      */
-    Page<DocumentBO> listDocuments(int pageNum, int pageSize);
+    Page<FileBO> listDocuments(int pageNum, int pageSize);
 
     /**
      * 按 ID 查询单个文档。
@@ -48,7 +48,7 @@ public interface DocumentService {
      * @param id 文档 ID
      * @return 文档业务对象
      */
-    DocumentBO getDocument(Long id);
+    FileBO getDocument(Long id);
 
     /**
      * 更新文档名称。
@@ -57,7 +57,7 @@ public interface DocumentService {
      * @param bo 更新内容
      * @return 更新后的文档
      */
-    DocumentBO updateDocument(Long id, UpdateDocumentBO bo);
+    FileBO updateDocument(Long id, UpdateFileBO bo);
 
     /**
      * 逻辑删除文档 + MinIO 文件清除。
