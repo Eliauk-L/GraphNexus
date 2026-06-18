@@ -69,7 +69,7 @@ public class OpenApiConfig {
                 .group("business")
                 .displayName("业务接口")
                 .packagesToScan(
-                        "com.graphnexus.api.document",
+                        "com.graphnexus.api.file",
                         "com.graphnexus.api.graph",
                         "com.graphnexus.api.query",
                         "com.graphnexus.api.analysis"
