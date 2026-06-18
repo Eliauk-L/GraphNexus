@@ -4,10 +4,7 @@ import { NModal, NSpace, useMessage } from 'naive-ui'
 import { Upload as UploadIcon } from '@lucide/vue'
 import { useFileStore } from '../fileStore'
 import BaseButton from '@/common/components/BaseButton.vue'
-
-const props = defineProps<{
-  subject: string
-}>()
+import BaseSelect from '@/common/components/BaseSelect.vue'
 
 const emit = defineEmits<{
   uploaded: []
@@ -17,9 +14,21 @@ const store = useFileStore()
 const message = useMessage()
 const showModal = ref(false)
 const selectedFile = ref<File | null>(null)
+const selectedSubject = ref<string | null>(null)
 const uploading = ref(false)
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const subjectOptions = [
+  { label: '数学', value: '数学' },
+  { label: '语文', value: '语文' },
+  { label: '英语', value: '英语' },
+  { label: '物理', value: '物理' },
+  { label: '化学', value: '化学' },
+  { label: '生物', value: '生物' },
+  { label: '历史', value: '历史' },
+  { label: '地理', value: '地理' },
+]
 
 function handleFileChange(e: Event) {
   const input = e.target as HTMLInputElement
@@ -31,6 +40,7 @@ function handleFileChange(e: Event) {
 function handleUpload() {
   showModal.value = true
   selectedFile.value = null
+  selectedSubject.value = null
 }
 
 function triggerFileInput() {
@@ -38,10 +48,10 @@ function triggerFileInput() {
 }
 
 async function confirmUpload() {
-  if (!selectedFile.value) return
+  if (!selectedFile.value || !selectedSubject.value) return
   uploading.value = true
   try {
-    await store.upload(selectedFile.value, props.subject)
+    await store.upload(selectedFile.value, selectedSubject.value)
     message.success('上传成功')
     showModal.value = false
     selectedFile.value = null
@@ -75,6 +85,16 @@ function removeFile() {
 
   <NModal v-model:show="showModal" title="上传文件" style="width: 480px">
     <div class="upload-modal">
+      <!-- 学科选择 -->
+      <div class="field">
+        <label class="label">学科 <span style="color: var(--color-error)">*</span></label>
+        <BaseSelect
+          v-model="selectedSubject"
+          :options="subjectOptions"
+          placeholder="请选择学科"
+        />
+      </div>
+
       <!-- 未选择文件 -->
       <div v-if="!selectedFile" class="upload-zone" @click="triggerFileInput">
         <UploadIcon :size="48" color="var(--color-text-tertiary)" />
@@ -103,11 +123,10 @@ function removeFile() {
         @change="handleFileChange"
       >
 
-      <!-- 操作按钮 -->
       <div class="modal-footer">
         <NSpace justify="end">
           <BaseButton variant="danger" @click="showModal = false">取消</BaseButton>
-          <BaseButton :disabled="!selectedFile || uploading" @click="confirmUpload">
+          <BaseButton :disabled="!selectedFile || !selectedSubject || uploading" @click="confirmUpload">
             {{ uploading ? '上传中...' : '确认上传' }}
           </BaseButton>
         </NSpace>
@@ -119,6 +138,19 @@ function removeFile() {
 <style scoped>
 .upload-modal {
   padding: var(--spacing-md);
+}
+
+.field {
+  margin-bottom: var(--spacing-md);
+}
+
+.field .label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .upload-zone {

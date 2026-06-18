@@ -14,7 +14,6 @@ const message = useMessage()
 
 const page = ref(1)
 const pageSize = ref(10)
-const selectedSubject = ref('数学')
 const searchName = ref('')
 const filterFileType = ref<string | null>(null)
 
@@ -102,7 +101,7 @@ onMounted(() => {
     <div class="page-header">
       <h1 class="headline">文件管理</h1>
       <NSpace>
-        <FileUpload :subject="selectedSubject" @uploaded="handleUploadFinish" />
+        <FileUpload @uploaded="handleUploadFinish" />
       </NSpace>
     </div>
 
