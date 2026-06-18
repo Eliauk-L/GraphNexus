@@ -1,6 +1,6 @@
 package com.graphnexus.api.graph.controller;
 
-import com.graphnexus.application.graph.metrics.model.MetricResultBO;
+import com.graphnexus.common.model.MetricResultBO;
 import com.graphnexus.application.graph.metrics.service.MetricsService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

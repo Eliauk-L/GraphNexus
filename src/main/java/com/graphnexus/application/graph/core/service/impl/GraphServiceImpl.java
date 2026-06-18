@@ -2,15 +2,18 @@ package com.graphnexus.application.graph.core.service.impl;
 
 import com.graphnexus.application.graph.construction.service.ExtractionService;
 import com.graphnexus.application.graph.core.model.ExtractionResultBO;
+import com.graphnexus.application.graph.core.model.GraphDataConverter;
+import com.graphnexus.application.graph.core.model.GraphEdgeData;
+import com.graphnexus.application.graph.core.model.GraphNodeData;
 import com.graphnexus.application.graph.core.model.GraphSubgraphBO;
 import com.graphnexus.application.graph.core.service.GraphService;
 import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import com.graphnexus.infrastructure.mysql.file.FileDO;
-import com.graphnexus.infrastructure.mysql.file.FileRepository;
-import com.graphnexus.infrastructure.mysql.file.FileStatus;
+import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
+import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
 import com.graphnexus.infrastructure.neo4j.node.FileNode;
 import com.graphnexus.infrastructure.neo4j.node.GraphNode;
@@ -125,8 +128,8 @@ public class GraphServiceImpl implements GraphService {
         List<GraphNode> nodes = graphNodeRepository.findByDocumentId(neo4jDocumentId);
         List<GraphEdge> edges = graphNodeRepository.findEdgesByDocumentId(neo4jDocumentId);
         return GraphSubgraphBO.builder()
-                .nodes(nodes)
-                .edges(edges)
+                .nodes(nodes.stream().map(GraphDataConverter::toNodeData).collect(Collectors.toList()))
+                .edges(edges.stream().map(GraphDataConverter::toEdgeData).collect(Collectors.toList()))
                 .build();
     }
 }

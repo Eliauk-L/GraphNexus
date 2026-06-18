@@ -1,8 +1,8 @@
 package com.graphnexus.infrastructure.neo4j.gds;
 
-import com.graphnexus.application.graph.metrics.config.MetricsProperties;
-import com.graphnexus.application.graph.metrics.model.MetricResultBO;
-import com.graphnexus.application.graph.metrics.model.MetricsQuery;
+import com.graphnexus.infrastructure.neo4j.gds.config.MetricsProperties;
+import com.graphnexus.common.model.MetricResultBO;
+import com.graphnexus.common.model.MetricsQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

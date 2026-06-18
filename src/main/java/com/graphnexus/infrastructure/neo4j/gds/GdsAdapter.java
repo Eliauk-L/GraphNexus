@@ -1,8 +1,8 @@
 package com.graphnexus.infrastructure.neo4j.gds;
 
-import com.graphnexus.application.graph.metrics.config.MetricsProperties;
-import com.graphnexus.application.graph.metrics.model.MetricResultBO;
-import com.graphnexus.application.graph.metrics.model.MetricsQuery;
+import com.graphnexus.infrastructure.neo4j.gds.config.MetricsProperties;
+import com.graphnexus.common.model.MetricResultBO;
+import com.graphnexus.common.model.MetricsQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.neo4j.core.Neo4jClient;

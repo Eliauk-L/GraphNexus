@@ -11,6 +11,9 @@ public enum FileParseType {
     /** CSV 成绩文件 */
     CSV_GRADE,
 
-    /** PDF 教辅文档 */
-    PDF_DOCUMENT
+    /** 文档类文件（PDF/TXT 及未来文档格式） */
+    DOCUMENT,
+
+    /** 纯文本文件（.txt） */
+    TXT
 }

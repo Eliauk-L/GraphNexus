@@ -1,7 +1,7 @@
 package com.graphnexus.application.graph.construction.service;
 
 import com.graphnexus.application.graph.construction.model.ExtractionRawResult;
-import com.graphnexus.application.llmgateway.service.LlmGateway;
+import com.graphnexus.common.LlmGateway;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.neo4j.edge.*;

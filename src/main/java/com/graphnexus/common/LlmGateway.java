@@ -1,4 +1,4 @@
-package com.graphnexus.application.llmgateway.service;
+package com.graphnexus.common;
 
 /**
  * LLM 调用网关 — v1 最小契约接口。

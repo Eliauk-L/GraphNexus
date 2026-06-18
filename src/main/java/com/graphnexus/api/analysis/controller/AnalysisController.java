@@ -45,10 +45,10 @@ public class AnalysisController {
         PrunedSubgraph subgraph = queryService.getSubgraph(taskId);
 
         var nodes = subgraph.nodes().stream()
-                .map(n -> new NodeVO(n.getId(), n.getNodeType(), n.toProperties()))
+                .map(n -> new NodeVO(n.id(), n.nodeType(), n.properties()))
                 .collect(Collectors.toList());
         var edges = subgraph.edges().stream()
-                .map(e -> new EdgeVO(e.getSourceNodeId(), e.getTargetNodeId(), e.getEdgeType(), e.getWeight()))
+                .map(e -> new EdgeVO(e.sourceNodeId(), e.targetNodeId(), e.edgeType(), e.weight()))
                 .collect(Collectors.toList());
         var meta = new PruningMetaVO(
                 subgraph.meta().strategy(), subgraph.meta().mastersAvailable(),

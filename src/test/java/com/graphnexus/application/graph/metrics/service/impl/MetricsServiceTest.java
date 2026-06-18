@@ -1,8 +1,8 @@
 package com.graphnexus.application.graph.metrics.service.impl;
 
-import com.graphnexus.application.graph.metrics.config.MetricsProperties;
-import com.graphnexus.application.graph.metrics.model.MetricResultBO;
-import com.graphnexus.application.graph.metrics.model.MetricsQuery;
+import com.graphnexus.infrastructure.neo4j.gds.config.MetricsProperties;
+import com.graphnexus.common.model.MetricResultBO;
+import com.graphnexus.common.model.MetricsQuery;
 import com.graphnexus.application.graph.metrics.service.MetricsService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.infrastructure.neo4j.gds.GdsAdapter;

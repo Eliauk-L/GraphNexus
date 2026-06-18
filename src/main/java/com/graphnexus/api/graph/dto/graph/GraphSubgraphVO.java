@@ -1,8 +1,8 @@
 package com.graphnexus.api.graph.dto.graph;
 
+import com.graphnexus.application.graph.core.model.GraphEdgeData;
+import com.graphnexus.application.graph.core.model.GraphNodeData;
 import com.graphnexus.application.graph.core.model.GraphSubgraphBO;
-import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
-import com.graphnexus.infrastructure.neo4j.node.GraphNode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 子图查询响应 VO — 含 nodes 和 edges 两个数组。
+ * 子图查询响应 VO — 含 nodes 和 edges 两个数组，使用 L2 层数据记录转换。
  *
  * @author Jay
  * @date 2026/06/13
@@ -47,12 +47,12 @@ public class GraphSubgraphVO {
         @Schema(description = "节点创建时间", example = "2026-06-17T10:30:00")
         private String createdAt;
 
-        public static GraphNodeVO from(GraphNode node) {
+        public static GraphNodeVO from(GraphNodeData data) {
             GraphNodeVO vo = new GraphNodeVO();
-            vo.setId(node.getId());
-            vo.setNodeType(node.getNodeType());
-            vo.setDocumentId(node.getDocumentId());
-            vo.setCreatedAt(node.getCreatedAt() != null ? node.getCreatedAt().toString() : null);
+            vo.setId(data.id());
+            vo.setNodeType(data.nodeType());
+            vo.setDocumentId(data.documentId());
+            vo.setCreatedAt(data.createdAt() != null ? data.createdAt().toString() : null);
             return vo;
         }
     }
@@ -72,12 +72,12 @@ public class GraphSubgraphVO {
         @Schema(description = "边创建时间", example = "2026-06-17T10:30:00")
         private String createdAt;
 
-        public static GraphEdgeVO from(GraphEdge edge) {
+        public static GraphEdgeVO from(GraphEdgeData data) {
             GraphEdgeVO vo = new GraphEdgeVO();
-            vo.setSourceNodeId(edge.getSourceNodeId());
-            vo.setTargetNodeId(edge.getTargetNodeId());
-            vo.setEdgeType(edge.getEdgeType());
-            vo.setCreatedAt(edge.getCreatedAt() != null ? edge.getCreatedAt().toString() : null);
+            vo.setSourceNodeId(data.sourceNodeId());
+            vo.setTargetNodeId(data.targetNodeId());
+            vo.setEdgeType(data.edgeType());
+            vo.setCreatedAt(data.createdAt() != null ? data.createdAt().toString() : null);
             return vo;
         }
     }

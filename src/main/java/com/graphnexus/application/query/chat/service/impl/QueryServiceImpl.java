@@ -3,7 +3,7 @@ package com.graphnexus.application.query.chat.service.impl;
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.analysis.model.PruningRequest;
 import com.graphnexus.application.analysis.strategy.StudentDiagnosisStrategy;
-import com.graphnexus.application.llmgateway.service.LlmGateway;
+import com.graphnexus.common.LlmGateway;
 import com.graphnexus.application.query.chat.config.QueryProperties;
 import com.graphnexus.application.query.chat.model.QueryIntent;
 import com.graphnexus.application.query.chat.model.QueryResultBO;
@@ -12,14 +12,13 @@ import com.graphnexus.application.query.prompt.service.PromptTemplateService;
 import com.graphnexus.application.query.chat.service.QueryService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
-import com.graphnexus.infrastructure.neo4j.node.GraphNode;
+import com.graphnexus.application.graph.core.model.GraphNodeData;
 import com.graphnexus.infrastructure.neo4j.node.StudentNode;
 import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
-import com.graphnexus.infrastructure.mysql.query.QueryTaskDO;
-import com.graphnexus.infrastructure.mysql.query.QueryTaskRepository;
-import com.graphnexus.infrastructure.mysql.query.QueryTaskStatus;
-import com.graphnexus.infrastructure.mysql.file.ExamRecordRepository;
+import com.graphnexus.infrastructure.mysql.query.entity.QueryTaskDO;
+import com.graphnexus.infrastructure.mysql.query.repository.QueryTaskRepository;
+import com.graphnexus.infrastructure.mysql.query.entity.QueryTaskStatus;
+import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -481,26 +480,26 @@ public class QueryServiceImpl implements QueryService {
 
         // 分类节点
         var nodeMap = subgraph.nodes().stream()
-                .collect(Collectors.toMap(GraphNode::getId, n -> n, (a, b) -> a));
+                .collect(Collectors.toMap(GraphNodeData::id, n -> n, (a, b) -> a));
         var studentNode = subgraph.nodes().stream()
-                .filter(n -> n instanceof StudentNode).findFirst();
+                .filter(n -> "Student".equals(n.nodeType())).findFirst();
         var kpNodes = subgraph.nodes().stream()
-                .filter(n -> !(n instanceof StudentNode)).collect(Collectors.toList());
+                .filter(n -> !"Student".equals(n.nodeType())).collect(Collectors.toList());
 
         // 薄弱知识点
         var mastersEdges = subgraph.edges().stream()
-                .filter(e -> "MASTERS".equals(e.getEdgeType())).collect(Collectors.toList());
+                .filter(e -> "MASTERS".equals(e.edgeType())).collect(Collectors.toList());
         var prereqEdges = subgraph.edges().stream()
-                .filter(e -> "PREREQUISITE_OF".equals(e.getEdgeType())).collect(Collectors.toList());
+                .filter(e -> "PREREQUISITE_OF".equals(e.edgeType())).collect(Collectors.toList());
 
         if (!mastersEdges.isEmpty()) {
             sb.append("## 知识点掌握度\n\n");
             // 按 weight 升序排列（越弱越靠前）
-            mastersEdges.sort(Comparator.comparingDouble(e -> e.getWeight() != null ? e.getWeight() : 1.0));
+            mastersEdges.sort(Comparator.comparingDouble(e -> e.weight() != null ? e.weight() : 1.0));
             for (var edge : mastersEdges) {
-                var kpNode = nodeMap.get(edge.getTargetNodeId());
-                String kpName = kpNode != null ? extractKpName(kpNode) : edge.getTargetNodeId();
-                double weight = edge.getWeight() != null ? edge.getWeight() : 0;
+                var kpNode = nodeMap.get(edge.targetNodeId());
+                String kpName = kpNode != null ? extractKpName(kpNode) : edge.targetNodeId();
+                double weight = edge.weight() != null ? edge.weight() : 0;
                 int pct = (int) (weight * 100);
                 String level = weight < 0.4 ? "严重薄弱" : weight < 0.6 ? "中等薄弱" : "已掌握";
                 sb.append("- **").append(kpName).append("** — 掌握度：").append(pct)
@@ -513,11 +512,11 @@ public class QueryServiceImpl implements QueryService {
         if (!prereqEdges.isEmpty()) {
             sb.append("## 前置依赖关系\n\n");
             for (var edge : prereqEdges) {
-                var fromNode = nodeMap.get(edge.getSourceNodeId());
-                var toNode = nodeMap.get(edge.getTargetNodeId());
-                String fromName = fromNode != null ? extractKpName(fromNode) : edge.getSourceNodeId();
-                String toName = toNode != null ? extractKpName(toNode) : edge.getTargetNodeId();
-                double strength = edge.getWeight() != null ? edge.getWeight() : 0;
+                var fromNode = nodeMap.get(edge.sourceNodeId());
+                var toNode = nodeMap.get(edge.targetNodeId());
+                String fromName = fromNode != null ? extractKpName(fromNode) : edge.sourceNodeId();
+                String toName = toNode != null ? extractKpName(toNode) : edge.targetNodeId();
+                double strength = edge.weight() != null ? edge.weight() : 0;
                 sb.append("- **").append(fromName).append("** → **").append(toName)
                         .append("**（依赖强度: ").append(String.format("%.2f", strength)).append("）\n");
             }
@@ -691,11 +690,13 @@ public class QueryServiceImpl implements QueryService {
         );
     }
 
-    String extractKpName(GraphNode node) {
-        if (node instanceof com.graphnexus.infrastructure.neo4j.node.KnowledgePointNode kp) {
-            return kp.getName() != null ? kp.getName() : node.getId();
+    String extractKpName(GraphNodeData node) {
+        // KnowledgePointNode 的 name 属性在 properties Map 中
+        if (node.properties() != null && node.properties().containsKey("name")) {
+            Object name = node.properties().get("name");
+            return name != null ? name.toString() : node.id();
         }
-        return node.getId();
+        return node.id();
     }
 
     TokenUsage parseTokenUsage(String json) {

@@ -1,4 +1,4 @@
-package com.graphnexus.application.graph.metrics.model;
+package com.graphnexus.common.model;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

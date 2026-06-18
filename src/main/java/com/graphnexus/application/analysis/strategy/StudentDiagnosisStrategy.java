@@ -3,12 +3,11 @@ package com.graphnexus.application.analysis.strategy;
 import com.graphnexus.application.analysis.model.PruningRequest;
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.analysis.model.PrunedSubgraph.PruningMeta;
-import com.graphnexus.infrastructure.mysql.file.ExamRecordDO;
-import com.graphnexus.infrastructure.mysql.file.ExamRecordRepository;
-import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
-import com.graphnexus.infrastructure.neo4j.edge.MastersEdge;
-import com.graphnexus.infrastructure.neo4j.edge.PrerequisiteEdge;
-import com.graphnexus.infrastructure.neo4j.node.GraphNode;
+import com.graphnexus.application.graph.core.model.GraphDataConverter;
+import com.graphnexus.application.graph.core.model.GraphEdgeData;
+import com.graphnexus.application.graph.core.model.GraphNodeData;
+import com.graphnexus.infrastructure.mysql.file.entity.ExamRecordDO;
+import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
 import com.graphnexus.infrastructure.neo4j.node.KnowledgePointNode;
 import com.graphnexus.infrastructure.neo4j.node.StudentNode;
 import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
@@ -201,12 +200,12 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             int maxHops,
             String subject) {
 
-        List<GraphNode> nodes = new ArrayList<>();
-        List<GraphEdge> edges = new ArrayList<>();
+        List<GraphNodeData> nodes = new ArrayList<>();
+        List<GraphEdgeData> edges = new ArrayList<>();
         Set<String> seenNodeIds = new HashSet<>();
 
         // Student 节点
-        nodes.add(studentNode);
+        nodes.add(GraphDataConverter.toNodeData(studentNode));
         seenNodeIds.add(studentNode.getId());
 
         // 弱掌握 KP 节点 + MASTERS 边
@@ -216,10 +215,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             }
             Double weight = kpMasteryMap.get(kpId);
             if (weight != null) {
-                edges.add(new MastersEdge(studentNode.getId(), kpId));
-                // 直接设置 weight（通过基类属性）
-                GraphEdge last = edges.get(edges.size() - 1);
-                last.setWeight(weight);
+                edges.add(new GraphEdgeData(studentNode.getId(), kpId, "MASTERS", weight, null));
             }
         }
 
@@ -232,8 +228,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
                 // 前置 KP 的 MASTERS 边
                 Double weight = kpMasteryMap.get(kpId);
                 if (weight != null) {
-                    edges.add(new MastersEdge(studentNode.getId(), kpId));
-                    edges.get(edges.size() - 1).setWeight(weight);
+                    edges.add(new GraphEdgeData(studentNode.getId(), kpId, "MASTERS", weight, null));
                 }
             }
         }
@@ -245,8 +240,8 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             if (seenNodeIds.add(toKpId)) {
                 nodes.add(buildKpNode(toKpId, kpNameMap.get(toKpId), subject));
             }
-            edges.add(new PrerequisiteEdge(
-                    (String) row.get("fromKpId"), toKpId, 1.0, ""));
+            edges.add(new GraphEdgeData(
+                    (String) row.get("fromKpId"), toKpId, "PREREQUISITE_OF", 1.0, null));
         }
 
         // 元信息
@@ -264,10 +259,10 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         return new PrunedSubgraph(nodes, edges, meta);
     }
 
-    private KnowledgePointNode buildKpNode(String id, String name, String subject) {
+    private GraphNodeData buildKpNode(String id, String name, String subject) {
         KnowledgePointNode kp = new KnowledgePointNode(name, subject);
         kp.setId(id);
-        return kp;
+        return GraphDataConverter.toNodeData(kp);
     }
 
     private double getParam(Map<String, Object> params, String key, double defaultValue) {

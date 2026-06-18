@@ -1,4 +1,4 @@
-package com.graphnexus.application.graph.metrics.model;
+package com.graphnexus.common.model;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

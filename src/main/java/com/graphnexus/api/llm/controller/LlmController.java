@@ -1,7 +1,7 @@
 package com.graphnexus.api.llm.controller;
 
 import com.graphnexus.api.llm.dto.LlmDebugRequest;
-import com.graphnexus.application.llmgateway.service.LlmGateway;
+import com.graphnexus.common.LlmGateway;
 import io.swagger.v3.oas.annotations.Hidden;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

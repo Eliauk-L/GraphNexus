@@ -1,6 +1,6 @@
 package com.graphnexus.application.graph.metrics.service;
 
-import com.graphnexus.application.graph.metrics.model.MetricResultBO;
+import com.graphnexus.common.model.MetricResultBO;
 
 import java.util.List;
 import java.util.Set;

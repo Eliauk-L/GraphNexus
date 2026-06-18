@@ -1,6 +1,6 @@
 package com.graphnexus.api.graph.dto.metrics;
 
-import com.graphnexus.application.graph.metrics.model.MetricResultBO;
+import com.graphnexus.common.model.MetricResultBO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

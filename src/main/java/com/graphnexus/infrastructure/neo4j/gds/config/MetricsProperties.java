@@ -1,4 +1,4 @@
-package com.graphnexus.application.graph.metrics.config;
+package com.graphnexus.infrastructure.neo4j.gds.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

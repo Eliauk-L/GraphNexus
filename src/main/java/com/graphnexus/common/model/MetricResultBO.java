@@ -1,4 +1,4 @@
-package com.graphnexus.application.graph.metrics.model;
+package com.graphnexus.common.model;
 
 /**
  * 图指标计算结果 BO —— 不可变 record，供 GdsAdapter → MetricsService → MetricsController 全链路传递。

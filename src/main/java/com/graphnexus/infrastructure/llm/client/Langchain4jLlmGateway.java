@@ -1,6 +1,6 @@
 package com.graphnexus.infrastructure.llm.client;
 
-import com.graphnexus.application.llmgateway.service.LlmGateway;
+import com.graphnexus.common.LlmGateway;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import dev.langchain4j.data.message.SystemMessage;
