@@ -119,7 +119,7 @@ class FileProcessingIntegrationTest {
     @Order(3)
     @DisplayName("AC-4: 分页查询文档列表")
     void listDocumentsShouldReturnPage() {
-        var page = fileService.listDocuments(1, 10);
+        var page = fileService.listDocuments(1, 10, null, null);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(1);
     }
 

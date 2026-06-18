@@ -56,14 +56,14 @@ async function confirmUpload() {
       <NUpload
         :show-file-list="true"
         :max="1"
-        accept=".pdf,.csv"
+        accept=".pdf,.csv,.txt"
         @change="handleFileChange"
       >
         <div class="upload-zone">
           <UploadIcon :size="48" color="var(--color-text-tertiary)" />
           <p class="body-lead">选择文件或拖拽到此区域</p>
           <p class="supporting" style="color: var(--color-text-tertiary)">
-            支持 PDF、CSV 格式，最大 50MB
+            支持 PDF、TXT、CSV 格式，最大 50MB
           </p>
         </div>
       </NUpload>

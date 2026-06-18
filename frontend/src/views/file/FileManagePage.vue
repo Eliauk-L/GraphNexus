@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref, h } from 'vue'
-import { NSpace, NModal, useMessage } from 'naive-ui'
-import { Upload, Trash2, Play } from '@lucide/vue'
+import { NSpace, useMessage } from 'naive-ui'
 import { useFileStore } from './fileStore'
-import type { GradeUploadResultVO } from '@/api/types'
 import FileUpload from './components/FileUpload.vue'
 import BaseButton from '@/common/components/BaseButton.vue'
-import BaseSelect from '@/common/components/BaseSelect.vue'
+import BaseInput from '@/common/components/BaseInput.vue'
 import StatusBadge from '@/common/components/StatusBadge.vue'
 import DataTable from '@/common/components/DataTable.vue'
 import type { DataTableColumns } from 'naive-ui'
@@ -17,31 +15,34 @@ const message = useMessage()
 const page = ref(1)
 const pageSize = ref(10)
 const selectedSubject = ref('数学')
+const searchName = ref('')
+const filterFileType = ref<string | null>(null)
 
 const columns: DataTableColumns<any> = [
-  { title: '文件名', key: 'name', width: 280, ellipsis: { tooltip: true } },
+  { title: '文件名', key: 'name', width: 260, ellipsis: { tooltip: true } },
+  { title: '类型', key: 'fileType', width: 60 },
   { title: '学科', key: 'subject', width: 80 },
   {
     title: '大小', key: 'fileSize', width: 90,
-    render(row) { return formatSize(row.fileSize) },
+    render(row: any) { return formatSize(row.fileSize) },
   },
   {
     title: '状态', key: 'status', width: 100,
-    render(row) { return h(StatusBadge, { status: row.status }) },
+    render(row: any) { return h(StatusBadge, { status: row.status }) },
   },
   {
     title: '上传时间', key: 'createTime', width: 160,
-    render(row) { return formatTime(row.createTime) },
+    render(row: any) { return formatTime(row.createTime) },
   },
   {
     title: '操作', key: 'actions', width: 140,
-    render(row) {
+    render(row: any) {
       return h(NSpace, { size: 'small' }, () => [
-        row.status === 'UPLOADED'
+        row.status === 'UPLOADED' || row.status === 'PARSED'
           ? h(BaseButton, { size: 'small', onClick: () => handleProcess(row.documentId) }, () => '解析')
           : null,
         h(BaseButton, {
-          variant: 'danger', size: 'small',
+          variant: 'danger' as const, size: 'small',
           onClick: () => handleDelete(row.documentId, row.name),
         }, () => '删除'),
       ])
@@ -62,12 +63,19 @@ function formatTime(iso: string): string {
   return iso.replace('T', ' ').substring(0, 19)
 }
 
+function load() {
+  store.loadFiles(page.value, pageSize.value,
+    filterFileType.value || undefined,
+    searchName.value || undefined,
+  )
+}
+
 async function handleProcess(id: number) {
   try {
     await store.process(id)
     message.success('解析完成')
   } catch {
-    // error already handled by store
+    // handled by store
   }
 }
 
@@ -76,16 +84,16 @@ async function handleDelete(id: number, name: string) {
     await store.remove(id)
     message.success(`已删除: ${name}`)
   } catch {
-    // error already handled by store
+    // handled by store
   }
 }
 
-async function handleUploadFinish() {
-  await store.loadFiles(page.value, pageSize.value)
+function handleUploadFinish() {
+  load()
 }
 
 onMounted(() => {
-  store.loadFiles(page.value, pageSize.value)
+  load()
 })
 </script>
 
@@ -98,6 +106,17 @@ onMounted(() => {
       </NSpace>
     </div>
 
+    <!-- 搜索栏 -->
+    <div class="search-bar">
+      <BaseInput
+        v-model="searchName"
+        placeholder="搜索文件名..."
+        style="width: 200px"
+        @keyup.enter="load"
+      />
+      <BaseButton @click="load">搜索</BaseButton>
+    </div>
+
     <DataTable
       :columns="columns"
       :data="store.files"
@@ -106,7 +125,7 @@ onMounted(() => {
       :page-size="pageSize"
       :total="store.total"
       empty-text="暂无文件，点击上方按钮上传"
-      @update:page="(p) => { page = p; store.loadFiles(p, pageSize); }"
+      @update:page="(p: number) => { page = p; load(); }"
     />
   </div>
 </template>
@@ -117,5 +136,12 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-lg);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
 }
 </style>

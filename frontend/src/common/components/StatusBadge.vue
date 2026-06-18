@@ -8,13 +8,21 @@ const props = defineProps<{
 const statusInfo = computed(() => {
   const map: Record<string, { label: string; color: string; bg: string }> = {
     UPLOADED: { label: '已上传', color: 'var(--color-text-secondary)', bg: 'oklch(0.65 0.005 95 / 0.12)' },
-    PROCESSING: { label: '处理中', color: 'var(--color-warning)', bg: 'oklch(0.65 0.15 85 / 0.12)' },
+    PARSING: { label: '解析中', color: 'var(--color-warning)', bg: 'oklch(0.65 0.15 85 / 0.12)' },
+    PARSED: { label: '已解析', color: 'var(--color-success)', bg: 'oklch(0.55 0.15 145 / 0.12)' },
+    EXTRACTING: { label: '抽取中', color: 'var(--color-warning)', bg: 'oklch(0.65 0.15 85 / 0.12)' },
+    EXTRACTED: { label: '已抽取', color: 'var(--color-success)', bg: 'oklch(0.55 0.15 145 / 0.12)' },
+    FUSING: { label: '融合中', color: 'var(--color-warning)', bg: 'oklch(0.65 0.15 85 / 0.12)' },
     COMPLETED: { label: '已完成', color: 'var(--color-success)', bg: 'oklch(0.55 0.15 145 / 0.12)' },
     FAILED: { label: '失败', color: 'var(--color-error)', bg: 'oklch(0.50 0.20 25 / 0.12)' },
     PENDING: { label: '排队中', color: 'var(--color-text-tertiary)', bg: 'oklch(0.65 0.005 95 / 0.12)' },
   }
   return map[props.status] ?? { label: props.status, color: 'var(--color-text-secondary)', bg: 'oklch(0.65 0.005 95 / 0.08)' }
 })
+
+const isAnimating = computed(() =>
+  ['PARSING', 'EXTRACTING', 'FUSING', 'PENDING'].includes(props.status),
+)
 </script>
 
 <template>
@@ -22,10 +30,7 @@ const statusInfo = computed(() => {
     class="status-badge label"
     :style="{ color: statusInfo.color, backgroundColor: statusInfo.bg }"
   >
-    <span
-      v-if="props.status === 'PROCESSING'"
-      class="status-badge__spinner"
-    />
+    <span v-if="isAnimating" class="status-badge__spinner" />
     {{ statusInfo.label }}
   </span>
 </template>

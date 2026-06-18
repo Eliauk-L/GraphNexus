@@ -199,7 +199,7 @@ class FileServiceTest {
         when(fileRepository.findByIsDeletedFalse(any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<FileBO> result = fileService.listDocuments(1, 10);
+        Page<FileBO> result = fileService.listDocuments(1, 10, null, null);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());

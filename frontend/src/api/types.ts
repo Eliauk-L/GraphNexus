@@ -1,6 +1,6 @@
 // ============================================
 // GraphNexus API TypeScript 类型定义
-// 来源：CHANGE.md 后端 API 清单 + CONTEXT.md DTO 定义
+// 来源：后端 Controller + DTO/VO（2026-06-18 审查）
 // ============================================
 
 // ── 通用响应 ──
@@ -31,11 +31,19 @@ export interface ErrorResponse {
   timestamp: number
 }
 
-// ── 文档管理 ──
+// ── 文件管理（FileController）──
 
-export type DocumentStatus = 'UPLOADED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+export type FileStatus =
+  | 'UPLOADED'
+  | 'PARSING'
+  | 'PARSED'
+  | 'EXTRACTING'
+  | 'EXTRACTED'
+  | 'FUSING'
+  | 'COMPLETED'
+  | 'FAILED'
 
-export interface DocumentVO {
+export interface FileVO {
   documentId: number
   documentNo: string
   name: string
@@ -43,7 +51,8 @@ export interface DocumentVO {
   fileSize: number
   minioPath: string
   pageCount: number
-  status: DocumentStatus
+  status: FileStatus
+  fileType: string
   createTime: string
   updateTime: string
 }
@@ -54,7 +63,7 @@ export interface ParseResultVO {
   pageCount: number
 }
 
-export interface UpdateDocumentRequest {
+export interface UpdateFileRequest {
   name: string
 }
 
@@ -64,7 +73,7 @@ export interface DeleteResultVO {
   deletedNeo4jEdges: number
 }
 
-// ── 成绩管理 ──
+// ── 成绩管理（GradeController）──
 
 export interface GradeRecordVO {
   id: number

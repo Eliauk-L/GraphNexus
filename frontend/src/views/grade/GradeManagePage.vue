@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, h } from 'vue'
-import { NSpace, useMessage } from 'naive-ui'
-import { Search } from '@lucide/vue'
+import { onMounted, ref, h } from 'vue'
+import { NSpace, NDataTable, useMessage } from 'naive-ui'
+import { Search, Trash2 } from '@lucide/vue'
 import { useGradeStore } from './gradeStore'
 import BaseButton from '@/common/components/BaseButton.vue'
 import BaseInput from '@/common/components/BaseInput.vue'
@@ -11,6 +11,8 @@ import type { DataTableColumns } from 'naive-ui'
 const store = useGradeStore()
 const message = useMessage()
 const searchExamNo = ref('')
+const page = ref(1)
+const pageSize = ref(10)
 
 const columns: DataTableColumns<any> = [
   { title: '学号', key: 'studentNo', width: 120 },
@@ -20,7 +22,7 @@ const columns: DataTableColumns<any> = [
   { title: '排名', key: 'classRank', width: 80 },
   {
     title: '得分明细', key: 'scoreDetails', ellipsis: { tooltip: true },
-    render(row) { return typeof row.scoreDetails === 'string' ? row.scoreDetails : JSON.stringify(row.scoreDetails) },
+    render(row: any) { return typeof row.scoreDetails === 'string' ? row.scoreDetails : JSON.stringify(row.scoreDetails) },
   },
 ]
 
@@ -37,6 +39,10 @@ async function handleDelete() {
     // handled by store
   }
 }
+
+onMounted(() => {
+  store.loadExams(page.value, pageSize.value)
+})
 </script>
 
 <template>
@@ -62,6 +68,7 @@ async function handleDelete() {
         @click="handleDelete"
         style="margin-left: auto"
       >
+        <Trash2 :size="16" style="margin-right: 4px" />
         删除此考试
       </BaseButton>
     </div>
@@ -77,8 +84,32 @@ async function handleDelete() {
       :loading="store.loading"
       empty-text="请先输入考试编号查询"
     />
+
+    <!-- 考试列表 -->
+    <div v-if="store.exams.length > 0" style="margin-top: var(--spacing-2xl)">
+      <h2 class="title" style="margin-bottom: var(--spacing-md)">历史考试</h2>
+      <DataTable
+        :columns="examColumns"
+        :data="store.exams"
+        empty-text="暂无考试记录"
+      />
+    </div>
   </div>
 </template>
+
+<script lang="ts">
+import { h } from 'vue'
+import type { DataTableColumns } from 'naive-ui'
+
+const examColumns: DataTableColumns<any> = [
+  { title: '考试编号', key: 'examNo', width: 140 },
+  { title: '考试名称', key: 'examName', width: 200, ellipsis: { tooltip: true } },
+  { title: '学科', key: 'subject', width: 80 },
+  { title: '考试日期', key: 'examDate', width: 120 },
+  { title: '考生数', key: 'studentCount', width: 80 },
+  { title: '试题数', key: 'questionCount', width: 80 },
+]
+</script>
 
 <style scoped>
 .page-header {
