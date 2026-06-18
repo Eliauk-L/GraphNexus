@@ -5,12 +5,22 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/files',
+      redirect: '/materials',
     },
     {
-      path: '/files',
-      name: 'files',
+      path: '/materials',
+      name: 'materials',
       component: () => import('@/views/file/FileManagePage.vue'),
+    },
+    {
+      path: '/knowledge-graph',
+      name: 'knowledge-graph',
+      component: () => import('@/views/graph/GraphVisualizePage.vue'),
+    },
+    {
+      path: '/knowledge-graph/document/:id',
+      name: 'knowledge-graph-document',
+      component: () => import('@/views/graph/GraphVisualizePage.vue'),
     },
     {
       path: '/grades',
@@ -18,28 +28,22 @@ const router = createRouter({
       component: () => import('@/views/grade/GradeManagePage.vue'),
     },
     {
-      path: '/qa',
-      name: 'qa',
+      path: '/diagnosis',
+      name: 'diagnosis',
       component: () => import('@/views/query/IntelligentQAPage.vue'),
     },
     {
-      path: '/graph',
-      name: 'graph',
-      component: () => import('@/views/graph/GraphVisualizePage.vue'),
+      path: '/settings',
+      redirect: '/settings/fusion',
     },
     {
-      path: '/graph/document/:id',
-      name: 'graph-document',
-      component: () => import('@/views/graph/GraphVisualizePage.vue'),
-    },
-    {
-      path: '/fusion',
-      name: 'fusion',
+      path: '/settings/fusion',
+      name: 'settings-fusion',
       component: () => import('@/views/fusion/FusionManagePage.vue'),
     },
     {
-      path: '/metrics',
-      name: 'metrics',
+      path: '/settings/metrics',
+      name: 'settings-metrics',
       component: () => import('@/views/metrics/MetricsDashboardPage.vue'),
     },
   ],

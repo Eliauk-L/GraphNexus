@@ -2,23 +2,28 @@
 import { computed } from 'vue'
 import { useRoute, RouterView, RouterLink } from 'vue-router'
 import {
-  FolderOpen, GitGraph, GraduationCap, MessageCircle,
-  GitMerge, BarChart3, User,
+  BookOpen, GitGraph, GraduationCap, MessageCircle,
+  Settings, GitMerge, BarChart3, User,
 } from '@lucide/vue'
 
 const route = useRoute()
 
 const navItems = [
-  { path: '/files', label: '文件管理', icon: FolderOpen },
-  { path: '/graph', label: '图谱可视化', icon: GitGraph },
-  { path: '/grades', label: '成绩管理', icon: GraduationCap },
-  { path: '/qa', label: '智能问答', icon: MessageCircle },
-  { path: '/fusion', label: '融合管理', icon: GitMerge },
-  { path: '/metrics', label: '图指标', icon: BarChart3 },
+  { path: '/materials', label: '教材管理', icon: BookOpen },
+  { path: '/knowledge-graph', label: '知识点可视化', icon: GitGraph },
+  { path: '/grades', label: '学生成绩管理', icon: GraduationCap },
+  { path: '/diagnosis', label: '学情诊断', icon: MessageCircle },
 ]
 
+const settingsItems = [
+  { path: '/settings/fusion', label: '融合管理', icon: GitMerge },
+  { path: '/settings/metrics', label: '图指标', icon: BarChart3 },
+]
+
+const allItems = [...navItems, ...settingsItems]
+
 const currentTitle = computed(() => {
-  return navItems.find((i) => route.path.startsWith(i.path))?.label ?? 'GraphNexus'
+  return allItems.find((i) => route.path.startsWith(i.path))?.label ?? 'GraphNexus'
 })
 </script>
 
@@ -41,6 +46,20 @@ const currentTitle = computed(() => {
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
+
+      <!-- 系统设置（左下角弱化） -->
+      <div class="sidebar__bottom">
+        <RouterLink
+          v-for="item in settingsItems"
+          :key="item.path"
+          :to="item.path"
+          class="sidebar__item sidebar__item--muted"
+          :class="{ active: route.path.startsWith(item.path) }"
+        >
+          <component :is="item.icon" :size="16" />
+          <span>{{ item.label }}</span>
+        </RouterLink>
+      </div>
     </aside>
 
     <!-- 内容区 -->
@@ -88,6 +107,7 @@ const currentTitle = computed(() => {
   flex-direction: column;
   gap: 2px;
   padding: 0 var(--spacing-sm);
+  flex: 1;
 }
 
 .sidebar__item {
@@ -124,6 +144,31 @@ const currentTitle = computed(() => {
   width: 3px;
   background: var(--color-brand);
   border-radius: 0 var(--rounded-sm) var(--rounded-sm) 0;
+}
+
+/* ── 系统设置（左下角弱化）── */
+.sidebar__bottom {
+  padding: var(--spacing-sm);
+  border-top: 1px solid oklch(1 0 0 / 0.08);
+  margin-top: auto;
+}
+
+.sidebar__item--muted {
+  font-size: 0.8125rem;
+  color: oklch(0.75 0.01 250 / 0.55);
+  height: 36px;
+}
+
+.sidebar__item--muted:hover {
+  color: oklch(0.75 0.01 250 / 0.8);
+}
+
+.sidebar__item--muted.active {
+  color: var(--color-sidebar-text-active);
+}
+
+.sidebar__item--muted.active::before {
+  width: 2px;
 }
 
 /* ── 主区域 ── */
