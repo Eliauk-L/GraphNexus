@@ -4,7 +4,7 @@ import { NModal, NSpace, useMessage } from 'naive-ui'
 import { Upload as UploadIcon } from '@lucide/vue'
 import { useFileStore } from '../fileStore'
 import BaseButton from '@/common/components/BaseButton.vue'
-import BaseSelect from '@/common/components/BaseSelect.vue'
+import BaseInput from '@/common/components/BaseInput.vue'
 
 const emit = defineEmits<{
   uploaded: []
@@ -14,7 +14,7 @@ const store = useFileStore()
 const message = useMessage()
 const showModal = ref(false)
 const selectedFile = ref<File | null>(null)
-const selectedSubject = ref<string | null>(null)
+const selectedSubject = ref('')
 const uploading = ref(false)
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -40,7 +40,7 @@ function handleFileChange(e: Event) {
 function handleUpload() {
   showModal.value = true
   selectedFile.value = null
-  selectedSubject.value = null
+  selectedSubject.value = ''
 }
 
 function triggerFileInput() {
@@ -48,7 +48,7 @@ function triggerFileInput() {
 }
 
 async function confirmUpload() {
-  if (!selectedFile.value || !selectedSubject.value) return
+  if (!selectedFile.value || !selectedSubject.value.trim()) return
   uploading.value = true
   try {
     await store.upload(selectedFile.value, selectedSubject.value)
@@ -85,13 +85,12 @@ function removeFile() {
 
   <NModal v-model:show="showModal" title="上传文件" style="width: 480px">
     <div class="upload-modal">
-      <!-- 学科选择 -->
+      <!-- 学科输入 -->
       <div class="field">
         <label class="label">学科 <span style="color: var(--color-error)">*</span></label>
-        <BaseSelect
+        <BaseInput
           v-model="selectedSubject"
-          :options="subjectOptions"
-          placeholder="请选择学科"
+          placeholder="请输入学科，如 数学"
         />
       </div>
 
@@ -126,7 +125,7 @@ function removeFile() {
       <div class="modal-footer">
         <NSpace justify="end">
           <BaseButton variant="danger" @click="showModal = false">取消</BaseButton>
-          <BaseButton :disabled="!selectedFile || !selectedSubject || uploading" @click="confirmUpload">
+          <BaseButton :disabled="!selectedFile || !selectedSubject.trim() || uploading" @click="confirmUpload">
             {{ uploading ? '上传中...' : '确认上传' }}
           </BaseButton>
         </NSpace>

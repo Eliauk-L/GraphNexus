@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref, h } from 'vue'
-import { useMessage } from 'naive-ui'
-import { Search, Trash2 } from '@lucide/vue'
+import { NSpace, useMessage } from 'naive-ui'
 import { useGradeStore } from './gradeStore'
 import BaseButton from '@/common/components/BaseButton.vue'
 import BaseInput from '@/common/components/BaseInput.vue'
 import DataTable from '@/common/components/DataTable.vue'
+import { Search, Trash2 } from '@lucide/vue'
 import type { DataTableColumns } from 'naive-ui'
+import type { GradeUploadResultVO } from '@/api/types'
 
 const store = useGradeStore()
 const message = useMessage()
@@ -26,7 +27,7 @@ const columns: DataTableColumns<any> = [
   },
 ]
 
-const examColumns: DataTableColumns<any> = [
+const examColumns: DataTableColumns<GradeUploadResultVO> = [
   { title: '考试编号', key: 'examNo', width: 140 },
   { title: '考试名称', key: 'examName', width: 200, ellipsis: { tooltip: true } },
   { title: '学科', key: 'subject', width: 80 },
