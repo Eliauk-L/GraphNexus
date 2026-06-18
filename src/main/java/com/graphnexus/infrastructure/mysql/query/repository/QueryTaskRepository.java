@@ -1,7 +1,9 @@
-package com.graphnexus.infrastructure.mysql.query;
+package com.graphnexus.infrastructure.mysql.query.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import com.graphnexus.infrastructure.mysql.query.entity.QueryTaskDO;
+import com.graphnexus.infrastructure.mysql.query.entity.QueryTaskStatus;
 
 import java.util.Optional;
 

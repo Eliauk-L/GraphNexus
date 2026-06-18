@@ -1,7 +1,8 @@
-package com.graphnexus.infrastructure.mysql.fusion;
+package com.graphnexus.infrastructure.mysql.fusion.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import com.graphnexus.infrastructure.mysql.fusion.entity.FusionLogDO;
 
 import java.util.Optional;
 

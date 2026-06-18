@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.query;
+package com.graphnexus.infrastructure.mysql.query.entity;
 
 /**
  * 问答任务状态枚举。

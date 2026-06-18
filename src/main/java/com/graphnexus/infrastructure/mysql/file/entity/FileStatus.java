@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.file;
+package com.graphnexus.infrastructure.mysql.file.entity;
 
 /**
  * 文档生命周期状态。

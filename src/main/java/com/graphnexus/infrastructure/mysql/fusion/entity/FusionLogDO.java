@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.fusion;
+package com.graphnexus.infrastructure.mysql.fusion.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

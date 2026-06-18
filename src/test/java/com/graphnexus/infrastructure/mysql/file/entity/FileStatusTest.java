@@ -1,4 +1,4 @@
-package com.graphnexus.infrastructure.mysql.file;
+package com.graphnexus.infrastructure.mysql.file.entity;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
