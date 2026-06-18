@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, h } from 'vue'
-import { NSpace, NDataTable, useMessage } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { Search, Trash2 } from '@lucide/vue'
 import { useGradeStore } from './gradeStore'
 import BaseButton from '@/common/components/BaseButton.vue'
@@ -24,6 +24,15 @@ const columns: DataTableColumns<any> = [
     title: '得分明细', key: 'scoreDetails', ellipsis: { tooltip: true },
     render(row: any) { return typeof row.scoreDetails === 'string' ? row.scoreDetails : JSON.stringify(row.scoreDetails) },
   },
+]
+
+const examColumns: DataTableColumns<any> = [
+  { title: '考试编号', key: 'examNo', width: 140 },
+  { title: '考试名称', key: 'examName', width: 200, ellipsis: { tooltip: true } },
+  { title: '学科', key: 'subject', width: 80 },
+  { title: '考试日期', key: 'examDate', width: 120 },
+  { title: '考生数', key: 'studentCount', width: 80 },
+  { title: '试题数', key: 'questionCount', width: 80 },
 ]
 
 async function handleSearch() {
@@ -73,7 +82,6 @@ onMounted(() => {
       </BaseButton>
     </div>
 
-    <!-- 考试信息摘要 -->
     <div v-if="store.grades.length > 0" class="exam-info supporting" style="color: var(--color-text-secondary)">
       考试 {{ store.examNo }} | {{ store.grades[0].examName }} | 学科: {{ store.grades[0].subject }} | 共 {{ store.grades.length }} 名考生
     </div>
@@ -85,7 +93,6 @@ onMounted(() => {
       empty-text="请先输入考试编号查询"
     />
 
-    <!-- 考试列表 -->
     <div v-if="store.exams.length > 0" style="margin-top: var(--spacing-2xl)">
       <h2 class="title" style="margin-bottom: var(--spacing-md)">历史考试</h2>
       <DataTable
@@ -97,33 +104,8 @@ onMounted(() => {
   </div>
 </template>
 
-<script lang="ts">
-import { h } from 'vue'
-import type { DataTableColumns } from 'naive-ui'
-
-const examColumns: DataTableColumns<any> = [
-  { title: '考试编号', key: 'examNo', width: 140 },
-  { title: '考试名称', key: 'examName', width: 200, ellipsis: { tooltip: true } },
-  { title: '学科', key: 'subject', width: 80 },
-  { title: '考试日期', key: 'examDate', width: 120 },
-  { title: '考生数', key: 'studentCount', width: 80 },
-  { title: '试题数', key: 'questionCount', width: 80 },
-]
-</script>
-
 <style scoped>
-.page-header {
-  margin-bottom: var(--spacing-lg);
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
-}
-
-.exam-info {
-  margin-bottom: var(--spacing-md);
-}
+.page-header { margin-bottom: var(--spacing-lg); }
+.search-bar { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-md); }
+.exam-info { margin-bottom: var(--spacing-md); }
 </style>
