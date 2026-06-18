@@ -86,7 +86,7 @@ public class QueryServiceImpl implements QueryService {
                     "maxHops", (double) queryProperties.getPruning().getMaxPrerequisiteHops()
             );
             PruningRequest pruningRequest = new PruningRequest(
-                    intent, student.getStudentNo(), subject, params);
+                    intent.name(), student.getStudentNo(), subject, params);
             PrunedSubgraph subgraph = diagnosisStrategy.prune(pruningRequest);
 
             if (subgraph.nodes().isEmpty() && "STUDENT_NOT_FOUND".equals(subgraph.meta().strategy())) {
@@ -226,7 +226,7 @@ public class QueryServiceImpl implements QueryService {
                     "weakThreshold", queryProperties.getPruning().getWeakThreshold(),
                     "maxHops", (double) queryProperties.getPruning().getMaxPrerequisiteHops()
             );
-            PruningRequest pruningRequest = new PruningRequest(intent, student.getStudentNo(), subject, params);
+            PruningRequest pruningRequest = new PruningRequest(intent.name(), student.getStudentNo(), subject, params);
             PrunedSubgraph subgraph = diagnosisStrategy.prune(pruningRequest);
             String subgraphText = serializeSubgraph(subgraph, student);
 

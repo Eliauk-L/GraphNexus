@@ -16,9 +16,8 @@ import com.graphnexus.infrastructure.mysql.document.ExamRecordRepository;
 import com.graphnexus.application.file.core.model.DeleteResultBO;
 import com.graphnexus.application.file.parse.model.FileParseRequest;
 import com.graphnexus.application.file.parse.parser.FileParserRegistry;
+import com.graphnexus.application.file.upload.event.GradeUploadedEvent;
 import com.graphnexus.application.file.upload.service.GradeService;
-import com.graphnexus.application.graph.fusion.service.FusionService;
-import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.common.util.Md5Utils;
@@ -54,7 +53,6 @@ public class GradeServiceImpl implements GradeService {
     private final FileStorageService fileStorageService;
     private final FileParserRegistry fileParserRegistry;
     private final ObjectMapper objectMapper;
-    private final FusionService fusionService;
     private final ApplicationEventPublisher eventPublisher;
 
     // ======================== 上传 ========================
@@ -161,16 +159,9 @@ public class GradeServiceImpl implements GradeService {
                 payload.examNo(), payload.students().size(),
                 payload.questionCount(), payload.knowledgePoints().size());
 
-        // 增量融合（见 ADR-009）
-        try {
-            fusionService.fuseIncremental(payload.knowledgePoints(), payload.subject());
-        } catch (Exception e) {
-            log.error("增量融合失败（CSV 上传后），examNo={}, kps={}，可手动全量融合修复",
-                    payload.examNo(), payload.knowledgePoints(), e);
-        }
-
-        // 图谱变更事件 — 触发指标缓存失效（见 ADR-013 §4）
-        eventPublisher.publishEvent(new GraphChangedEvent(this));
+        // 发布成绩上传完成事件 — 图模块监听后触发增量融合 + 指标缓存失效
+        eventPublisher.publishEvent(new GradeUploadedEvent(
+                this, payload.examNo(), payload.subject(), payload.knowledgePoints()));
 
         return GradeUploadResultBO.builder()
                 .examNo(payload.examNo())

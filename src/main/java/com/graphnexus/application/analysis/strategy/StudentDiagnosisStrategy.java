@@ -3,7 +3,6 @@ package com.graphnexus.application.analysis.strategy;
 import com.graphnexus.application.analysis.model.PruningRequest;
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.analysis.model.PrunedSubgraph.PruningMeta;
-import com.graphnexus.application.query.chat.model.QueryIntent;
 import com.graphnexus.infrastructure.mysql.document.ExamRecordDO;
 import com.graphnexus.infrastructure.mysql.document.ExamRecordRepository;
 import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
@@ -50,7 +49,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
 
     @Override
     public PrunedSubgraph prune(PruningRequest request) {
-        if (request.intent() != QueryIntent.STUDENT_DIAGNOSIS) {
+        if (!"STUDENT_DIAGNOSIS".equals(request.intent())) {
             log.warn("StudentDiagnosisStrategy 收到非预期意图: {}", request.intent());
             return emptyResult("UNSUPPORTED_INTENT");
         }
