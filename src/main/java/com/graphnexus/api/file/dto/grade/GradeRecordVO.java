@@ -1,4 +1,4 @@
-package com.graphnexus.api.file.dto.upload;
+package com.graphnexus.api.file.dto.grade;
 
 import com.graphnexus.application.file.grade.model.GradeRecordBO;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -1,4 +1,4 @@
-package com.graphnexus.api.file.dto.parse;
+package com.graphnexus.api.file.dto.textbook;
 
 import com.graphnexus.application.file.parse.ParseResult;
 import io.swagger.v3.oas.annotations.media.Schema;

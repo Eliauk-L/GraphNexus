@@ -1,4 +1,4 @@
-package com.graphnexus.api.file.dto.core;
+package com.graphnexus.api.file.dto.textbook;
 
 import com.graphnexus.application.file.textbook.model.DeleteResultBO;
 import io.swagger.v3.oas.annotations.media.Schema;

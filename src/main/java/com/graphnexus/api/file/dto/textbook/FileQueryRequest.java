@@ -1,4 +1,4 @@
-package com.graphnexus.api.file.dto.core;
+package com.graphnexus.api.file.dto.textbook;
 
 import io.swagger.v3.oas.annotations.Parameter;
 

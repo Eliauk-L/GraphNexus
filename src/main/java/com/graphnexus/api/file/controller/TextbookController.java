@@ -1,8 +1,8 @@
 package com.graphnexus.api.file.controller;
 
-import com.graphnexus.api.file.dto.core.FileVO;
-import com.graphnexus.api.file.dto.parse.ParseResultVO;
-import com.graphnexus.api.file.dto.core.UpdateFileRequest;
+import com.graphnexus.api.file.dto.textbook.FileVO;
+import com.graphnexus.api.file.dto.textbook.ParseResultVO;
+import com.graphnexus.api.file.dto.textbook.UpdateFileRequest;
 import com.graphnexus.application.file.textbook.model.FileBO;
 import com.graphnexus.application.file.textbook.model.UpdateFileBO;
 import com.graphnexus.application.file.parse.ParseResult;
