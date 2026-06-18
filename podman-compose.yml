@@ -8,10 +8,18 @@
 # 停止: podman compose down
 # 清理: podman compose down -v
 #
+# ⚠️  本文件仅管理基础设施服务。
+# 三层部署顺序:
+#   ① podman compose up -d                                          ← 基础设施
+#   ② podman build --format docker -t graphnexus-app:0.1.0 -f deployment/Containerfile .
+#   ③ podman compose -f deployment/podman-compose.app.yml up -d     ← 应用集群
+#   ④ podman compose -f deployment/podman-compose.nginx.yml up -d   ← Nginx 网关
+#
 # 若需更大内存，调整 Podman Machine：
 #   podman machine stop
 #   podman machine set --memory 4096 --cpus 6
 #   podman machine start
+# 查看端口占用： lsof -i tcp:8080
 # =============================================================================
 
 version: "3.9"
@@ -60,6 +68,11 @@ volumes:
   nginx-logs:
     labels:
       com.graphnexus.service: "nginx"
+
+# =============================================================================
+# GraphNexus 应用集群 → deployment/podman-compose.app.yml
+# Nginx 网关        → deployment/podman-compose.nginx.yml
+# =============================================================================
 
 # ---------------------------------------------------------------------------
 # 服务定义
@@ -227,34 +240,3 @@ services:
       start_period: 15s
     labels:
       com.graphnexus.role: "object-storage"
-
-  # =========================================================================
-  # 6. Nginx — 反向代理
-  # =========================================================================
-  # nginx:
-  #   image: docker.io/nginx:stable-alpine
-  #   container_name: graphnexus-nginx
-  #   restart: unless-stopped
-  #   hostname: nginx
-  #   networks:
-  #     - graphnexus-net
-  #   ports:
-  #     - "8080:80"
-  #   volumes:
-  #     - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf:Z,ro
-  #     - ./deployment/nginx/conf.d:/etc/nginx/conf.d:Z,ro
-  #     - nginx-logs:/var/log/nginx
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "curl -sf http://localhost:80/health || exit 1"]
-  #     interval: 15s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 10s
-  #   depends_on:
-  #     - neo4j
-  #     - mysql
-  #     - redis
-  #     - rabbitmq
-  #     - minio
-  #   labels:
-  #     com.graphnexus.role: "reverse-proxy"

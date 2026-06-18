@@ -1,0 +1,198 @@
+# =============================================================================
+# GraphNexus 容器化生产环境配置（profile: prod）
+# =============================================================================
+# 用途: Podman Compose 容器部署，所有主机名使用容器服务名
+# 激活: SPRING_PROFILES_ACTIVE=prod（通过环境变量注入）
+# 网络: graphnexus-net（容器间内部通信，见 podman-compose.yml）
+#
+# 安全: 所有凭证通过环境变量注入，默认值与 podman-compose.yml 一致
+#       生产环境务必通过 podman-compose 或 .env 文件覆盖所有密码
+# =============================================================================
+
+spring:
+
+  # ---------------------------------------------------------------------------
+  # Neo4j 图数据库
+  # ---------------------------------------------------------------------------
+  neo4j:
+    uri: bolt://neo4j:7687
+    authentication:
+      username: ${NEO4J_USERNAME:neo4j}
+      password: ${NEO4J_PASSWORD:graphnexus123}
+    pool:
+      max-connection-pool-size: 20
+
+  # ---------------------------------------------------------------------------
+  # MySQL 关系数据库
+  # ---------------------------------------------------------------------------
+  datasource:
+    url: jdbc:mysql://mysql:3306/graphnexus?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: ${MYSQL_USERNAME:graphnexus}
+    password: ${MYSQL_PASSWORD:graphnexus123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # ---------------------------------------------------------------------------
+  # 文件上传限制
+  # ---------------------------------------------------------------------------
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+
+  # ---------------------------------------------------------------------------
+  # Redis 缓存
+  # ---------------------------------------------------------------------------
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: ${REDIS_PASSWORD:graphnexus123}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ 消息队列
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: ${RABBITMQ_USERNAME:graphnexus}
+    password: ${RABBITMQ_PASSWORD:graphnexus123}
+    virtual-host: ${RABBITMQ_VHOST:graphnexus}
+
+  # ---------------------------------------------------------------------------
+  # DeepSeek API（Spring AI OpenAI starter，兼容 OpenAI 协议）
+  # ---------------------------------------------------------------------------
+  ai:
+    openai:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode
+      api-key: ${LLM_API_KEY:}
+      chat:
+        options:
+          model: deepseek-v4-flash
+          temperature: 0.3
+          max-tokens: 4096
+
+# ---------------------------------------------------------------------------
+# MinIO 对象存储（自定义配置，无 Spring Boot 自动配置）
+# ---------------------------------------------------------------------------
+minio:
+  endpoint: http://minio:9000
+  access-key: ${MINIO_ROOT_USER:minioadmin}
+  secret-key: ${MINIO_ROOT_PASSWORD:minioadmin123}
+  bucket: ${MINIO_BUCKET:graphnexus-prod}
+
+# ---------------------------------------------------------------------------
+# 宽图谱融合配置
+# ---------------------------------------------------------------------------
+fusion:
+  kp-matching:
+    strategy: fuzzy
+    threshold: 0.85
+  weight:
+    strategy: time-decay
+  rollback:
+    weight-tolerance: 0.01
+
+fusion.strategy.fuzzy:
+  alpha: 0.3
+  beta: 0.5
+  gamma: 0.2
+
+fusion.strategy.time-decay:
+  factor: 0.9
+
+# ---------------------------------------------------------------------------
+# 图指标度量配置
+# ---------------------------------------------------------------------------
+graph:
+  metrics:
+    cache:
+      ttl-minutes: 5
+      max-size: 50
+    page-rank:
+      max-iterations: 20
+      damping-factor: 0.85
+
+# ---------------------------------------------------------------------------
+# MinerU PDF 解析
+# ---------------------------------------------------------------------------
+mineru:
+  enabled: true
+  api:
+    base-url: https://mineru.net
+    version: v4
+    submit-path: /api/v4/file-urls/batch
+    poll-path-template: /api/v4/extract-results/batch/{batch_id}
+    token: ${MINERU_API_TOKEN:}
+    model-version: vlm
+    parser-name: mineru-v1
+    poll-timeout: 300s
+    poll-interval: 3s
+  parse:
+    enable-formula: true
+    enable-table: true
+    language: ch
+
+# ---------------------------------------------------------------------------
+# 智能问答配置
+# ---------------------------------------------------------------------------
+query:
+  token-budget:
+    max-input-tokens: 8000
+    chars-per-token: 3
+  pruning:
+    weak-threshold: 0.6
+    max-prerequisite-hops: 2
+  retry:
+    max-retries: 2
+    retry-delay-ms: 1000
+  async:
+    core-pool-size: 2
+    max-pool-size: 5
+    queue-capacity: 10
+  timeout:
+    sync-timeout-seconds: 30
+
+# ---------------------------------------------------------------------------
+# 日志（生产环境降低日志级别）
+# ---------------------------------------------------------------------------
+logging:
+  level:
+    com.graphnexus: INFO
+    com.graphnexus.infra: INFO
+    org.springframework.web: WARN
+    org.springframework.data.neo4j: WARN
+    org.springframework.data.redis: WARN
+
+# ---------------------------------------------------------------------------
+# SpringDoc OpenAPI
+# ---------------------------------------------------------------------------
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+  show-actuator: false
+  default-produces-media-type: application/json

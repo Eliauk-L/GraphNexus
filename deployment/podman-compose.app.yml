@@ -1,0 +1,115 @@
+# =============================================================================
+# GraphNexus — 应用服务编排（两个冗余副本）
+# =============================================================================
+# 版本: v1.1
+# 日期: 2026-06-17
+# 用途: 部署 GraphNexus Spring Boot 应用容器集群（2 副本）
+#
+# 前置条件:
+#   1. 先启动基础设施:    podman compose up -d -f deployment/podman-compose.yml up -d
+#   2. 构建应用镜像:       podman build --format docker -t graphnexus-app:0.1.0 -f deployment/Containerfile .
+#   3. 准备环境变量:       cp .env.example .env && source .env
+#   4. 启动应用集群:       podman compose -f deployment/podman-compose.app.yml up -d
+#   5. 启动 Nginx 网关:    podman compose -f deployment/podman-compose.nginx.yml up -d
+#
+# 停止:   podman compose -f deployment/podman-compose.app.yml down
+# 查看:   podman compose -f deployment/podman-compose.app.yml ps
+# 日志:   podman compose -f deployment/podman-compose.app.yml logs -f
+# =============================================================================
+
+version: "3.9"
+
+# ---------------------------------------------------------------------------
+# 网络 — 共用基础设施的 graphnexus-net
+# ---------------------------------------------------------------------------
+networks:
+  graphnexus-net:
+    name: graphnexus-net
+    external: true
+
+# ---------------------------------------------------------------------------
+# 服务定义
+# ---------------------------------------------------------------------------
+services:
+
+  # =========================================================================
+  # GraphNexus 应用 — 副本 1（端口 8081）
+  # =========================================================================
+  graphnexus-app-1:
+    image: graphnexus-app:0.1.0
+    container_name: graphnexus-app-1
+    restart: unless-stopped
+    hostname: graphnexus-app-1
+    networks:
+      - graphnexus-net
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      # 基础设施凭证（生产环境务必覆盖默认值）
+      - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-graphnexus123}
+      - MYSQL_USERNAME=${MYSQL_USERNAME:-graphnexus}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-graphnexus123}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-graphnexus123}
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-graphnexus}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-graphnexus123}
+      - RABBITMQ_VHOST=${RABBITMQ_VHOST:-graphnexus}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - MINIO_BUCKET=${MINIO_BUCKET:-graphnexus-prod}
+      # 外部 API 密钥
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - MINERU_API_TOKEN=${MINERU_API_TOKEN:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    labels:
+      com.graphnexus.role: "application"
+      com.graphnexus.replica: "1"
+
+  # =========================================================================
+  # GraphNexus 应用 — 副本 2（端口 8082）
+  # =========================================================================
+  graphnexus-app-2:
+    image: graphnexus-app:0.1.0
+    container_name: graphnexus-app-2
+    restart: unless-stopped
+    hostname: graphnexus-app-2
+    networks:
+      - graphnexus-net
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      # 基础设施凭证（生产环境务必覆盖默认值）
+      - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-graphnexus123}
+      - MYSQL_USERNAME=${MYSQL_USERNAME:-graphnexus}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-graphnexus123}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-graphnexus123}
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-graphnexus}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-graphnexus123}
+      - RABBITMQ_VHOST=${RABBITMQ_VHOST:-graphnexus}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - MINIO_BUCKET=${MINIO_BUCKET:-graphnexus-prod}
+      # 外部 API 密钥
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - MINERU_API_TOKEN=${MINERU_API_TOKEN:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    labels:
+      com.graphnexus.role: "application"
+      com.graphnexus.replica: "2"
+
+# =============================================================================
+# Nginx 网关 → 见 deployment/podman-compose.nginx.yml
+# =============================================================================

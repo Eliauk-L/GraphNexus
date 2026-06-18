@@ -1,0 +1,72 @@
+# =============================================================================
+# GraphNexus — Nginx 反向代理网关（独立容器）
+# =============================================================================
+# 版本: v1.1
+# 日期: 2026-06-17
+# 用途: 统一入口 :8080，least_conn 负载均衡到 graphnexus-app-1/2
+#
+# 前置条件:
+#   1. 基础设施已启动:    podman compose up -d
+#   2. 应用集群已启动:    podman compose -f deployment/podman-compose.app.yml up -d
+#   3. 启动 Nginx 网关:   podman compose -f deployment/podman-compose.nginx.yml up -d
+#
+# 停止:   podman compose -f deployment/podman-compose.nginx.yml down
+# 查看:   podman compose -f deployment/podman-compose.nginx.yml ps
+# 日志:   podman compose -f deployment/podman-compose.nginx.yml logs -f
+# 重载:   podman exec graphnexus-nginx nginx -s reload
+#
+# 说明:
+#   - Nginx 独立部署，不依赖 app compose 的 depends_on
+#   - 上游 graphnexus-app-1/2 通过运行时 DNS 解析（resolver 127.0.0.11）
+#   - 若应用副本未就绪，nginx 仍会启动，请求返回 502
+#   管理面板代理（/minio /rabbitmq /neo4j）同样运行时解析，不影响启动
+# =============================================================================
+
+version: "3.9"
+
+# ---------------------------------------------------------------------------
+# 网络 — 共用 graphnexus-net
+# ---------------------------------------------------------------------------
+networks:
+  graphnexus-net:
+    name: graphnexus-net
+    external: true
+
+# ---------------------------------------------------------------------------
+# 服务定义
+# ---------------------------------------------------------------------------
+services:
+
+  # =========================================================================
+  # Nginx — 反向代理网关
+  # =========================================================================
+  nginx:
+    image: docker.io/nginx:stable-alpine
+    container_name: graphnexus-nginx
+    restart: unless-stopped
+    hostname: nginx
+    networks:
+      - graphnexus-net
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:Z,ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:Z,ro
+      - nginx-logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    labels:
+      com.graphnexus.role: "reverse-proxy"
+      com.graphnexus.tier: "gateway"
+
+# ---------------------------------------------------------------------------
+# 数据卷
+# ---------------------------------------------------------------------------
+volumes:
+  nginx-logs:
+    labels:
+      com.graphnexus.service: "nginx"

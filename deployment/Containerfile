@@ -1,0 +1,48 @@
+# =============================================================================
+# GraphNexus — 多阶段构建 Containerfile
+# =============================================================================
+# 用途: 构建 Spring Boot 3.3.5 / Java 17 应用镜像
+#
+# 构建:
+#   podman build --format docker -t graphnexus-app:0.1.0 -f deployment/Containerfile .
+#
+# 说明: 多阶段构建，构建产物不携带 Maven 缓存，镜像更小。
+#       --format docker 确保 HEALTHCHECK 指令写入镜像。
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Stage 1 — Maven 编译打包
+# ---------------------------------------------------------------------------
+FROM docker.io/library/maven:3.9-eclipse-temurin-17-alpine AS builder
+
+WORKDIR /build
+
+# 先复制 pom.xml，利用层缓存加速重复构建
+COPY pom.xml .
+
+# 下载依赖（源码未变更时此层被缓存）
+RUN mvn dependency:go-offline -B -q
+
+# 复制源码并构建（跳过测试）
+COPY src ./src
+RUN mvn package -B -q -DskipTests -Dmaven.test.skip=true
+
+# ---------------------------------------------------------------------------
+# Stage 2 — JRE 运行时
+# ---------------------------------------------------------------------------
+FROM docker.io/eclipse-temurin:17-jre-jammy
+
+RUN groupadd -r app && useradd -r -g app app
+USER app:app
+
+WORKDIR /app
+
+# 从构建阶段复制 fat JAR
+COPY --from=builder /build/target/*.jar ./app.jar
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=60s \
+    CMD wget -qO- http://localhost:8080/actuator/health || exit 1
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

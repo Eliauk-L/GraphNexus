@@ -1,0 +1,39 @@
+# GraphNexus — Docker build context ignore
+# 排除这些目录/文件以减少构建上下文大小并避免缓存失效
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git/
+.gitignore
+
+# Claude / AI 工具
+.claude/
+.agents/
+
+# 文档与设计（不参与编译）
+docs/
+figs/
+
+# Flow-kit 流程管理（不参与编译）
+flow-kit/
+.specs/
+
+# 部署配置（运行时挂载，不打包进镜像）
+deployment/
+
+# 环境变量文件（包含密钥，绝不能进入镜像！）
+.env
+.env.example
+.env.*
+
+# macOS
+.DS_Store
+
+# 临时文件
+*.bkp
+*.tmp
+*.log
