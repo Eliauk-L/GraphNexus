@@ -13,8 +13,17 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  optimizeDeps: {
+    exclude: ['@neo4j-nvl/base', '@neo4j-nvl/layout-workers'],
+  },
+  worker: {
+    format: 'es',
+  },
   server: {
     port: 5173,
+    fs: {
+      allow: ['..'],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
