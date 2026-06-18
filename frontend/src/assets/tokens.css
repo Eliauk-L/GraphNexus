@@ -1,0 +1,77 @@
+/* ============================================
+   GraphNexus Design Tokens
+   来源：UI-DESIGN.md frontmatter
+   所有颜色使用 OKLCH，禁止 hex/rgb
+   ============================================ */
+
+:root {
+  /* ── 主色 ── */
+  --color-brand: oklch(0.55 0.18 250);
+  --color-brand-deep: oklch(0.48 0.18 250);
+  --color-brand-veil: oklch(0.55 0.18 250 / 0.12);
+
+  /* ── 背景 ── */
+  --color-bg: oklch(0.985 0.002 95);
+  --color-surface: oklch(1 0 0);
+  --color-sidebar-bg: oklch(0.12 0.01 250);
+  --color-sidebar-text: oklch(0.75 0.01 250);
+  --color-sidebar-text-active: oklch(1 0 0);
+
+  /* ── 文字 ── */
+  --color-text-primary: oklch(0.15 0.005 95);
+  --color-text-secondary: oklch(0.45 0.005 95);
+  --color-text-tertiary: oklch(0.65 0.005 95);
+  --color-text-on-brand: oklch(1 0 0);
+
+  /* ── 边框 ── */
+  --color-border: oklch(0.90 0.005 95);
+  --color-border-focus: oklch(0.55 0.18 250);
+
+  /* ── 语义色 ── */
+  --color-success: oklch(0.55 0.15 145);
+  --color-warning: oklch(0.65 0.15 85);
+  --color-error: oklch(0.50 0.20 25);
+
+  /* ── 间距（非线性 scale）── */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 80px;
+  --spacing-4xl: 120px;
+
+  /* ── 圆角 ── */
+  --rounded-none: 0;
+  --rounded-sm: 4px;
+  --rounded-md: 8px;
+  --rounded-lg: 12px;
+  --rounded-full: 9999px;
+
+  /* ── 阴影 ── */
+  --shadow-hover-lift: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-card-lifted: 0 20px 60px rgba(0, 0, 0, 0.12);
+  --shadow-accent-glow: 0 20px 60px var(--color-brand-veil);
+
+  /* ── 动效 ── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+  --duration-slow: 600ms;
+
+  /* ── 字体栈 ── */
+  --font-display: 'DM Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-body: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
+}
+
+/* ── prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
