@@ -1,8 +1,8 @@
 package com.graphnexus.api.query.controller;
 
-import com.graphnexus.api.query.dto.*;
-import com.graphnexus.application.query.model.QueryResultBO;
-import com.graphnexus.application.query.service.QueryService;
+import com.graphnexus.api.query.dto.chat.*;
+import com.graphnexus.application.query.chat.model.QueryResultBO;
+import com.graphnexus.application.query.chat.service.QueryService;
 import com.graphnexus.common.ApiResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

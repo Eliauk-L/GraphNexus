@@ -1,7 +1,7 @@
 package com.graphnexus.api.graph.controller;
 
-import com.graphnexus.api.graph.dto.MetricResultVO;
-import com.graphnexus.api.graph.dto.MetricsQueryRequest;
+import com.graphnexus.api.graph.dto.metrics.MetricResultVO;
+import com.graphnexus.api.graph.dto.metrics.MetricsQueryRequest;
 import com.graphnexus.application.graph.metrics.model.MetricResultBO;
 import com.graphnexus.application.graph.metrics.service.MetricsService;
 import com.graphnexus.common.ApiResult;

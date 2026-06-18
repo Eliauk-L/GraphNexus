@@ -2,7 +2,7 @@ package com.graphnexus.api.query.controller;
 
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.analysis.model.PrunedSubgraph.PruningMeta;
-import com.graphnexus.api.query.dto.QueryAskRequest;
+import com.graphnexus.api.query.dto.chat.QueryAskRequest;
 import com.graphnexus.infrastructure.mysql.document.ExamRecordDO;
 import com.graphnexus.infrastructure.mysql.document.ExamRecordRepository;
 import com.graphnexus.infrastructure.mysql.query.QueryTaskDO;

@@ -1,8 +1,8 @@
 package com.graphnexus.api.graph.controller;
 
-import com.graphnexus.api.graph.dto.FusionExecuteVO;
-import com.graphnexus.api.graph.dto.FusionRollbackVO;
-import com.graphnexus.api.graph.dto.FusionStatusVO;
+import com.graphnexus.api.graph.dto.fusion.FusionExecuteVO;
+import com.graphnexus.api.graph.dto.fusion.FusionRollbackVO;
+import com.graphnexus.api.graph.dto.fusion.FusionStatusVO;
 import com.graphnexus.application.graph.fusion.model.FusionExecuteResult;
 import com.graphnexus.application.graph.fusion.model.FusionRollbackResult;
 import com.graphnexus.application.graph.fusion.model.FusionStatusResult;

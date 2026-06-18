@@ -3,7 +3,7 @@ package com.graphnexus.api.analysis.controller;
 import com.graphnexus.api.analysis.dto.SubgraphResponse;
 import com.graphnexus.api.analysis.dto.SubgraphResponse.*;
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
-import com.graphnexus.application.query.service.QueryService;
+import com.graphnexus.application.query.chat.service.QueryService;
 import com.graphnexus.common.ApiResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

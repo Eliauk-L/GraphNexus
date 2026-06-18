@@ -1,9 +1,9 @@
 package com.graphnexus.api.graph.controller;
 
 import com.graphnexus.common.ApiResult;
-import com.graphnexus.api.graph.dto.FusionExecuteVO;
-import com.graphnexus.api.graph.dto.FusionStatusVO;
-import com.graphnexus.api.graph.dto.FusionRollbackVO;
+import com.graphnexus.api.graph.dto.fusion.FusionExecuteVO;
+import com.graphnexus.api.graph.dto.fusion.FusionStatusVO;
+import com.graphnexus.api.graph.dto.fusion.FusionRollbackVO;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

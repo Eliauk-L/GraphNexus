@@ -1,6 +1,6 @@
 package com.graphnexus.application.analysis.model;
 
-import com.graphnexus.application.query.model.QueryIntent;
+import com.graphnexus.application.query.chat.model.QueryIntent;
 
 import java.util.Map;
 

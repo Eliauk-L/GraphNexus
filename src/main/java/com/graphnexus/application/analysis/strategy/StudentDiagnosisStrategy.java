@@ -3,7 +3,7 @@ package com.graphnexus.application.analysis.strategy;
 import com.graphnexus.application.analysis.model.PruningRequest;
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.analysis.model.PrunedSubgraph.PruningMeta;
-import com.graphnexus.application.query.model.QueryIntent;
+import com.graphnexus.application.query.chat.model.QueryIntent;
 import com.graphnexus.infrastructure.mysql.document.ExamRecordDO;
 import com.graphnexus.infrastructure.mysql.document.ExamRecordRepository;
 import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;

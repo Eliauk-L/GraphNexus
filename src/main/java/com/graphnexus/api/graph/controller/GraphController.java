@@ -1,10 +1,10 @@
 package com.graphnexus.api.graph.controller;
 
-import com.graphnexus.api.graph.dto.ExtractionResultVO;
-import com.graphnexus.api.graph.dto.GraphSubgraphVO;
-import com.graphnexus.application.graph.model.ExtractionResultBO;
-import com.graphnexus.application.graph.model.GraphSubgraphBO;
-import com.graphnexus.application.graph.service.GraphService;
+import com.graphnexus.api.graph.dto.graph.ExtractionResultVO;
+import com.graphnexus.api.graph.dto.graph.GraphSubgraphVO;
+import com.graphnexus.application.graph.core.model.ExtractionResultBO;
+import com.graphnexus.application.graph.core.model.GraphSubgraphBO;
+import com.graphnexus.application.graph.core.service.GraphService;
 import com.graphnexus.common.ApiResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
