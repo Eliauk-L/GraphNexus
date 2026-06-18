@@ -1,11 +1,12 @@
 import type { GraphSubgraphVO, SubgraphResponse } from '@/api/types'
-import type { Node, Relationship } from '@neo4j-nvl/base'
 
-export interface NvlGraphData {
-  nodes: Node[]
-  relationships: Relationship[]
+// G6 v5 数据格式
+export interface G6GraphData {
+  nodes: Array<{ id: string; data: Record<string, unknown> }>
+  edges: Array<{ source: string; target: string; data: Record<string, unknown> }>
 }
 
+// Neo4j 风格颜色映射
 const NODE_COLORS: Record<string, string> = {
   KnowledgePoint: '#4A90D9',
   Student: '#52C41A',
@@ -38,48 +39,52 @@ const EDGE_COLORS: Record<string, string> = {
   REFERENCES: '#8C8C8C',
 }
 
-/** 文档子图 VO → NVL 数据 */
-export function transformGraphSubgraphVO(vo: GraphSubgraphVO): NvlGraphData {
+export function transformGraphSubgraphVO(vo: GraphSubgraphVO): G6GraphData {
   return {
-    nodes: vo.nodes.map((n) => toNvlNode(n.id, n.nodeType, { documentId: n.documentId })),
-    relationships: vo.edges.map((e, i) =>
-      toNvlRel(`ge-${i}`, e.sourceNodeId, e.targetNodeId, e.edgeType),
-    ),
+    nodes: vo.nodes.map((n) => ({
+      id: n.id,
+      data: {
+        label: n.id.substring(0, 8),
+        nodeType: n.nodeType,
+        fill: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
+        size: NODE_SIZES[n.nodeType] ?? 26,
+        documentId: n.documentId,
+      },
+    })),
+    edges: vo.edges.map((e) => ({
+      source: e.sourceNodeId,
+      target: e.targetNodeId,
+      data: {
+        type: e.edgeType,
+        stroke: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
+        lineWidth: 1.5,
+        lineDash: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType) ? [4, 4] : undefined,
+      },
+    })),
   }
 }
 
-/** 剪枝子图 Response → NVL 数据 */
-export function transformSubgraphResponse(res: SubgraphResponse): NvlGraphData {
+export function transformSubgraphResponse(res: SubgraphResponse): G6GraphData {
   return {
-    nodes: res.nodes.map((n) => toNvlNode(n.id, n.nodeType, n.properties)),
-    relationships: res.edges.map((e, i) =>
-      toNvlRel(`se-${i}`, e.sourceNodeId, e.targetNodeId, e.edgeType, e.weight),
-    ),
-  }
-}
-
-function nodeLabel(nodeType: string, props: Record<string, unknown>): string {
-  const name = (props.name as string) ?? (props.label as string)
-  return name ?? nodeType
-}
-
-function toNvlNode(id: string, nodeType: string, props: Record<string, unknown>): Node {
-  return {
-    id,
-    captions: [{ value: nodeLabel(nodeType, props) }],
-    color: NODE_COLORS[nodeType] ?? '#8C8C8C',
-    size: NODE_SIZES[nodeType] ?? 26,
-  }
-}
-
-function toNvlRel(id: string, from: string, to: string, type: string, weight = 1.0): Relationship {
-  const isDashed = ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(type)
-  return {
-    id,
-    from,
-    to,
-    captions: [{ value: type }],
-    color: EDGE_COLORS[type] ?? '#8C8C8C',
-    width: 1 + Math.min(weight, 3),
+    nodes: res.nodes.map((n) => ({
+      id: n.id,
+      data: {
+        label: (n.properties.name as string) ?? (n.properties.label as string) ?? n.id.substring(0, 8),
+        nodeType: n.nodeType,
+        fill: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
+        size: NODE_SIZES[n.nodeType] ?? 26,
+        ...n.properties,
+      },
+    })),
+    edges: res.edges.map((e) => ({
+      source: e.sourceNodeId,
+      target: e.targetNodeId,
+      data: {
+        type: e.edgeType,
+        stroke: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
+        lineWidth: 1 + Math.min(e.weight, 3),
+        lineDash: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType) ? [4, 4] : undefined,
+      },
+    })),
   }
 }
