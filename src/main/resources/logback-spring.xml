@@ -86,7 +86,7 @@
      ========================================================================= -->
 
     <springProfile name="dev">
-        <root level="TRACE">
+        <root level="INFO">
             <appender-ref ref="CONSOLE_PLAIN"/>
             <appender-ref ref="FILE_PLAIN"/>
             <appender-ref ref="FILE_ERROR"/>

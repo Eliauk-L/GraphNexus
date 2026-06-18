@@ -182,28 +182,36 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
 
     private ParseResult doParse(Long docId, byte[] rawBytes, String filename, List<FileParser> parsers) {
         updateStatus(docId, FileStatus.PARSING);
+
+        // 遍历解析器链（主→兜底），只 catch 解析本身的异常
+        ParseResult parseResult = null;
+        String lastParserName = "unknown";
         Exception lastError = null;
         for (FileParser parser : parsers) {
+            lastParserName = parser.getClass().getSimpleName();
             try {
                 FileParseRequest request = new FileParseRequest(
                         null, filename, null, rawBytes);
-                ParseResult result = ((com.graphnexus.application.file.parse.parser.DocumentParser) parser)
-                        .parse(request.rawBytes());
-                updateAfterParse(docId, result);
-                log.info("解析成功: id={}, parser={}, textLength={}",
-                        docId, parser.getClass().getSimpleName(),
-                        result.textContent() != null ? result.textContent().length() : 0);
-                return result;
+                parseResult = ((DocumentParser) parser).parse(request.rawBytes());
+                lastError = null;
+                break;
             } catch (Exception e) {
                 lastError = e;
                 log.warn("解析器 {} 失败: id={}, error={}",
-                        parser.getClass().getSimpleName(), docId, e.getMessage());
+                        lastParserName, docId, e.getMessage());
             }
         }
-        // 所有解析器都失败 → FAILED
-        revertTo(docId, FileStatus.PARSING, "all parsers failed: " + truncate(
-                lastError != null ? lastError.getMessage() : "unknown", 300));
-        throw new BusinessException(ErrorCode.A0004, "文档解析失败（所有解析器均失败）");
+
+        if (parseResult == null) {
+            // 所有解析器都失败 → 回退到 UPLOADED
+            revertTo(docId, FileStatus.UPLOADED, "all parsers failed: " + truncate(
+                    lastError != null ? lastError.getMessage() : "unknown", 300));
+            throw new BusinessException(ErrorCode.A0004, "文档解析失败（所有解析器均失败）");
+        }
+
+        // 解析成功 → PARSED（在 try-catch 外，状态更新失败会正确传播）
+        updateAfterParse(docId, parseResult, lastParserName);
+        return parseResult;
     }
 
     private ExtractionResultBO doExtract(Long docId) {
@@ -308,10 +316,10 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
         doc.getStatus().validateTransition(target);
         doc.setStatus(target);
         doc.setFailReason(null);
-        fileRepository.save(doc);
+        fileRepository.saveAndFlush(doc);
     }
 
-    private void updateAfterParse(Long docId, ParseResult result) {
+    private void updateAfterParse(Long docId, ParseResult result, String parserName) {
         FileDO doc = fileRepository.findById(docId).orElseThrow();
         doc.getStatus().validateTransition(FileStatus.PARSED);
         doc.setStatus(FileStatus.PARSED);
@@ -320,6 +328,8 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
         doc.setMetadataJson(toJson(result.metadata()));
         doc.setFailReason(null);
         fileRepository.save(doc);
+        log.info("解析成功: id={}, parser={}, textLength={}",
+                docId, parserName, result.textContent() != null ? result.textContent().length() : 0);
     }
 
     private void revertTo(Long docId, FileStatus target, String failReason) {

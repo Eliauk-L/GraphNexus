@@ -196,9 +196,8 @@ query:
 # ---------------------------------------------------------------------------
 logging:
   level:
-    com.graphnexus: TRACE
-    org.springframework.web: DEBUG
-    org.springframework.data.neo4j: DEBUG
+    com.graphnexus: DEBUG
+    com.graphnexus.infra: INFO
 
 # ---------------------------------------------------------------------------
 # SpringDoc OpenAPI 3.0 配置
