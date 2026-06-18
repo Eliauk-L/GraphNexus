@@ -21,13 +21,11 @@ function createNvl() {
     {
       renderer: 'canvas',
       layout: 'forceDirected',
-      initialZoom: 0.8,
     },
   )
 }
 
 watch(() => props.data, () => {
-  // NVL doesn't support full data replacement, so destroy and recreate
   createNvl()
 }, { deep: true })
 
