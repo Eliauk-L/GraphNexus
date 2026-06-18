@@ -13,7 +13,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1 — Maven 编译打包
 # ---------------------------------------------------------------------------
-FROM docker.io/library/maven:3.9-eclipse-temurin-17-alpine AS builder
+FROM library/maven:3.8.5-openjdk-17-slim AS builder
 
 WORKDIR /build
 
@@ -30,7 +30,7 @@ RUN mvn package -B -q -DskipTests -Dmaven.test.skip=true
 # ---------------------------------------------------------------------------
 # Stage 2 — JRE 运行时
 # ---------------------------------------------------------------------------
-FROM docker.io/eclipse-temurin:17-jre-jammy
+FROM library/openjdk:26-ea-17-slim
 
 RUN groupadd -r app && useradd -r -g app app
 USER app:app
