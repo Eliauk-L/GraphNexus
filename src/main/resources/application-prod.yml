@@ -53,31 +53,6 @@ spring:
       max-request-size: 55MB
 
   # ---------------------------------------------------------------------------
-  # Redis 缓存
-  # ---------------------------------------------------------------------------
-  data:
-    redis:
-      host: redis
-      port: 6379
-      password: ${REDIS_PASSWORD:graphnexus123}
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 16
-          max-idle: 8
-          min-idle: 4
-
-  # ---------------------------------------------------------------------------
-  # RabbitMQ 消息队列
-  # ---------------------------------------------------------------------------
-  rabbitmq:
-    host: rabbitmq
-    port: 5672
-    username: ${RABBITMQ_USERNAME:graphnexus}
-    password: ${RABBITMQ_PASSWORD:graphnexus123}
-    virtual-host: ${RABBITMQ_VHOST:graphnexus}
-
-  # ---------------------------------------------------------------------------
   # DeepSeek API（Spring AI OpenAI starter，兼容 OpenAI 协议）
   # ---------------------------------------------------------------------------
   ai:
@@ -180,7 +155,6 @@ logging:
     com.graphnexus.infra: INFO
     org.springframework.web: WARN
     org.springframework.data.neo4j: WARN
-    org.springframework.data.redis: WARN
 
 # ---------------------------------------------------------------------------
 # SpringDoc OpenAPI

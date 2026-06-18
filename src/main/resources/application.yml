@@ -57,4 +57,3 @@ logging:
     com.graphnexus: INFO
     org.springframework.web: INFO
     org.springframework.data.neo4j: WARN
-    org.springframework.data.redis: WARN
