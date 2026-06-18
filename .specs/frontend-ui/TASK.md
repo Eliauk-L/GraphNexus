@@ -157,7 +157,7 @@ Wave 5:            T18                                          (depends on Wave
   <action>
     按 DESIGN §3 路由设计创建 Vue Router 配置（history mode）：
     - / → redirect /files
-    - /files → lazy(() => import('@/features/file/FileManagePage.vue'))
+    - /files → lazy(() => import('@/views/file/FileManagePage.vue'))
     - /grades → lazy(...GradeManagePage)
     - /qa → lazy(...IntelligentQAPage)
     - /graph → lazy(...GraphVisualizePage)

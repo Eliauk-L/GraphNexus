@@ -2,19 +2,22 @@ package com.graphnexus.api.file.controller;
 
 import com.graphnexus.api.file.dto.core.DeleteResultVO;
 import com.graphnexus.api.file.dto.core.FileVO;
-import com.graphnexus.api.file.dto.upload.GradeRecordVO;
 import com.graphnexus.api.file.dto.upload.GradeUploadResultVO;
 import com.graphnexus.api.file.dto.parse.ParseResultVO;
 import com.graphnexus.api.file.dto.core.UpdateFileRequest;
-import com.graphnexus.application.file.core.model.DeleteResultBO;
 import com.graphnexus.application.file.core.model.FileBO;
 import com.graphnexus.application.file.upload.model.GradeUploadResultBO;
 import com.graphnexus.application.file.parse.parser.FileParserRegistry;
 import com.graphnexus.application.file.core.service.FileService;
+import com.graphnexus.application.file.core.pipeline.DocumentProcessingPipeline;
+import com.graphnexus.application.file.core.pipeline.GradeProcessingPipeline;
+import com.graphnexus.application.file.parse.model.FileParseType;
 import com.graphnexus.application.file.parse.model.ParseResult;
 import com.graphnexus.application.file.core.model.UpdateFileBO;
 import com.graphnexus.common.ApiResult;
 import com.graphnexus.common.PageResult;
+import com.graphnexus.common.exception.BusinessException;
+import com.graphnexus.common.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -39,41 +42,52 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/file/document")
 @RequiredArgsConstructor
-@Tag(name = "文档处理", description = "PDF 教辅上传解析、CSV 成绩导入与成绩查询管理")
+@Tag(name = "文档处理", description = "文档上传解析管理（PDF/TXT/CSV 统一入口）")
 public class FileController {
 
     private final FileService fileService;
     private final FileParserRegistry fileParserRegistry;
+    private final DocumentProcessingPipeline documentPipeline;
+    private final GradeProcessingPipeline gradePipeline;
 
     /**
-     * 上传文件（PDF / CSV 统一入口，策略+工厂路由）。
+     * 上传文件（PDF/TXT/CSV 统一入口，枚举 switch 路由）。
      */
-    @Operation(summary = "上传文件", description = "PDF/CSV 统一上传入口。PDF 上传后返回文档元数据，CSV 上传后自动解析成绩并入库 Neo4j 图 + MySQL exam_record 表。按文件扩展名自动路由到对应处理器")
+    @Operation(summary = "上传文件", description = "统一上传入口。按文件扩展名自动路由到 DocumentPipeline 或 GradePipeline")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "上传成功",
                     content = {@Content(mediaType = "application/json", schema = @Schema(oneOf = {FileVO.class, GradeUploadResultVO.class}))}),
-            @ApiResponse(responseCode = "400", description = "A0002 参数校验失败 / A0004 文件类型不支持 / A0011 CSV 格式错误 / A0012 CSV 缺少必要列 / A0013 CSV 编码异常"),
+            @ApiResponse(responseCode = "400", description = "A0004 文件类型不支持"),
             @ApiResponse(responseCode = "409", description = "A0007 该学科下已存在相同内容文档"),
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @PostMapping("/upload")
     public ApiResult<?> upload(
-            @Parameter(description = "上传文件（支持 PDF/CSV）", required = true)
+            @Parameter(description = "上传文件（支持 PDF/TXT/CSV）", required = true)
             @RequestParam("file") MultipartFile file,
-            @Parameter(description = "学科名称（如 数学、语文、英语）", required = true, example = "数学")
+            @Parameter(description = "学科名称", required = true, example = "数学")
             @RequestParam("subject") String subject
     ) {
         String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "";
         var parser = fileParserRegistry.getParser(filename);
 
-        if (parser.isPresent() && parser.get().supportedType().name().equals("CSV_GRADE")) {
-            GradeUploadResultBO bo = fileService.uploadGradeCsv(file, subject);
-            return ApiResult.success(GradeUploadResultVO.from(bo));
+        if (parser.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0004, "不支持的文件类型: " + filename);
         }
 
-        // 默认走 PDF 链路
-        FileBO bo = fileService.upload(file, subject);
-        return ApiResult.success(FileVO.from(bo));
+        FileParseType type = parser.get().supportedType();
+        return switch (type) {
+            case DOCUMENT -> {
+                FileBO bo = (FileBO) documentPipeline.process(file, subject);
+                yield ApiResult.success(FileVO.from(bo));
+            }
+            case CSV_GRADE -> {
+                GradeUploadResultBO bo = (GradeUploadResultBO) gradePipeline.process(file, subject);
+                yield ApiResult.success(GradeUploadResultVO.from(bo));
+            }
+            case TXT -> throw new BusinessException(ErrorCode.A0004,
+                    "TXT 类型应由 DOCUMENT pipeline 处理");
+        };
     }
 
     /**
@@ -172,46 +186,5 @@ public class FileController {
             @PathVariable("id") Long id) {
         fileService.deleteDocument(id);
         return ApiResult.success(null);
-    }
-
-    // ======================== 成绩端点 ========================
-
-    /**
-     * 按考试编号查询成绩列表（AC-4）。
-     */
-    @Operation(summary = "按考试编号查询成绩", description = "返回指定考试编号下的全部学生成绩记录列表，含各题得分明细（JSON）。数据来源：MySQL exam_record 表")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "成绩记录列表"),
-            @ApiResponse(responseCode = "404", description = "A0014 考试编号不存在"),
-            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
-    })
-    @GetMapping("/grade/exam/{examNo}")
-    public ApiResult<List<GradeRecordVO>> queryGrade(
-            @Parameter(description = "考试编号（来源于 CSV 第 1 行考试编号列）", required = true, example = "E20200041")
-            @PathVariable("examNo") String examNo
-    ) {
-        var records = fileService.queryGradeByExam(examNo);
-        List<GradeRecordVO> result = records.stream()
-                .map(GradeRecordVO::from)
-                .toList();
-        return ApiResult.success(result);
-    }
-
-    /**
-     * 按考试编号级联删除成绩（AC-7）。
-     */
-    @Operation(summary = "级联删除成绩", description = "按考试编号级联删除：MySQL exam_record 记录 + MinIO CSV 文件 + Neo4j ATTENDED/TESTED 边。保留 Student 和 KnowledgePoint 共享节点不级联。幂等操作")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "删除成功，含删除的 MySQL 记录数、MinIO 文件路径、Neo4j 边数"),
-            @ApiResponse(responseCode = "404", description = "A0015 考试记录不存在或已删除"),
-            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
-    })
-    @DeleteMapping("/grade/exam/{examNo}")
-    public ApiResult<DeleteResultVO> deleteGrade(
-            @Parameter(description = "考试编号", required = true, example = "E20200041")
-            @PathVariable("examNo") String examNo
-    ) {
-        DeleteResultBO bo = fileService.deleteGradeByExamNo(examNo);
-        return ApiResult.success(DeleteResultVO.from(bo));
     }
 }

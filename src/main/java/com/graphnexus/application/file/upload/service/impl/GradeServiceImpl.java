@@ -22,6 +22,8 @@ import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.common.util.Md5Utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -195,6 +197,24 @@ public class GradeServiceImpl implements GradeService {
                 .scoreDetails(r.getScoreDetails())
                 .build()
         ).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<GradeUploadResultBO> listExams(int pageNum, int pageSize) {
+        Page<Object[]> rows = examRecordRepository.findDistinctExams(
+                PageRequest.of(pageNum - 1, pageSize));
+        return rows.map(row -> {
+            GradeUploadResultBO bo = new GradeUploadResultBO();
+            bo.setExamNo((String) row[0]);
+            bo.setExamName((String) row[1]);
+            bo.setExamDate(row[2] != null ? ((java.sql.Date) row[2]).toLocalDate() : null);
+            bo.setSubject((String) row[3]);
+            bo.setMinioPath((String) row[4]);
+            bo.setCsvMd5((String) row[5]);
+            bo.setStudentCount(((Number) row[6]).intValue());
+            return bo;
+        });
     }
 
     // ======================== 删除 ========================

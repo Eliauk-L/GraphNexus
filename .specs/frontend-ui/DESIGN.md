@@ -197,7 +197,7 @@ GraphNexus/
 ├── assets/
 │   ├── tokens.css                   # T-UI-01: CSS variables (OKLCH colors/spacing/rounded/motion)
 │   └── global.css                   # T-UI-02: typography hierarchy + base reset
-├── shared/                          # 跨模块共享
+├── common/                          # 跨模块共享
 │   ├── components/                  # BaseButton, BaseInput, BaseCard, DataTable, StatusBadge, MarkdownViewer
 │   ├── composables/                 # useApi, usePagination, usePolling
 │   └── utils/                       # formatFileSize, formatDate, graphAdapter
@@ -208,7 +208,7 @@ GraphNexus/
 │   ├── query.ts                     # /api/v1/query/*
 │   ├── analysis.ts                  # /api/v1/analysis/*
 │   └── types.ts                     # ApiResult<T>, PageResult<T>, ErrorResponse 类型定义
-├── features/
+├── views/
 │   ├── file/                        # 文件管理模块
 │   │   ├── FileManagePage.vue
 │   │   ├── components/              # FileUpload, FileTable, FileDetail
@@ -346,7 +346,7 @@ UPLOADED ──[点击解析]──→ PROCESSING ──[轮询完成]──→ 
 ```
 - 新增禁动：src/api/client.ts 不允许绕过直接 import axios
 - 新增禁动：src/common/components/ 中组件不允许包含业务逻辑（纯展示）
-- 新增禁动：features/*/components/ 中组件不允许直接调 api/*（必须通过 store）
+- 新增禁动：views/*/components/ 中组件不允许直接调 api/*（必须通过 store）
 ```
 
 ---

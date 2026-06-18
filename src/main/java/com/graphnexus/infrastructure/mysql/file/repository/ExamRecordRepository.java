@@ -2,6 +2,9 @@ package com.graphnexus.infrastructure.mysql.file.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import com.graphnexus.infrastructure.mysql.file.entity.ExamRecordDO;
 
@@ -69,4 +72,15 @@ public interface ExamRecordRepository extends JpaRepository<ExamRecordDO, Long> 
     @Query("SELECT DISTINCT e.studentNo AS studentNo, e.name AS name, e.className AS className " +
            "FROM ExamRecordDO e WHERE e.studentNo = :studentNo AND e.isDeleted = 0")
     List<Object[]> findStudentByNo(String studentNo);
+
+    /**
+     * 分页查询不重复的考试元数据（按 examNo 分组）。
+     */
+    @Query("SELECT DISTINCT e.examNo AS examNo, e.examName AS examName, "
+         + "e.examDate AS examDate, e.subject AS subject, e.csvFilePath AS csvFilePath, "
+         + "e.csvMd5 AS csvMd5, COUNT(e) AS studentCount "
+         + "FROM ExamRecordDO e WHERE e.isDeleted = 0 "
+         + "GROUP BY e.examNo, e.examName, e.examDate, e.subject, e.csvFilePath, e.csvMd5 "
+         + "ORDER BY e.examDate DESC")
+    Page<Object[]> findDistinctExams(Pageable pageable);
 }

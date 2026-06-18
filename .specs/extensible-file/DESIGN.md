@@ -25,67 +25,107 @@
 ### 0.5.1 本次 change 触碰的既有模块
 
 ```
-触碰模块（基于实际 grep 结果）：
-- api/file/controller/FileController.java（既有 · 拆分为 FileController + GradeController）
-- api/file/dto/core/FileVO.java（既有 · 新增 fileType 字段）
-- api/file/dto/upload/GradeUploadResultVO.java（既有 · 迁入 GradeController）
-- application/file/core/service/FileService.java + impl（既有 · 重构为 Pipeline 模式）
-- application/file/upload/service/GradeService.java + impl（既有 · 迁入 GradePipeline）
-- application/file/parse/parser/FileParser.java（既有 · 保持接口不变）
-- application/file/parse/parser/DocumentParser.java（既有 · 让 TxtFileParser 实现）
-- application/file/parse/parser/FileParserRegistry.java（既有 · 扩展注册）
-- application/file/parse/model/FileParseType.java（既有 · 新增 TXT 枚举值）
-- infrastructure/mysql/file/FileDO.java（既有 · 新增 fileType 字段）
-- infrastructure/mysql/file/FileStatus.java（既有 · 扩展 8 状态）
-- infrastructure/mysql/file/FileRepository.java（既有 · 新增条件查询方法）
-- application/graph/fusion/event/GradeUploadedEventListener.java（既有 · 无变更）
-- application/graph/metrics/event/GraphChangedEvent.java（既有 · 无变更）
+触碰模块（已验证的实际文件路径）：
 
-新增模块：
-- application/file/core/pipeline/FileProcessingPipeline.java（新接口）
-- application/file/core/pipeline/DocumentProcessingPipeline.java（新实现）
-- application/file/core/pipeline/GradeProcessingPipeline.java（新实现）
-- application/file/parse/parser/TxtFileParser.java（新解析器）
-- api/file/controller/GradeController.java（新 Controller）
-- api/file/dto/core/FileQueryRequest.java（新查询 DTO）
+【重构 · 既有类】
+- api/file/controller/FileController.java
+  · 移除成绩端点（queryGrade/deleteGrade → GradeController）
+  · upload() 移除 CSV 路由分支 + 字符串比较 → 统一走 Pipeline
+  · @RequestMapping 从 /api/v1/file/document → /api/v1/document
+- api/file/dto/core/FileVO.java
+  · 新增 fileType 字段
+- application/file/core/service/FileService.java
+  · 移除 uploadGradeCsv/deleteGradeByExamNo/queryGradeByExam 三个方法
+- application/file/core/service/impl/FileServiceImpl.java
+  · 移除 PDF_MIME_TYPE 硬编码 MIME 校验（line 83）
+  · 移除 MinerU→PDFBox 硬编码回退链（line 161-201）→ 由 Pipeline 编排
+  · 移除三个成绩委托方法（line 316-327）
+  · 显式构造器注入改为 @RequiredArgsConstructor
+  · 新增条件查询方法
+- application/file/parse/parser/FileParserRegistry.java
+  · Map<String, FileParser> → Map<String, List<FileParser>>，支持多解析器 per extension
+  · 新增 getParsers() 返回有序列表（主解析器优先），getParser() 保持兼容
+- application/file/parse/model/FileParseType.java
+  · PDF_DOCUMENT 重命名为 DOCUMENT（语义不再绑定 PDF）
+  · 新增 TXT 值
+- application/file/parse/parser/DocumentParser.java（保持接口不变）
+- application/file/parse/parser/PdfBoxDocumentParser.java
+  · supportedType() 返回值由 PDF_DOCUMENT → DOCUMENT
+- application/file/parse/parser/MinerUDocumentParser.java
+  · supportedType() 返回值由 PDF_DOCUMENT → DOCUMENT
+- infrastructure/mysql/file/entity/FileDO.java
+  · 修正 @Table(name = "document") → @Table(name = "file")（与 DB 实际表名一致）
+  · 新增 fileType 字段（@Enumerated(STRING) FileParseType）
+- infrastructure/mysql/file/entity/FileStatus.java
+  · 扩展 5→8 状态：新增 PARSING/PARSED/EXTRACTING/EXTRACTED/FUSING
+  · 重写 validateTransition() 支持失败回退逻辑
+- infrastructure/mysql/file/repository/FileRepository.java
+  · 新增条件查询方法 findByConditions(fileType, nameLike, pageable)
+- application/file/core/model/FileBO.java
+  · 新增 fileType 字段
+- application/file/core/model/UpdateFileBO.java（无变更）
+- application/file/parse/model/ParseResult.java（无变更）
+- infrastructure/storage/FileStorageService.java（无变更）
 
-禁动清单（与本次无关，AI 不许碰）：
-- application/graph/fusion/service/FusionService.java（只调用，不改逻辑）
-- application/graph/construction/（图谱构建逻辑不变）
-- application/llmgateway/（LLM 调用不变）
-- infrastructure/neo4j/（Neo4j 持久化层不变）
-- infrastructure/storage/（MinIO 适配器不变）
-- pom.xml（禁动清单中的依赖管理文件）
+【新建】
+- api/file/controller/GradeController.java
+  · POST /api/v1/grade/upload, GET /api/v1/grade,
+    GET /api/v1/grade/exam/{examNo}, DELETE /api/v1/grade/exam/{examNo}
+- application/file/core/pipeline/FileProcessingPipeline.java（接口）
+- application/file/core/pipeline/DocumentProcessingPipeline.java
+- application/file/core/pipeline/GradeProcessingPipeline.java
+- application/file/parse/parser/TxtFileParser.java（实现 DocumentParser）
+- api/file/dto/core/FileQueryRequest.java（查询 DTO record）
+
+【不动 · 只调用不修改】
+- application/file/upload/service/GradeService.java + impl（CSV 逻辑保持不变）
+- application/file/parse/parser/CsvGradeParser.java（FileParser 实现不变）
+- application/file/upload/event/GradeUploadedEvent.java（发布点不变）
+- application/graph/fusion/event/GradeUploadedEventListener.java
+- application/graph/metrics/event/GraphChangedEvent.java + MetricsCacheInvalidator.java
+
+【禁动 · AI 不许碰】
+- application/graph/fusion/service/FusionService.java（只调用）
+- application/graph/construction/（图谱构建逻辑）
+- application/llmgateway/（LLM 调用）
+- infrastructure/neo4j/（Neo4j 持久化层）
+- infrastructure/storage/FileStorageService.java（MinIO 适配器）
+- pom.xml
 ```
 
 ### 0.5.2 既有抽象沿用对照表
 
 | 本次需要 | 既有有没有？路径 | 决定 |
 |----------|-----------------|------|
-| 文件扩展名→解析器路由 | `FileParserRegistry`（按 extension 索引） | **沿用**，扩展 PDF/TXT 注册 |
-| PDF 解析 | `DocumentParser` 接口 + `MinerUDocumentParser` + `PdfBoxDocumentParser` | **沿用**，保持 MinerU→PDFBox 兜底链 |
-| 解析结果模型 | `ParseResult`（textContent/pageCount/metadata） | **沿用**，TXT 也返回此结构 |
-| 文档元数据持久化 | `FileDO` → `document` 表 + `FileRepository` | **沿用**，新增 `fileType` + 扩展 `status` |
+| 文件扩展名→解析器路由 | `FileParserRegistry`（`Map<String, FileParser>` 单 key 单 value） | **重构**为 `Map<String, List<FileParser>>`，支持多解析器 per extension + 优先级排序（理由：`MinerUDocumentParser` 和 `PdfBoxDocumentParser` 都注册 `.pdf`，后者静默覆盖前者，无法表达 MinerU→PDFBox 兜底链） |
+| PDF 解析器接口 | `DocumentParser extends FileParser` + `MinerUDocumentParser` + `PdfBoxDocumentParser` | **沿用**，`supportedType()` 从 `PDF_DOCUMENT` 改为 `DOCUMENT`（语义通用化，不再绑定 PDF） |
+| TXT 文本解析 | **没有**（PDFBox 和 MinerU 都只能处理 PDF） | **新建** `TxtFileParser`（实现 `DocumentParser`，编码检测 UTF-8→GBK 回退，复用 `CsvGradeParser.tryDecode()` 同款策略） |
+| CSV 成绩解析 | `CsvGradeParser implements FileParser` | **沿用**（无变更） |
+| 文件类型枚举 | `FileParseType`（`CSV_GRADE`, `PDF_DOCUMENT`） | **扩展**：`PDF_DOCUMENT` → `DOCUMENT` + 新增 `TXT` |
+| 解析结果模型 | `ParseResult`（textContent/pageCount/metadata） | **沿用**，TXT 返回 pageCount=1 + metadata=emptyMap |
+| 文档元数据持久化 | `FileDO` → `@Table(name = "document")` + `FileRepository` | **沿用**，新增 `fileType` 字段 + 扩展 `status` 枚举值 |
+| 文档状态枚举 | `FileStatus`（5 状态：UPLOADED/PROCESSING/COMPLETED/FAILED/DELETING） | **扩展**为 8 状态，重写 `validateTransition()` 支持失败回退 |
 | MinIO 文件存储 | `FileStorageService`（upload/download/delete） | **沿用**，路径结构不变 |
 | Neo4j 图写入 | `GraphNodeRepository`（Cypher MERGE/MATCH） | **沿用**，不修改 |
 | 事件发布 | `ApplicationEventPublisher` + `@EventListener` | **沿用**，`GradeUploadedEvent` / `GraphChangedEvent` 发布点不变 |
 | 分页响应 | `PageResult<T>` record | **沿用** |
-| 依赖注入 | 构造器注入（`@RequiredArgsConstructor`） | **沿用** |
-| 异常处理 | `BusinessException` + `GlobalExceptionHandler` | **沿用** |
-| TXT 文本解析 | **没有**（PDFBox 只能处理 PDF，MinerU 也是 PDF 专用） | **新建** `TxtFileParser`（理由：首次支持纯文本文件） |
-| 全链路 Pipeline 编排 | **没有**（当前 upload/process 分离，手动触发） | **新建** `FileProcessingPipeline`（理由：同步链路的编排抽象是首次引入） |
-| Controller 级别文件类型路由 | **没有**（当前在 `FileController.upload()` 内 if-else） | **新建** `FilePipelineRegistry`（理由：消除 Controller 中的硬编码分支） |
+| FileService 接口 | `FileService`（含 3 个成绩委托方法：`uploadGradeCsv`/`deleteGradeByExamNo`/`queryGradeByExam`） | **清理**：移除三个成绩委托方法，接口回归纯文档职责 |
+| MIME 类型校验 | `FileServiceImpl.upload()` 硬编码 `"application/pdf"` 白名单（line 83） | **移除**，改为 Pipeline 层按 `FileParseType` 校验（PDF→application/pdf, TXT→text/plain, CSV→text/csv） |
+| 全链路 Pipeline 编排 | **没有**（当前 upload/process 分离，手动触发；`FileServiceImpl.process()` 硬编码 MinerU→PDFBox 链） | **新建** `FileProcessingPipeline` + `DocumentProcessingPipeline` + `GradeProcessingPipeline` |
+| Controller 路由 | `FileController.upload()` 内 `name().equals("CSV_GRADE")` 字符串比较（line 69） | **消除**：Controller 统一走 Pipeline，CSV 拆出 `GradeController` |
 
 ### 0.5.3 沿用模式 vs 引入新模式
 
 ```
 - 数据访问：**沿用** Repository 模式（JpaRepository + 显式 @Query JPQL）
-- 依赖注入：**沿用** 构造器注入（@RequiredArgsConstructor + private final）
+- 依赖注入：**统一** @RequiredArgsConstructor（FileServiceImpl 当前手动构造器注入，改为 Lombok 与项目风格一致）
 - 错误处理：**沿用** BusinessException + GlobalExceptionHandler
 - 事件解耦：**沿用** ApplicationEventPublisher + @EventListener（模块间通知）
 - 策略模式：**沿用**（FileParser 接口 + Spring Bean 自动注册，与既有 KpMatchingStrategy/WeightCalculationStrategy/SubgraphPruningStrategy 一致）
-- Pipeline 编排：**引入新模式** → 理由：既有架构中没有"串联多步骤 + 状态机驱动 + 断点续跑"的编排抽象。这是一个新的关注点，但遵循 Spring 单机同步执行的既有范式，不引入工作流引擎
-- Controller 拆分：**沿用** 既有分层（L1 Controller → L2 Service → L3 Infrastructure），GradeController 与 FileController 各自独立但共享底层 Service
+- FileParserRegistry：**重构**（Map<String, FileParser> → Map<String, List<FileParser>>，支持多解析器 per extension + 优先级排序）
+- Pipeline 编排：**引入新模式** → 理由：既有架构中没有"串联多步骤 + 状态机驱动 + 断点续跑"的编排抽象。遵循 Spring 单机同步执行范式，不引入工作流引擎
+- Controller 拆分：**引入新模式** → 理由：当前 FileController 混合文档+成绩端点。引入 GradeController 实现职责分离，遵循既有 L1→L2→L3 分层
+- 接口隔离：**清理** FileService 移除成绩委托方法 → 理由：接口含 uploadGradeCsv/deleteGradeByExamNo/queryGradeByExam 三个纯委托方法，违反接口隔离原则
 ```
 
 ---
@@ -95,13 +135,16 @@
 | # | 决策 | 备选 | 选择理由 | 取舍代价 |
 |---|---|---|---|---|
 | **D1** | **Pipeline 抽象**：定义 `FileProcessingPipeline` 接口（`process(MultipartFile, subject)` + `retry(documentId)`），由 `DocumentProcessingPipeline` 和 `GradeProcessingPipeline` 分别实现 | (A) 不引入新接口，在 Service 层加 if-else 分支；(B) 用 Spring StateMachine 做状态机驱动的编排 | 选 A 违反开闭原则正是本次要解决的；选 B 太重，引入新依赖 + 学习曲线。自己写 Pipeline 可以精确控制状态机 + 同步执行 + 保持架构简单 | 需手工管理状态转换和错误恢复，约多写 ~100 行编排代码，但能精确控制行为 |
-| **D2** | **Parser 统一**：保留 `FileParser` → `DocumentParser` 继承链不变，新增 `TxtFileParser` 直接实现 `DocumentParser`。`FileParserRegistry` 同时注册 PDF 和 TXT 解析器 | (A) 合并 FileParser 和 DocumentParser 为单一接口；(B) 让 TXT 解析器另起一个独立接口 | 选 A 改动面太大（PdfBox/MinerU/Csv 三个实现类都得改）；选 B 又走回两套接口的老路。保留继承链 + 新增 TXT 实现改动最小 | `DocumentParser.parse(byte[])` 方法名暗示 PDF，对 TXT 略语义不匹配，但接口契约（byte[] → ParseResult）完全通用 |
+| **D2** | **Parser 统一 + FileParseType 重命名**：保留 `FileParser` → `DocumentParser` 继承链不变。`FileParseType.PDF_DOCUMENT` 重命名为 `DOCUMENT`（语义不再绑定 PDF），新增 `TXT`。`PdfBoxDocumentParser`/`MinerUDocumentParser` 的 `supportedType()` 返回 `DOCUMENT`，`TxtFileParser` 也返回 `DOCUMENT`。`FileParserRegistry` 通过扩展名区分 PDF vs TXT | (A) 保留 `PDF_DOCUMENT` + 新增 `TXT_DOCUMENT`；(B) 合并为一个 `DOCUMENT` 类型 | 选 A 会导致 TXT 和 PDF 在类型系统上被当作不同类别，但实际上它们共享同一条处理链路（DocumentProcessingPipeline）。合并为 `DOCUMENT` + 扩展名路由更简洁 | PDF/TXT 的类型信息在 `FileParseType` 层面丢失（需通过 `fileType` + 扩展名联合区分），但列表查询可同时用 `file_type` + 文件名后缀来判断 |
 | **D3** | **同步链路编排**：`DocumentProcessingPipeline.process()` 内联调用 解析 → 抽取 → 融合，状态机在 Pipeline 内部管理。HTTP 请求等待全链路完成再返回 | (A) 异步模式（上传立即返回 UPLOADED，后台队列处理）；(B) 同步但每步独立请求（保持现有 upload + /process 两步） | 需求明确要求同步链路 + 一次请求返回最终结果。异步模式在 v2 考虑。保持两步操作则未解决痛点 | 大文件可能 60-90s 才返回，HTTP 超时风险需配置 `spring.mvc.async.request-timeout` 或改用 SSE 推送进度（v2） |
 | **D4** | **状态机扩展**：`FileStatus` 扩展为 8 状态 `UPLOADED → PARSING → PARSED → EXTRACTING → EXTRACTED → FUSING → COMPLETED`，`*ING` 失败回退到上一步 `*ED` + 记录 `failReason`；`FAILED` 保留给不可恢复错误 | (A) 5 状态（最小改动）；(B) 每步仅有 ING 无 ED（7 状态） | 需要 ED 状态来表示"该步骤成功完成，可从此继续"，否则失败后无法区分"没做"还是"正在做"。AC-5 要求保留已完成步骤产物，必须有 ED 状态 | 状态数增加 3 倍，状态转换矩阵从 6 条规则变为 ~20 条。需在 `FileStatus.validateTransition()` 中严格校验 |
-| **D5** | **TXT 解析**：`TxtFileParser` 实现 `DocumentParser`，编码检测 UTF-8 → GBK 回退。`parse(byte[])` 将字节按编码转为字符串，返回 `ParseResult(textContent, 1, emptyMap)` | (A) 用 Apache Tika 自动检测文件类型和编码；(B) 直接用 `new String(bytes, UTF-8)` 不做编码检测 | Tika 引入新依赖且过度（只需要文本读取）。手工编码检测用 `juniversalchardet` 或简单 BOM 判断即可。TXT 文件通常 UTF-8，GBK 是少数情况 | 编码检测不如 Tika 全面（如 ISO-2022-JP 等罕见编码不支持），但目标用户群（中文教育场景）只涉及 UTF-8/GBK |
-| **D6** | **Controller 拆分**：`FileController`（`/api/v1/document`）处理文档文件 + `GradeController`（`/api/v1/grade`）处理成绩文件。CSV 上传从原 `POST /api/v1/file/document/upload` 迁移到 `POST /api/v1/grade/upload` | (A) 保留统一入口 `POST /api/v1/document/upload` 兼容旧调用；(B) 拆为两个 controller 各自独立 | 需求选 B。前端同步更新端点路径。旧路径不再兼容 CSV，CSV 调用方需更新 | 旧 CSV 上传调用方（如有脚本/测试）需更新 URL。前端同步调整 |
-| **D7** | **条件查询实现**：`FileRepository` 新增 `findByConditions(fileType, nameLike, pageable)` 方法，使用 JPQL `WHERE ... AND (:fileType IS NULL OR d.fileType = :fileType) AND (:name IS NULL OR d.name LIKE %:name%)` 动态条件 | (A) Spring Data JPA Specification + Criteria API；(B) 多条 `findByXxx` 派生查询方法组合 | Specification 代码冗长且不易读。JPQL 动态条件用 `IS NULL OR` 模式简洁，两条可选参数即可覆盖。本项目已有使用 `@Query` 的先例（Hibernate Boolean bug workaround） | 无法在编译期检查 JPQL 正确性，但可在集成测试中覆盖。不能做多条件 AND/OR 组合（AC 明确不在 v1 范围） |
-| **D8** | **`file_type` 字段**：`document` 表新增 `file_type VARCHAR(20) NOT NULL DEFAULT 'PDF'`。`FileDO` 映射为 `@Enumerated(STRING) FileParseType fileType`。存量数据通过 DEFAULT 值自动为 `PDF` | (A) 允许 NULL，代码中 null → 默认 PDF；(B) 用 `file_type` 关联一张 `file_type_config` 表 | NOT NULL + DEFAULT 保证了 DDL 执行时存量自动填充，无需脚本。单独配置表过度设计（v1 仅 3 种类型） | `FileParseType` 枚举新增 TXT 值后，旧代码中 `switch` 若无 default 分支可能编译警告 |
+| **D5** | **TXT 解析**：`TxtFileParser` 实现 `DocumentParser`，编码检测 UTF-8 → GBK 回退（复用 `CsvGradeParser.tryDecode()` 同款策略）。`parse(byte[])` 将字节按编码转为字符串，返回 `ParseResult(textContent, 1, emptyMap)` | (A) 用 Apache Tika 自动检测文件类型和编码；(B) 直接用 `new String(bytes, UTF-8)` 不做编码检测 | Tika 引入新依赖且过度（只需要文本读取）。CsvGradeParser 已有成熟的 UTF-8→GBK 回退实现，TxtFileParser 直接复用同款策略，代码风格一致 | 编码检测不如 Tika 全面（如 ISO-2022-JP 等罕见编码不支持），但目标用户群（中文教育场景）只涉及 UTF-8/GBK |
+| **D6** | **Controller 拆分 + 统一上传入口**：`FileController`（`/api/v1/file/document`）保留 `POST /upload` 作为**所有文件类型统一上传入口**，通过 `FileParserRegistry` 查找扩展名 → 获取 `FileParseType` → 路由到对应 Pipeline（DOCUMENT → `DocumentProcessingPipeline`，CSV_GRADE → `GradeProcessingPipeline`）。`GradeController`（`/api/v1/file/grade`）仅负责成绩查询/删除（GET 列表、GET /exam/{examNo}、DELETE /exam/{examNo}），**不提供上传端点** | (A) 保留统一入口兼容旧调用；(B) 拆为两个 controller 各自独立，路径简化 | 需求选 B。前端同步更新端点路径。`/file/document` → `/document` 去掉了冗余的 `/file` 前缀 | 旧 CSV 上传调用方（如有脚本/测试）需更新 URL。前端同步调整 |
+| **D7** | **条件查询实现**：`FileRepository` 新增 `findByConditions(fileType, nameLike, pageable)` 方法，使用 JPQL `WHERE ... AND (:fileType IS NULL OR d.fileType = :fileType) AND (:name IS NULL OR d.name LIKE %:name%)` 动态条件 | (A) Spring Data JPA Specification + Criteria API；(B) 多条 `findByXxx` 派生查询方法组合 | Specification 代码冗长且不易读。JPQL 动态条件用 `IS NULL OR` 模式简洁。本项目已有使用 `@Query` 的先例（Hibernate Boolean bug workaround） | 无法在编译期检查 JPQL 正确性，但可在集成测试中覆盖。不能做多条件 AND/OR 组合（AC 明确不在 v1 范围） |
+| **D8** | **`file_type` 字段**：`file` 表新增 `file_type VARCHAR(20) NOT NULL DEFAULT 'DOCUMENT'`。`FileDO` 映射为 `@Enumerated(STRING) FileParseType fileType`。存量数据通过 DEFAULT 值自动为 `DOCUMENT`。同时修正 `FileDO` 的 `@Table(name = "document")` → `@Table(name = "file")`（与 DB 实际表名一致） | (A) 允许 NULL，代码中 null → 默认 DOCUMENT；(B) 用 `file_type` 关联一张 `file_type_config` 表 | NOT NULL + DEFAULT 保证了 DDL 执行时存量自动填充，无需脚本。单独配置表过度设计。@Table 修正是既有 bug——上次重构改了 DB 表名但漏了 JPA 注解 | DDL DEFAULT 'DOCUMENT' 匹配重命名后的枚举值 DOCUMENT；存量数据都是 PDF 正确回填 |
+| **D9** | **FileParserRegistry 增强**：将内部存储从 `Map<String, FileParser>` 改为 `Map<String, List<FileParser>>`。新增方法 `List<FileParser> getParsers(String filename)` 返回按优先级排序的解析器列表。PDF 扩展名返回 `[MinerUDocumentParser(priority=0), PdfBoxDocumentParser(priority=1)]`，TXT 返回 `[TxtFileParser]`。`getParser()` 保持兼容返回第一个 | (A) 引入 `@Priority` 注解 + `Ordered` 接口排序；(B) 在 `FileParser` 接口上新增 `int priority()` 方法 | 选 B 更显式——优先级是解析器的固有属性，不应依赖外部注解。`DocumentParser` 的 default 方法设为 0（最高），CsvGradeParser 默认 0 | `FileParser` 接口新增方法，所有实现类都需要实现（或通过 default 方法）。但 4 个实现类改动都很小 |
+| **D10** | **FileService 接口清理**：从 `FileService` 接口中移除 `uploadGradeCsv(MultipartFile, String)`、`deleteGradeByExamNo(String)`、`queryGradeByExam(String)` 三个方法。`FileServiceImpl` 同步移除这三个纯委托方法。`GradeController` 直接注入 `GradeService` | (A) 保留在 FileService 中作为快捷方式；(B) 移除，各 Controller 直接注入各自 Service | 这三个方法体是单行委托（`return gradeService.xxx(...)`），放在 FileService 中违反接口隔离原则。移除后 FileService 回归纯文档职责 | GradeController 需要额外注入 GradeService（但本来就该如此），FileServiceImpl 减少 3 个方法和 1 个依赖 |
+| **D11** | **MIME 校验下放**：`FileServiceImpl.upload()` 中移除 `"application/pdf"` 硬编码 MIME 白名单。MIME 校验下放到各 `FileParser` 实现中（`supportedExtensions()` 已隐含类型约束）。`DocumentProcessingPipeline` 通过 `FileParserRegistry` 获取解析器时即完成了类型校验——找不到解析器则拒绝 | (A) 在 Pipeline 层统一维护 MIME 白名单 Map；(B) 完全依赖扩展名判断，不校验 MIME | 选 B 最简单——扩展名已经能区分类型，MIME 是冗余校验。当前实现中 `upload()` 的 MIME 检查实际只拒绝非 PDF，而 CSV 通过 Controller 分支绕过了这个检查——说明 MIME 检查本来就不一致 | 恶意修改扩展名的文件会走到错误的解析器（如把 .txt 改成 .pdf），解析失败时会被正确标记为 FAILED。风险可接受 |
 
 ---
 
@@ -112,7 +155,7 @@
 ```
 Client                    FileController         DocumentProcessingPipeline      FileParserRegistry    MinerU/PDFBox    LLMGateway    FusionService
   │                            │                          │                           │                   │              │             │
-  │  POST /api/v1/document     │                          │                           │                   │              │             │
+  │  POST /api/v1/file/document│                          │                           │                   │              │             │
   │  /upload (file + subject)  │                          │                           │                   │              │             │
   │───────────────────────────>│                          │                           │                   │              │             │
   │                            │  process(file, subject)  │                           │                   │              │             │
@@ -162,7 +205,7 @@ Client                    FileController         DocumentProcessingPipeline     
 ```
 Client                    FileController         DocumentProcessingPipeline
   │                            │                          │
-  │  POST /api/v1/document     │                          │
+  │  POST /api/v1/file/document│                          │
   │  /{id}/process             │                          │
   │───────────────────────────>│  retry(id)               │
   │                            │─────────────────────────>│
@@ -176,19 +219,24 @@ Client                    FileController         DocumentProcessingPipeline
   │<───────────────────────────│                          │
 ```
 
-### 2.3 CSV 成绩上传链路（Grade Pipeline）
+### 2.3 CSV 成绩上传链路（统一入口 → Grade Pipeline）
 
 ```
-Client                    GradeController         GradeProcessingPipeline       GradeService (既有)
+Client                    FileController          GradeProcessingPipeline       GradeService (既有)
   │                            │                          │                        │
-  │  POST /api/v1/grade        │                          │                        │
-  │  /upload (file + subject)  │                          │                        │
-  │───────────────────────────>│  process(file, subject)  │                        │
+  │  POST /api/v1/file/document│                          │                        │
+  │  /upload (CSV + subject)   │                          │                        │
+  │───────────────────────────>│                          │                        │
+  │                            │ ① FileParserRegistry     │                        │
+  │                            │    .getParser("xxx.csv") │                        │
+  │                            │    → CSV_GRADE           │                        │
+  │                            │ ② route to               │                        │
+  │                            │   GradeProcessingPipeline │                        │
   │                            │─────────────────────────>│                        │
   │                            │                          │  uploadGradeCsv(file,  │
   │                            │                          │    subject)            │
   │                            │                          │───────────────────────>│
-  │                            │                          │                        │── CSV parse (FileParserRegistry)
+  │                            │                          │                        │── CSV parse
   │                            │                          │                        │── MinIO upload
   │                            │                          │                        │── MySQL batch insert
   │                            │                          │                        │── Neo4j graph write
@@ -309,6 +357,7 @@ retry(documentId):
 | ADR-001 | `.specs/adr/001-file-pipeline-abstraction.md` | D1: FileProcessingPipeline 接口设计 |
 | ADR-002 | `.specs/adr/002-document-state-machine-v2.md` | D4: 8 状态文档状态机 |
 | ADR-003 | `.specs/adr/003-controller-split.md` | D6: FileController + GradeController 拆分 |
+| ADR-004 | `.specs/adr/004-parser-registry-multi-parser.md` | D9: FileParserRegistry 多解析器 per extension |
 
 ---
 
@@ -323,6 +372,7 @@ retry(documentId):
 | **R5** | **Controller 拆分导致前端/脚本断裂**：CSV 上传从 `/api/v1/file/document/upload` 迁移到 `/api/v1/grade/upload`，旧调用方未同步更新 | CSV 上传 404，成绩数据中断 | 中 | ① 前端同步更新（需求假设前端可同步调整）；② 如有外部脚本/CI，在 INTEGRATION 阶段回归 CSV 上传测试；③ 可在 v1 短期保留旧端点的兼容转发（返回 301 + 新 URL，提醒调用方迁移），v2 移除 |
 | **R6** | **LLM 抽取覆盖旧图谱数据**：同步链路每次重新抽取会先删旧子图再写新子图（既有的"全量覆盖"策略），若融合未执行即失败，图谱中残留不完整数据 | 用户查询图谱时看到不完整/不一致的知识点 | 中 | ① EXTRACTING 失败时回退到 PARSED，已经写入 Neo4j 的数据在 `GraphNodeRepository.deleteByDocumentId()` 后是空白的（抽取前先清理）；② 抽取成功但融合失败 → 图谱有抽取结果但 MASTERS 未更新，状态 EXTRACTED + failReason 明确指示 |
 | **R7** | **长期债务：Pipeline 难测试**：`DocumentProcessingPipeline.process()` 是一个长方法，依赖多个外部服务（MinIO/MinerU/LLM/Neo4j），单元测试困难 | 重构或修 bug 时回归成本高 | 中 | ① 每个子步骤（parse/extract/fuse）已有独立 Service，可单独单元测试；② Pipeline 本身的集成测试用 `@SpringBootTest` + `@ActiveProfiles("dev")` 直连 podman 真实组件（既有模式）；③ 未来可引入步骤间状态持久化（如 pipeline_execution 表），使 Pipeline 成为可恢复的状态机 |
+| **R8** | **@Table 注解不一致**：`FileDO.@Table(name = "document")` 但 DB 实际表名为 `file`（上次重构改了 DB 表名但漏了 JPA 注解）。若某处代码使用 JPA 原生查询引用 `document` 表名，与实际 DB 不一致 | 查询报错 "Table 'graphnexus.document' doesn't exist" | 低 | 本次 T02 一并修正 `@Table(name = "file")`，与 DB 实际表名一致。grep 全项目确认无硬编码 `document` 表名的 JPQL/SQL |
 
 ---
 
@@ -359,9 +409,9 @@ retry(documentId):
 
 ```
 - API 端点变更：
-  - FileController: POST/GET /api/v1/document/* (文档 CRUD + 上传 + 解析触发) — 复用原 FileController 路径
-  - GradeController: POST /api/v1/grade/upload, GET /api/v1/grade, GET /api/v1/grade/exam/{examNo}, DELETE /api/v1/grade/exam/{examNo} — 新端点
-  - 废弃: POST /api/v1/file/document/upload 不再接受 CSV 文件（CSV 必须走 /api/v1/grade/upload）
+  - FileController: POST /api/v1/file/document/upload (统一上传入口，PDF/TXT/CSV 自动路由), GET /api/v1/file/document (列表+筛选), GET/PUT/DELETE /api/v1/file/document/{id}, POST /api/v1/file/document/{id}/process
+  - GradeController: GET /api/v1/file/grade, GET /api/v1/file/grade/exam/{examNo}, DELETE /api/v1/file/grade/exam/{examNo} — 仅查询/删除，不上传
+  - 废弃: FileController 中原有的 GET/DELETE /grade/exam/{examNo} → 迁入 GradeController
 - 数据库 schema：
   - document 表: 新增 file_type VARCHAR(20) NOT NULL DEFAULT 'PDF'
   - document.status: 扩展枚举值（PARSING/PARSED/EXTRACTING/EXTRACTED/FUSING）
