@@ -144,8 +144,8 @@ public class FileServiceImpl implements FileService {
                         "文档不存在: id=" + documentId));
 
         // ② 校验并更新状态 → PROCESSING
-        doc.getStatus().validateTransition(FileStatus.PROCESSING);
-        doc.setStatus(FileStatus.PROCESSING);
+        doc.getStatus().validateTransition(FileStatus.PARSING);
+        doc.setStatus(FileStatus.PARSING);
         fileRepository.save(doc);
 
         // ③ 从 MinIO 获取文件

@@ -16,9 +16,10 @@ import java.util.Set;
  * <p>继承体系：</p>
  * <pre>
  * FileParser（通用文件解析）
- *   ├── DocumentParser（文档解析，如 PDF）
+ *   ├── DocumentParser（文档解析，如 PDF/TXT）
  *   │     ├── PdfBoxDocumentParser
- *   │     └── MinerUDocumentParser
+ *   │     ├── MinerUDocumentParser
+ *   │     └── TxtFileParser
  *   └── CsvGradeParser（CSV 成绩解析，直接实现 FileParser）
  * </pre>
  *
@@ -45,4 +46,17 @@ public interface FileParser {
      * @return 解析结果
      */
     <T> FileParseResult<T> parse(FileParseRequest request);
+
+    /**
+     * 解析器优先级，数值越小优先级越高。
+     * 同一扩展名注册多个解析器时，按 priority 升序排列构成兜底链。
+     * 默认 0（最高优先级）。
+     *
+     * <p>示例：MinerU(0) → PDFBox(1) 在 PDF 解析时 MinerU 优先。</p>
+     *
+     * @see FileParserRegistry#getParsers(String)
+     */
+    default int priority() {
+        return 0;
+    }
 }

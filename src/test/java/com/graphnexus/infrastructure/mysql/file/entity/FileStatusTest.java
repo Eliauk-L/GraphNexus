@@ -1,81 +1,128 @@
 package com.graphnexus.infrastructure.mysql.file.entity;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 文档状态机单元测试（对应 AC-3）。
+ * 文档状态机 v2 单元测试 — 8 状态模型。
  *
  * @author Jay
- * @date 2026/06/12
+ * @date 2026/06/18
  */
-@DisplayName("FileStatus 状态机")
+@DisplayName("FileStatus v2 状态机")
 class FileStatusTest {
 
+    // ==================== 正向路径 ====================
+
     @Test
-    @DisplayName("UPLOADED → PROCESSING 合法")
-    void uploadedToProcessingShouldPass() {
-        assertDoesNotThrow(() -> FileStatus.UPLOADED.validateTransition(FileStatus.PROCESSING));
+    @DisplayName("UPLOADED → PARSING 合法")
+    void uploadedToParsingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.UPLOADED.validateTransition(FileStatus.PARSING));
     }
 
     @Test
-    @DisplayName("PROCESSING → COMPLETED 合法")
-    void processingToCompletedShouldPass() {
-        assertDoesNotThrow(() -> FileStatus.PROCESSING.validateTransition(FileStatus.COMPLETED));
+    @DisplayName("PARSING → PARSED 合法")
+    void parsingToParsedShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.PARSING.validateTransition(FileStatus.PARSED));
     }
 
     @Test
-    @DisplayName("PROCESSING → FAILED 合法")
-    void processingToFailedShouldPass() {
-        assertDoesNotThrow(() -> FileStatus.PROCESSING.validateTransition(FileStatus.FAILED));
+    @DisplayName("PARSED → EXTRACTING 合法")
+    void parsedToExtractingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.PARSED.validateTransition(FileStatus.EXTRACTING));
     }
 
     @Test
-    @DisplayName("COMPLETED → PROCESSING 合法（重新解析）")
-    void completedToProcessingShouldPass() {
-        assertDoesNotThrow(() -> FileStatus.COMPLETED.validateTransition(FileStatus.PROCESSING));
+    @DisplayName("EXTRACTING → EXTRACTED 合法")
+    void extractingToExtractedShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.EXTRACTING.validateTransition(FileStatus.EXTRACTED));
     }
 
     @Test
-    @DisplayName("FAILED → PROCESSING 合法（重试）")
-    void failedToProcessingShouldPass() {
-        assertDoesNotThrow(() -> FileStatus.FAILED.validateTransition(FileStatus.PROCESSING));
+    @DisplayName("EXTRACTED → FUSING 合法")
+    void extractedToFusingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.EXTRACTED.validateTransition(FileStatus.FUSING));
     }
 
     @Test
-    @DisplayName("UPLOADED → COMPLETED 非法（跳过 PROCESSING）")
-    void uploadedToCompletedShouldFail() {
-        assertThrows(IllegalArgumentException.class,
-                () -> FileStatus.UPLOADED.validateTransition(FileStatus.COMPLETED));
+    @DisplayName("FUSING → COMPLETED 合法")
+    void fusingToCompletedShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.FUSING.validateTransition(FileStatus.COMPLETED));
+    }
+
+    // ==================== 失败回退 ====================
+
+    @Test
+    @DisplayName("PARSING → UPLOADED 合法（可恢复失败回退）")
+    void parsingToUploadedShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.PARSING.validateTransition(FileStatus.UPLOADED));
     }
 
     @Test
-    @DisplayName("COMPLETED → UPLOADED 非法（禁止回退）")
-    void completedToUploadedShouldFail() {
-        assertThrows(IllegalArgumentException.class,
-                () -> FileStatus.COMPLETED.validateTransition(FileStatus.UPLOADED));
+    @DisplayName("PARSING → FAILED 合法（不可恢复失败）")
+    void parsingToFailedShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.PARSING.validateTransition(FileStatus.FAILED));
     }
 
     @Test
-    @DisplayName("FAILED → UPLOADED 非法（禁止回退）")
-    void failedToUploadedShouldFail() {
-        assertThrows(IllegalArgumentException.class,
-                () -> FileStatus.FAILED.validateTransition(FileStatus.UPLOADED));
+    @DisplayName("EXTRACTING → PARSED 合法（可恢复失败回退）")
+    void extractingToParsedShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.EXTRACTING.validateTransition(FileStatus.PARSED));
     }
 
     @Test
-    @DisplayName("UPLOADED → FAILED 非法（禁止跳跃）")
-    void uploadedToFailedShouldFail() {
-        assertThrows(IllegalArgumentException.class,
-                () -> FileStatus.UPLOADED.validateTransition(FileStatus.FAILED));
+    @DisplayName("FUSING → EXTRACTED 合法（可恢复失败回退）")
+    void fusingToExtractedShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.FUSING.validateTransition(FileStatus.EXTRACTED));
     }
+
+    // ==================== 手动重新处理 ====================
+
+    @Test
+    @DisplayName("COMPLETED → PARSING 合法（重新解析）")
+    void completedToParsingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.COMPLETED.validateTransition(FileStatus.PARSING));
+    }
+
+    @Test
+    @DisplayName("COMPLETED → EXTRACTING 合法（重新抽取）")
+    void completedToExtractingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.COMPLETED.validateTransition(FileStatus.EXTRACTING));
+    }
+
+    @Test
+    @DisplayName("COMPLETED → FUSING 合法（重新融合）")
+    void completedToFusingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.COMPLETED.validateTransition(FileStatus.FUSING));
+    }
+
+    @Test
+    @DisplayName("FAILED → PARSING 合法（从头重试）")
+    void failedToParsingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.FAILED.validateTransition(FileStatus.PARSING));
+    }
+
+    // ==================== 删除路径 ====================
 
     @Test
     @DisplayName("UPLOADED → DELETING 合法")
     void uploadedToDeletingShouldPass() {
         assertDoesNotThrow(() -> FileStatus.UPLOADED.validateTransition(FileStatus.DELETING));
+    }
+
+    @Test
+    @DisplayName("PARSED → DELETING 合法")
+    void parsedToDeletingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.PARSED.validateTransition(FileStatus.DELETING));
+    }
+
+    @Test
+    @DisplayName("EXTRACTED → DELETING 合法")
+    void extractedToDeletingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.EXTRACTED.validateTransition(FileStatus.DELETING));
     }
 
     @Test
@@ -90,17 +137,58 @@ class FileStatusTest {
         assertDoesNotThrow(() -> FileStatus.FAILED.validateTransition(FileStatus.DELETING));
     }
 
-    @Test
-    @DisplayName("DELETING → 任何状态 非法（终态不可再转换）")
-    void deletingCannotTransition() {
-        assertThrows(IllegalArgumentException.class,
-                () -> FileStatus.DELETING.validateTransition(FileStatus.UPLOADED));
-    }
+    // ==================== 非法跳转 ====================
 
-    @Test
-    @DisplayName("PROCESSING → DELETING 非法（处理中不可删除）")
-    void processingToDeletingShouldFail() {
-        assertThrows(IllegalArgumentException.class,
-                () -> FileStatus.PROCESSING.validateTransition(FileStatus.DELETING));
+    @Nested
+    @DisplayName("非法跳转")
+    class IllegalTransitions {
+
+        @Test
+        @DisplayName("UPLOADED → COMPLETED 非法（跳过所有步骤）")
+        void uploadedToCompletedShouldFail() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> FileStatus.UPLOADED.validateTransition(FileStatus.COMPLETED));
+        }
+
+        @Test
+        @DisplayName("UPLOADED → PARSED 非法（跳跃）")
+        void uploadedToParsedShouldFail() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> FileStatus.UPLOADED.validateTransition(FileStatus.PARSED));
+        }
+
+        @Test
+        @DisplayName("COMPLETED → UPLOADED 非法（禁止回退）")
+        void completedToUploadedShouldFail() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> FileStatus.COMPLETED.validateTransition(FileStatus.UPLOADED));
+        }
+
+        @Test
+        @DisplayName("PARSED → UPLOADED 非法（禁止回退到上上游）")
+        void parsedToUploadedShouldFail() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> FileStatus.PARSED.validateTransition(FileStatus.UPLOADED));
+        }
+
+        @Test
+        @DisplayName("DELETING → 任何状态 非法（终态）")
+        void deletingCannotTransition() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> FileStatus.DELETING.validateTransition(FileStatus.UPLOADED));
+            assertThrows(IllegalArgumentException.class,
+                    () -> FileStatus.DELETING.validateTransition(FileStatus.COMPLETED));
+        }
+
+        @Test
+        @DisplayName("*ING 状态不可直接删除（必须回退到 *ED 才能删）")
+        void ingStatesCannotDelete() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> FileStatus.PARSING.validateTransition(FileStatus.DELETING));
+            assertThrows(IllegalArgumentException.class,
+                    () -> FileStatus.EXTRACTING.validateTransition(FileStatus.DELETING));
+            assertThrows(IllegalArgumentException.class,
+                    () -> FileStatus.FUSING.validateTransition(FileStatus.DELETING));
+        }
     }
 }

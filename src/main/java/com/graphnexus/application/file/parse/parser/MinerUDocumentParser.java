@@ -97,7 +97,7 @@ public class MinerUDocumentParser implements DocumentParser {
 
     @Override
     public FileParseType supportedType() {
-        return FileParseType.PDF_DOCUMENT;
+        return FileParseType.DOCUMENT;
     }
 
     @Override
