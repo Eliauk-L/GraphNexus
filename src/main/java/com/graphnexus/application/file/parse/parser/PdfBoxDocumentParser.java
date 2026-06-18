@@ -100,4 +100,9 @@ public class PdfBoxDocumentParser implements DocumentParser {
     public Set<String> supportedExtensions() {
         return Set.of(".pdf");
     }
+
+    @Override
+    public int priority() {
+        return 1; // 兜底解析器，MinerU 优先
+    }
 }

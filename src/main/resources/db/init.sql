@@ -1,20 +1,19 @@
 -- =============================================================================
--- GraphNexus 文档元数据表 DDL
--- Change: document-process-pdf-minimal
--- 首次执行: mysql -u graphnexus -p graphnexus < init-document.sql
+-- GraphNexus 文件元数据表 DDL
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS file (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '技术主键',
     document_no     CHAR(32)        NOT NULL COMMENT 'MD5(pdf_bytes) 内容指纹',
-    name            VARCHAR(255)    NOT NULL COMMENT '文档名称（原始文件名清洗后）',
+    name            VARCHAR(255)    NOT NULL COMMENT '文件名称（原始文件名清洗后）',
     subject         VARCHAR(20)     NOT NULL COMMENT '所属学科 MATH/PHYSICS/CHEMISTRY',
+    file_type       VARCHAR(20)     NOT NULL DEFAULT 'DOCUMENT' COMMENT '文件类型 DOCUMENT/TXT/CSV_GRADE',
     file_size       BIGINT          DEFAULT NULL COMMENT '文件大小(字节)',
     minio_path      VARCHAR(500)    NOT NULL COMMENT 'MinIO 存储路径',
-    text_content    MEDIUMTEXT      DEFAULT NULL COMMENT 'PDFBox 提取的文本内容',
+    text_content    MEDIUMTEXT      DEFAULT NULL COMMENT '提取的文本内容',
     page_count      INT             DEFAULT NULL COMMENT '总页数',
-    metadata_json   VARCHAR(2000)   DEFAULT NULL COMMENT 'PDF 元信息 JSON（标题/作者/创建日期等）',
-    status          VARCHAR(20)     NOT NULL DEFAULT 'UPLOADED' COMMENT '文档状态 UPLOADED/PROCESSING/COMPLETED/FAILED',
+    metadata_json   VARCHAR(2000)   DEFAULT NULL COMMENT '元信息 JSON',
+    status          VARCHAR(20)     NOT NULL DEFAULT 'UPLOADED' COMMENT '文件状态 UPLOADED/PARSING/PARSED/EXTRACTING/EXTRACTED/FUSING/COMPLETED/FAILED',
     fail_reason     VARCHAR(512)    DEFAULT NULL COMMENT '失败原因',
     uploaded_by     BIGINT UNSIGNED DEFAULT NULL COMMENT '上传人ID FK→user_account.id',
     is_deleted      TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '逻辑删除 0=否 1=是',
@@ -22,12 +21,14 @@ CREATE TABLE IF NOT EXISTS file (
     update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_document_subject (document_no, subject),
+    KEY idx_file_type (file_type),
     KEY idx_minio_path (minio_path(200)),
     KEY idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文档元数据表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文件元数据表';
 
--- =============================================================================
--- down（回滚）
+-- ALTER TABLE 增量迁移（已存在的 file 表）：
+-- ALTER TABLE file ADD COLUMN IF NOT EXISTS file_type VARCHAR(20) NOT NULL DEFAULT 'DOCUMENT' AFTER subject;
+-- ALTER TABLE file ADD INDEX IF NOT EXISTS idx_file_type (file_type);
 -- DROP TABLE IF EXISTS file;
 -- =============================================================================
 
