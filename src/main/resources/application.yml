@@ -21,17 +21,11 @@ spring:
   autoconfigure:
     exclude:
       # Neo4j — 已激活（knowledge-graph-extraction）
-      # Redis
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-      # RabbitMQ
-      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
       # Security（本次不配置安全规则，所有端点开放）
       - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
       - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
       # 基础设施健康检查（已在 management.health 中逐一禁用，此处 double check）
-      - org.springframework.boot.actuate.autoconfigure.redis.RedisHealthContributorAutoConfiguration
   jackson:
     deserialization:
           fail-on-unknown-properties: false
@@ -52,10 +46,6 @@ management:
     neo4j:
       enabled: true
     db:
-      enabled: false
-    redis:
-      enabled: false
-    rabbit:
       enabled: false
   metrics:
     export:

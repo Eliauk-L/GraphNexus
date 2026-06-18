@@ -5,6 +5,7 @@ import com.graphnexus.application.file.core.model.FileBO;
 import com.graphnexus.application.file.parse.model.FileParseRequest;
 import com.graphnexus.application.file.parse.model.FileParseType;
 import com.graphnexus.application.file.parse.model.ParseResult;
+import com.graphnexus.application.file.parse.parser.DocumentParser;
 import com.graphnexus.application.file.parse.parser.FileParser;
 import com.graphnexus.application.file.parse.parser.FileParserRegistry;
 import com.graphnexus.application.graph.core.model.ExtractionResultBO;
