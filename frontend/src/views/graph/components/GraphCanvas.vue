@@ -1,65 +1,46 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { Graph } from '@antv/g6'
-import type { G6GraphData } from '../graphAdapter'
+import { NVL } from '@neo4j-nvl/base'
+import type { NvlGraphData } from '../graphAdapter'
 
 const props = defineProps<{
-  data: G6GraphData | null
+  data: NvlGraphData | null
 }>()
 
 const container = ref<HTMLDivElement>()
-let graph: Graph | null = null
+let nvl: NVL | null = null
 
-function initGraph() {
+function createNvl() {
   if (!container.value || !props.data) return
-  if (graph) { graph.destroy(); graph = null }
+  if (nvl) { nvl.destroy(); nvl = null }
 
-  graph = new Graph({
-    container: container.value,
-    width: container.value.clientWidth,
-    height: 500,
-    data: (props.data ?? { nodes: [], edges: [] }) as any,
-    layout: {
-      type: 'force',
-      preventOverlap: true,
-      animated: true,
+  nvl = new NVL(
+    container.value,
+    props.data.nodes,
+    props.data.relationships,
+    {
+      renderer: 'canvas',
+      layout: 'forceDirected',
+      layoutOptions: {
+        enableCytoscape: false,
+      },
+      initialZoom: 0.8,
     },
-    node: (d: any) => ({
-      style: {
-        fill: d.data?.fill ?? '#1783FF',
-        size: d.data?.size ?? 28,
-        labelText: d.data?.label ?? d.id,
-        labelFontSize: 12,
-        labelPlacement: 'bottom',
-        labelOffsetY: 6,
-        labelFill: '#333',
-      },
-    }),
-    edge: (d: any) => ({
-      style: {
-        stroke: d.data?.stroke ?? '#99ADD1',
-        lineWidth: d.data?.lineWidth ?? 1.5,
-        endArrow: true,
-      },
-    }),
-    behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'],
-  } as any)
-
-  graph.render()
+  )
 }
 
 watch(() => props.data, () => {
-  initGraph()
+  createNvl()
 }, { deep: true })
 
 onMounted(() => {
-  nextTick(() => initGraph())
+  nextTick(() => createNvl())
 })
 
 onBeforeUnmount(() => {
-  if (graph) {
-    graph.destroy()
-    graph = null
+  if (nvl) {
+    nvl.destroy()
+    nvl = null
   }
 })
 </script>

@@ -1,12 +1,12 @@
 import type { GraphSubgraphVO, SubgraphResponse } from '@/api/types'
+import type { Node, Relationship } from '@neo4j-nvl/base'
 
-// G6 v5 数据格式
-export interface G6GraphData {
-  nodes: Array<{ id: string; data: Record<string, unknown> }>
-  edges: Array<{ source: string; target: string; data: Record<string, unknown> }>
+export interface NvlGraphData {
+  nodes: Node[]
+  relationships: Relationship[]
 }
 
-// Neo4j 风格颜色映射
+// Neo4j Bloom 风格颜色
 const NODE_COLORS: Record<string, string> = {
   KnowledgePoint: '#4A90D9',
   Student: '#52C41A',
@@ -17,12 +17,12 @@ const NODE_COLORS: Record<string, string> = {
 }
 
 const NODE_SIZES: Record<string, number> = {
-  KnowledgePoint: 32,
-  Student: 28,
-  Entity: 24,
-  Exam: 26,
-  KnowledgeCategory: 30,
-  Document: 26,
+  KnowledgePoint: 36,
+  Student: 32,
+  Entity: 28,
+  Exam: 30,
+  KnowledgeCategory: 34,
+  Document: 30,
 }
 
 const EDGE_COLORS: Record<string, string> = {
@@ -39,52 +39,51 @@ const EDGE_COLORS: Record<string, string> = {
   REFERENCES: '#8C8C8C',
 }
 
-export function transformGraphSubgraphVO(vo: GraphSubgraphVO): G6GraphData {
+export function transformGraphSubgraphVO(vo: GraphSubgraphVO): NvlGraphData {
+  const relIdCounter = (() => { let i = 0; return () => `r-${i++}` })()
+
   return {
     nodes: vo.nodes.map((n) => ({
       id: n.id,
-      data: {
-        label: n.id.substring(0, 8),
-        nodeType: n.nodeType,
-        fill: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
-        size: NODE_SIZES[n.nodeType] ?? 26,
-        documentId: n.documentId,
-      },
-    })),
-    edges: vo.edges.map((e) => ({
-      source: e.sourceNodeId,
-      target: e.targetNodeId,
-      data: {
-        type: e.edgeType,
-        stroke: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
-        lineWidth: 1.5,
-        lineDash: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType) ? [4, 4] : undefined,
-      },
-    })),
+      captions: [{ value: nodeLabel(n.nodeType, {}) }],
+      color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
+      size: NODE_SIZES[n.nodeType] ?? 28,
+    } satisfies Node)),
+    relationships: vo.edges.map((e) => ({
+      id: relIdCounter(),
+      from: e.sourceNodeId,
+      to: e.targetNodeId,
+      type: e.edgeType,
+      captions: [{ value: e.edgeType }],
+      color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
+      width: 1.5,
+    } satisfies Relationship)),
   }
 }
 
-export function transformSubgraphResponse(res: SubgraphResponse): G6GraphData {
+export function transformSubgraphResponse(res: SubgraphResponse): NvlGraphData {
+  const relIdCounter = (() => { let i = 0; return () => `sr-${i++}` })()
+
   return {
     nodes: res.nodes.map((n) => ({
       id: n.id,
-      data: {
-        label: (n.properties.name as string) ?? (n.properties.label as string) ?? n.id.substring(0, 8),
-        nodeType: n.nodeType,
-        fill: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
-        size: NODE_SIZES[n.nodeType] ?? 26,
-        ...n.properties,
-      },
-    })),
-    edges: res.edges.map((e) => ({
-      source: e.sourceNodeId,
-      target: e.targetNodeId,
-      data: {
-        type: e.edgeType,
-        stroke: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
-        lineWidth: 1 + Math.min(e.weight, 3),
-        lineDash: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType) ? [4, 4] : undefined,
-      },
-    })),
+      captions: [{ value: nodeLabel(n.nodeType, n.properties) }],
+      color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
+      size: NODE_SIZES[n.nodeType] ?? 28,
+      properties: n.properties,
+    } satisfies Node & { properties?: Record<string, unknown> })),
+    relationships: res.edges.map((e) => ({
+      id: relIdCounter(),
+      from: e.sourceNodeId,
+      to: e.targetNodeId,
+      type: e.edgeType,
+      captions: [{ value: e.edgeType }],
+      color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
+      width: 1 + Math.min(e.weight, 3),
+    } satisfies Relationship)),
   }
+}
+
+function nodeLabel(nodeType: string, props: Record<string, unknown>): string {
+  return (props.name as string) ?? (props.label as string) ?? nodeType
 }
