@@ -52,10 +52,12 @@ public class GraphServiceImpl implements GraphService {
         FileDO doc = fileRepository.findByIdAndIsDeletedFalse(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: " + documentId));
 
-        // 2. 校验状态
-        if (doc.getStatus() != FileStatus.COMPLETED) {
+        // 2. 校验状态（v2：PARSED/EXTRACTED/COMPLETED 均可抽取）
+        FileStatus status = doc.getStatus();
+        if (status != FileStatus.PARSED && status != FileStatus.EXTRACTED
+                && status != FileStatus.COMPLETED && status != FileStatus.EXTRACTING) {
             throw new BusinessException(ErrorCode.A0009,
-                    String.format("文档状态为 %s，需先完成解析", doc.getStatus()));
+                    String.format("文档状态为 %s，需先完成解析", status));
         }
 
         // 3. 校验文本非空
