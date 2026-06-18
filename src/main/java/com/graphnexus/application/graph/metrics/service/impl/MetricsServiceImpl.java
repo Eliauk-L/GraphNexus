@@ -3,13 +3,14 @@ package com.graphnexus.application.graph.metrics.service.impl;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.graphnexus.infrastructure.neo4j.gds.config.MetricsProperties;
-import com.graphnexus.common.model.MetricResultBO;
-import com.graphnexus.common.model.MetricsQuery;
+import com.graphnexus.application.graph.metrics.model.MetricResultBO;
+import com.graphnexus.application.graph.metrics.model.MetricsQuery;
 import com.graphnexus.application.graph.metrics.service.MetricsService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.neo4j.edge.EdgeType;
 import com.graphnexus.infrastructure.neo4j.gds.GdsAdapter;
+import com.graphnexus.infrastructure.neo4j.gds.model.GdsResult;
 import com.graphnexus.infrastructure.neo4j.node.NodeType;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -59,7 +60,15 @@ public class MetricsServiceImpl implements MetricsService {
         MetricsQuery query = new MetricsQuery(normalizedNodes, normalizedEdges, "pagerank");
         return cache.get(query.toCacheKey(), key -> {
             log.debug("缓存未命中，执行 PageRank 计算（nodeTypes={}, edgeTypes={}）", normalizedNodes, normalizedEdges);
-            return gdsAdapter.calculate(query);
+            String graphName = gdsAdapter.projectGraph(normalizedNodes, normalizedEdges);
+            try {
+                return gdsAdapter.runPageRank(graphName).stream()
+                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), "pagerank", r.score()))
+                        .sorted(Comparator.comparingDouble(MetricResultBO::metricValue).reversed())
+                        .collect(Collectors.toList());
+            } finally {
+                gdsAdapter.dropGraph(graphName);
+            }
         });
     }
 
@@ -69,15 +78,23 @@ public class MetricsServiceImpl implements MetricsService {
         Set<String> normalizedNodes = normalizeNodeTypes(nodeTypes);
         Set<String> normalizedEdges = normalizeEdgeTypes(edgeTypes);
 
-        MetricsQuery inQuery = new MetricsQuery(normalizedNodes, normalizedEdges, "inDegree");
-        MetricsQuery outQuery = new MetricsQuery(normalizedNodes, normalizedEdges, "outDegree");
-
-        List<MetricResultBO> results = new ArrayList<>();
-        results.addAll(cache.get(inQuery.toCacheKey(),
-                key -> gdsAdapter.calculate(inQuery)));
-        results.addAll(cache.get(outQuery.toCacheKey(),
-                key -> gdsAdapter.calculate(outQuery)));
-        return results;
+        MetricsQuery query = new MetricsQuery(normalizedNodes, normalizedEdges, "degree");
+        return cache.get(query.toCacheKey(), key -> {
+            log.debug("缓存未命中，执行度中心性计算（nodeTypes={}, edgeTypes={}）", normalizedNodes, normalizedEdges);
+            String graphName = gdsAdapter.projectGraph(normalizedNodes, normalizedEdges);
+            try {
+                List<MetricResultBO> results = new ArrayList<>();
+                results.addAll(gdsAdapter.runDegreeStream(graphName, "NATURAL").stream()
+                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), "outDegree", r.score()))
+                        .collect(Collectors.toList()));
+                results.addAll(gdsAdapter.runDegreeStream(graphName, "REVERSE").stream()
+                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), "inDegree", r.score()))
+                        .collect(Collectors.toList()));
+                return results;
+            } finally {
+                gdsAdapter.dropGraph(graphName);
+            }
+        });
     }
 
     @Override
