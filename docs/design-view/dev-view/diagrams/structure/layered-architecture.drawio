@@ -144,7 +144,7 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-2" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅文件解析" vertex="1">
           <mxGeometry height="32.5" width="160" x="170" y="426" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-3" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅文件管理" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-3" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅教材管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="170" y="476" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-4" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图谱构建" vertex="1">
@@ -174,7 +174,7 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-12" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="配置管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="890" y="476" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-13" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅数据源管理" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-13" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅成绩管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="170" y="526" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-14" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="报告导出" vertex="1">

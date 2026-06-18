@@ -41,8 +41,8 @@ public class GradeUploadResultBO {
     /** 考查知识点名称列表（去重） */
     private List<String> knowledgePoints;
 
-    /** MinIO 存储路径 */
-    private String minioPath;
+    /** 完整文件访问路径 */
+    private String filePath;
 
     /** CSV 文件 MD5 */
     private String csvMd5;

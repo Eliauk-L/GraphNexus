@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
-import com.graphnexus.application.file.parse.model.FileParseType;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
@@ -45,7 +44,7 @@ public interface FileRepository extends JpaRepository<FileDO, Long> {
          + "AND (:fileType IS NULL OR d.fileType = :fileType) "
          + "AND (:name IS NULL OR d.name LIKE %:name%) "
          + "ORDER BY d.createTime DESC")
-    Page<FileDO> findByConditions(@Param("fileType") FileParseType fileType,
+    Page<FileDO> findByConditions(@Param("fileType") String fileType,
                                   @Param("name") String name,
                                   Pageable pageable);
 }

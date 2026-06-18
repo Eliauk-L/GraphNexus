@@ -24,7 +24,7 @@ public class DeleteResultBO {
     private int deletedRecordCount;
 
     /** 已删除的 MinIO 文件路径 */
-    private String minioPath;
+    private String filePath;
 
     /** 已删除的 Neo4j 边数 */
     private int deletedEdgeCount;

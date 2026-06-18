@@ -27,7 +27,7 @@ public class DeleteResultVO {
     private int deletedRecordCount;
 
     @Schema(description = "被删除的 MinIO CSV 文件路径", example = "grades/2026/06/E20200041_scores.csv")
-    private String minioPath;
+    private String filePath;
 
     @Schema(description = "删除的 Neo4j 边数（ATTENDED + TESTED）", example = "90")
     private int deletedEdgeCount;
@@ -36,7 +36,7 @@ public class DeleteResultVO {
         return DeleteResultVO.builder()
                 .examNo(bo.getExamNo())
                 .deletedRecordCount(bo.getDeletedRecordCount())
-                .minioPath(bo.getMinioPath())
+                .filePath(bo.getFilePath())
                 .deletedEdgeCount(bo.getDeletedEdgeCount())
                 .build();
     }

@@ -4,6 +4,7 @@ import com.graphnexus.api.file.dto.core.DeleteResultVO;
 import com.graphnexus.api.file.dto.upload.GradeRecordVO;
 import com.graphnexus.api.file.dto.upload.GradeUploadResultVO;
 import com.graphnexus.application.file.core.model.DeleteResultBO;
+import com.graphnexus.application.file.core.upload.GradeUploadService;
 import com.graphnexus.application.file.upload.model.GradeRecordBO;
 import com.graphnexus.application.file.upload.model.GradeUploadResultBO;
 import com.graphnexus.application.file.upload.service.GradeService;
@@ -11,28 +12,53 @@ import com.graphnexus.common.ApiResult;
 import com.graphnexus.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 /**
- * 成绩处理 REST API 控制器 — 仅查询/删除。
- *
- * <p>上传入口统一在 {@link FileController}。</p>
+ * 成绩处理 REST API 控制器 — 独立上传/查询/删除。
  *
  * @author Jay
  * @date 2026/06/18
  */
 @RestController
-@RequestMapping("/api/v1/file/grade")
+@RequestMapping("/api/v1/file/grades")
 @RequiredArgsConstructor
-@Tag(name = "成绩管理", description = "CSV 成绩查询与删除管理")
+@Tag(name = "成绩管理", description = "CSV 成绩上传、查询与删除管理")
 public class GradeController {
 
     private final GradeService gradeService;
+    private final GradeUploadService gradeUploadService;
+
+    /**
+     * 上传 CSV 成绩文件。
+     */
+    @Operation(summary = "上传成绩", description = "上传 CSV 成绩文件（双行表头格式），自动解析并写入 MySQL + Neo4j")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "上传成功",
+                    content = {@Content(mediaType = "application/json", schema = @Schema(implementation = GradeUploadResultVO.class))}),
+            @ApiResponse(responseCode = "400", description = "A0004 文件类型不支持"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+    })
+    @PostMapping("/upload")
+    public ApiResult<GradeUploadResultVO> upload(
+            @Parameter(description = "CSV 成绩文件", required = true)
+            @RequestParam("file") MultipartFile file,
+            @Parameter(description = "学科名称", required = true, example = "数学")
+            @RequestParam("subject") String subject
+    ) {
+        GradeUploadResultBO bo = (GradeUploadResultBO) gradeUploadService.upload(file, subject);
+        return ApiResult.success(GradeUploadResultVO.from(bo));
+    }
 
     /**
      * 分页查询成绩列表（按考试分组）。

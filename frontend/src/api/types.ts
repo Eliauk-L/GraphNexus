@@ -49,12 +49,11 @@ export interface FileVO {
   name: string
   subject: string
   fileSize: number
-  minioPath: string
+  filePath: string
   pageCount: number
   status: FileStatus
   fileType: string
   createTime: string
-  updateTime: string
 }
 
 export interface ParseResultVO {
@@ -96,7 +95,7 @@ export interface GradeUploadResultVO {
   studentCount: number
   questionCount: number
   knowledgePoints: string[]
-  minioPath: string
+  filePath: string
   csvMd5: string
 }
 

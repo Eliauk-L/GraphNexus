@@ -1,12 +1,11 @@
 package com.graphnexus.application.file.core.service.impl;
 
 import com.graphnexus.application.file.core.model.FileBO;
-import com.graphnexus.application.file.core.model.DeleteResultBO;
 import com.graphnexus.application.file.parse.model.ParseResult;
 import com.graphnexus.application.file.core.model.UpdateFileBO;
 import com.graphnexus.application.file.core.pipeline.DocumentProcessingPipeline;
-import com.graphnexus.application.file.core.service.FileService;
-import com.graphnexus.application.file.parse.model.FileParseType;
+import com.graphnexus.application.file.core.service.TextbookService;
+import com.graphnexus.application.file.core.upload.TextBookUploadService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
@@ -23,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 文档处理业务服务实现（v2 — Pipeline 适配）。
+ * 文档处理业务服务实现（v2 — Pipeline 适配，上传/处理解耦）。
  *
  * @author Jay
  * @date 2026/06/12
@@ -31,27 +30,28 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class FileServiceImpl implements FileService {
+public class TextbookServiceImpl implements TextbookService {
 
     private final FileRepository fileRepository;
     private final FileStorageService fileStorageService;
     private final GraphNodeRepository graphNodeRepository;
+    private final TextBookUploadService uploadService;
     private final DocumentProcessingPipeline documentProcessingPipeline;
 
-    // ======================== 上传 ========================
+    // ======================== 上传（仅存储 + 入库） ========================
 
     @Override
     @Transactional
     public FileBO upload(MultipartFile file, String subject) {
-        return (FileBO) documentProcessingPipeline.process(file, subject);
+        return (FileBO) uploadService.upload(file, subject);
     }
 
-    // ======================== 处理 ========================
+    // ======================== 处理（对已入库文件执行全链路） ========================
 
     @Override
     @Transactional
     public ParseResult process(Long documentId) {
-        documentProcessingPipeline.retry(documentId);
+        documentProcessingPipeline.processStored(documentId);
         FileDO doc = fileRepository.findById(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: id=" + documentId));
         return new ParseResult(doc.getTextContent(), doc.getPageCount() != null ? doc.getPageCount() : 0, null);
@@ -62,12 +62,8 @@ public class FileServiceImpl implements FileService {
     @Override
     @Transactional(readOnly = true)
     public Page<FileBO> listDocuments(int pageNum, int pageSize, String fileType, String name) {
-        FileParseType type = null;
-        if (fileType != null && !fileType.isBlank()) {
-            type = FileParseType.valueOf(fileType);
-        }
         return fileRepository
-                .findByConditions(type, name, PageRequest.of(pageNum - 1, pageSize))
+                .findByConditions(fileType, name, PageRequest.of(pageNum - 1, pageSize))
                 .map(this::toBO);
     }
 
@@ -121,10 +117,11 @@ public class FileServiceImpl implements FileService {
         }
 
         try {
-            fileStorageService.deleteFile(doc.getMinioPath());
+            fileStorageService.deleteFile(
+                    fileStorageService.extractObjectKey(doc.getFilePath()));
         } catch (Exception e) {
-            log.warn("MinIO 文件删除失败（可能已被删除，忽略继续）: path={}, error={}",
-                    doc.getMinioPath(), e.getMessage());
+            log.warn("文件删除失败（可能已被删除，忽略继续）: path={}, error={}",
+                    doc.getFilePath(), e.getMessage());
         }
 
         graphNodeRepository.deleteByDocumentId(String.valueOf(id));
@@ -132,7 +129,7 @@ public class FileServiceImpl implements FileService {
         doc.markDeleted();
         fileRepository.save(doc);
 
-        log.info("文档已删除: id={}, minioPath={}", doc.getId(), doc.getMinioPath());
+        log.info("文档已删除: id={}, filePath={}", doc.getId(), doc.getFilePath());
     }
 
     // ======================== 工具方法 ========================
@@ -144,16 +141,14 @@ public class FileServiceImpl implements FileService {
                 .name(doc.getName())
                 .subject(doc.getSubject())
                 .fileSize(doc.getFileSize())
-                .minioPath(doc.getMinioPath())
+                .filePath(doc.getFilePath())
                 .pageCount(doc.getPageCount())
                 .textContent(doc.getTextContent())
-                .metadataJson(doc.getMetadataJson())
                 .status(doc.getStatus() != null ? doc.getStatus().name() : null)
                 .failReason(doc.getFailReason())
-                .fileType(doc.getFileType() != null ? doc.getFileType().name() : null)
+                .fileType(doc.getFileType())
                 .uploadedBy(doc.getUploadedBy())
                 .createTime(doc.getCreateTime())
-                .updateTime(doc.getUpdateTime())
                 .build();
     }
 }

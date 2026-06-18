@@ -93,4 +93,28 @@ public class FileStorageService {
             throw new BusinessException(ErrorCode.B0001, "文件删除失败", "文件存储服务暂时不可用，请稍后重试");
         }
     }
+
+    /**
+     * 根据对象键构建完整文件访问 URL。
+     *
+     * @param objectKey MinIO 对象键（如 textbooks/uuid.pdf）
+     * @return 完整文件访问路径（如 http://localhost:9000/bucket/textbooks/uuid.pdf）
+     */
+    public String getFileUrl(String objectKey) {
+        return minioProperties.getEndpoint() + "/" + minioProperties.getBucket() + "/" + objectKey;
+    }
+
+    /**
+     * 从完整文件访问 URL 中提取 MinIO 对象键。
+     *
+     * @param filePath 完整文件路径（如 http://localhost:9000/bucket/textbooks/uuid.pdf）
+     * @return MinIO 对象键（如 textbooks/uuid.pdf），无法提取时返回原值
+     */
+    public String extractObjectKey(String filePath) {
+        String prefix = minioProperties.getEndpoint() + "/" + minioProperties.getBucket() + "/";
+        if (filePath != null && filePath.startsWith(prefix)) {
+            return filePath.substring(prefix.length());
+        }
+        return filePath;
+    }
 }

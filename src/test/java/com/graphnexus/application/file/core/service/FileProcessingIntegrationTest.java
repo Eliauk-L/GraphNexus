@@ -66,7 +66,7 @@ class FileProcessingIntegrationTest {
     }
 
     @Autowired
-    private FileService fileService;
+    private TextbookService textBookService;
 
     @Autowired
     private FileRepository fileRepository;
@@ -82,7 +82,7 @@ class FileProcessingIntegrationTest {
                 "file", "test-integration.pdf", "application/pdf", pdfContent
         );
 
-        FileBO result = fileService.upload(file, "MATH");
+        FileBO result = textBookService.upload(file, "MATH");
 
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo("test-integration.pdf");
@@ -103,7 +103,7 @@ class FileProcessingIntegrationTest {
     void processDocumentShouldSucceed() {
         assertThat(uploadedDocId).isNotNull();
 
-        ParseResult result = fileService.process(uploadedDocId);
+        ParseResult result = textBookService.process(uploadedDocId);
 
         assertThat(result).isNotNull();
         assertThat(result.textContent()).isNotBlank();
@@ -119,7 +119,7 @@ class FileProcessingIntegrationTest {
     @Order(3)
     @DisplayName("AC-4: 分页查询文档列表")
     void listDocumentsShouldReturnPage() {
-        var page = fileService.listDocuments(1, 10, null, null);
+        var page = textBookService.listDocuments(1, 10, null, null);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(1);
     }
 
@@ -132,7 +132,7 @@ class FileProcessingIntegrationTest {
         UpdateFileBO bo = new UpdateFileBO();
         bo.setName("renamed-integration.pdf");
 
-        FileBO updated = fileService.updateDocument(uploadedDocId, bo);
+        FileBO updated = textBookService.updateDocument(uploadedDocId, bo);
         assertThat(updated.getName()).isEqualTo("renamed-integration.pdf");
     }
 
@@ -144,7 +144,7 @@ class FileProcessingIntegrationTest {
                 "file", "test.txt", "text/plain", "not a pdf".getBytes()
         );
         try {
-            fileService.upload(file, "MATH");
+            textBookService.upload(file, "MATH");
             Assertions.fail("Should have thrown BusinessException");
         } catch (BusinessException e) {
             assertThat(e.getErrorCode()).isEqualTo("A0004");
@@ -157,7 +157,7 @@ class FileProcessingIntegrationTest {
     void deleteDocumentShouldSucceed() {
         assertThat(uploadedDocId).isNotNull();
 
-        fileService.deleteDocument(uploadedDocId);
+        textBookService.deleteDocument(uploadedDocId);
 
         FileDO doc = fileRepository.findById(uploadedDocId).orElseThrow();
         assertThat(doc.getIsDeleted()).isEqualTo(1);

@@ -29,9 +29,10 @@
 
 【重构 · 既有类】
 - api/file/controller/FileController.java
-  · 移除成绩端点（queryGrade/deleteGrade → GradeController）
-  · upload() 移除 CSV 路由分支 + 字符串比较 → 统一走 Pipeline
-  · @RequestMapping 从 /api/v1/file/document → /api/v1/document
+	  · 移除成绩端点（queryGrade/deleteGrade → GradeController）
+	  · upload() 简化为仅处理 DOCUMENT 类型，移除 CSV 路由 switch 分支
+	  · 直接注入 DocumentProcessingPipeline，无需 FileParserRegistry 做类型路由
+	  · @RequestMapping 保持 /api/v1/file/document
 - api/file/dto/core/FileVO.java
   · 新增 fileType 字段
 - application/file/core/service/FileService.java
@@ -69,8 +70,9 @@
 
 【新建】
 - api/file/controller/GradeController.java
-  · POST /api/v1/grade/upload, GET /api/v1/grade,
-    GET /api/v1/grade/exam/{examNo}, DELETE /api/v1/grade/exam/{examNo}
+	  · POST /api/v1/file/grades/upload（独立上传端点）, GET /api/v1/file/grade,
+	    GET /api/v1/file/grades/exam/{examNo}, DELETE /api/v1/file/grades/exam/{examNo}
+	  · 直接注入 GradeProcessingPipeline，上传与文档端点完全解耦
 - application/file/core/pipeline/FileProcessingPipeline.java（接口）
 - application/file/core/pipeline/DocumentProcessingPipeline.java
 - application/file/core/pipeline/GradeProcessingPipeline.java
@@ -139,7 +141,7 @@
 | **D3** | **同步链路编排**：`DocumentProcessingPipeline.process()` 内联调用 解析 → 抽取 → 融合，状态机在 Pipeline 内部管理。HTTP 请求等待全链路完成再返回 | (A) 异步模式（上传立即返回 UPLOADED，后台队列处理）；(B) 同步但每步独立请求（保持现有 upload + /process 两步） | 需求明确要求同步链路 + 一次请求返回最终结果。异步模式在 v2 考虑。保持两步操作则未解决痛点 | 大文件可能 60-90s 才返回，HTTP 超时风险需配置 `spring.mvc.async.request-timeout` 或改用 SSE 推送进度（v2） |
 | **D4** | **状态机扩展**：`FileStatus` 扩展为 8 状态 `UPLOADED → PARSING → PARSED → EXTRACTING → EXTRACTED → FUSING → COMPLETED`，`*ING` 失败回退到上一步 `*ED` + 记录 `failReason`；`FAILED` 保留给不可恢复错误 | (A) 5 状态（最小改动）；(B) 每步仅有 ING 无 ED（7 状态） | 需要 ED 状态来表示"该步骤成功完成，可从此继续"，否则失败后无法区分"没做"还是"正在做"。AC-5 要求保留已完成步骤产物，必须有 ED 状态 | 状态数增加 3 倍，状态转换矩阵从 6 条规则变为 ~20 条。需在 `FileStatus.validateTransition()` 中严格校验 |
 | **D5** | **TXT 解析**：`TxtFileParser` 实现 `DocumentParser`，编码检测 UTF-8 → GBK 回退（复用 `CsvGradeParser.tryDecode()` 同款策略）。`parse(byte[])` 将字节按编码转为字符串，返回 `ParseResult(textContent, 1, emptyMap)` | (A) 用 Apache Tika 自动检测文件类型和编码；(B) 直接用 `new String(bytes, UTF-8)` 不做编码检测 | Tika 引入新依赖且过度（只需要文本读取）。CsvGradeParser 已有成熟的 UTF-8→GBK 回退实现，TxtFileParser 直接复用同款策略，代码风格一致 | 编码检测不如 Tika 全面（如 ISO-2022-JP 等罕见编码不支持），但目标用户群（中文教育场景）只涉及 UTF-8/GBK |
-| **D6** | **Controller 拆分 + 统一上传入口**：`FileController`（`/api/v1/file/document`）保留 `POST /upload` 作为**所有文件类型统一上传入口**，通过 `FileParserRegistry` 查找扩展名 → 获取 `FileParseType` → 路由到对应 Pipeline（DOCUMENT → `DocumentProcessingPipeline`，CSV_GRADE → `GradeProcessingPipeline`）。`GradeController`（`/api/v1/file/grade`）仅负责成绩查询/删除（GET 列表、GET /exam/{examNo}、DELETE /exam/{examNo}），**不提供上传端点** | (A) 保留统一入口兼容旧调用；(B) 拆为两个 controller 各自独立，路径简化 | 需求选 B。前端同步更新端点路径。`/file/document` → `/document` 去掉了冗余的 `/file` 前缀 | 旧 CSV 上传调用方（如有脚本/测试）需更新 URL。前端同步调整 |
+| **D6** | **Controller 拆分 + 上传端点独立**：`FileController`（`/api/v1/file/document`）负责文档上传（`POST /upload`，仅 PDF/TXT）+ 文档查询/删除/处理。`GradeController`（`/api/v1/file/grade`）新增独立上传端点（`POST /upload`，仅 CSV），同时负责成绩查询/删除（GET 列表、GET /exam/{examNo}、DELETE /exam/{examNo}）。两个 Controller 各自直接注入对应的 Pipeline，无需通过 FileParserRegistry 在 Controller 层做类型路由 | (A) 保留统一入口兼容旧调用；(B) 拆为两个独立上传端点 | 需求选 B。教辅上传和成绩上传是两类不同的业务操作，耦合在一个接口中只通过文件类型区分不够灵活。拆分后各端点职责单一、参数校验独立、错误处理精准、Swagger 文档清晰。前端只需为两种上传各维护一个端点 | 旧 CSV 上传调用方（如有脚本/测试）需更新 URL。FileController.upload() 移除 switch 路由逻辑，简化为仅处理 DOCUMENT 类型 |
 | **D7** | **条件查询实现**：`FileRepository` 新增 `findByConditions(fileType, nameLike, pageable)` 方法，使用 JPQL `WHERE ... AND (:fileType IS NULL OR d.fileType = :fileType) AND (:name IS NULL OR d.name LIKE %:name%)` 动态条件 | (A) Spring Data JPA Specification + Criteria API；(B) 多条 `findByXxx` 派生查询方法组合 | Specification 代码冗长且不易读。JPQL 动态条件用 `IS NULL OR` 模式简洁。本项目已有使用 `@Query` 的先例（Hibernate Boolean bug workaround） | 无法在编译期检查 JPQL 正确性，但可在集成测试中覆盖。不能做多条件 AND/OR 组合（AC 明确不在 v1 范围） |
 | **D8** | **`file_type` 字段**：`file` 表新增 `file_type VARCHAR(20) NOT NULL DEFAULT 'DOCUMENT'`。`FileDO` 映射为 `@Enumerated(STRING) FileParseType fileType`。存量数据通过 DEFAULT 值自动为 `DOCUMENT`。同时修正 `FileDO` 的 `@Table(name = "document")` → `@Table(name = "file")`（与 DB 实际表名一致） | (A) 允许 NULL，代码中 null → 默认 DOCUMENT；(B) 用 `file_type` 关联一张 `file_type_config` 表 | NOT NULL + DEFAULT 保证了 DDL 执行时存量自动填充，无需脚本。单独配置表过度设计。@Table 修正是既有 bug——上次重构改了 DB 表名但漏了 JPA 注解 | DDL DEFAULT 'DOCUMENT' 匹配重命名后的枚举值 DOCUMENT；存量数据都是 PDF 正确回填 |
 | **D9** | **FileParserRegistry 增强**：将内部存储从 `Map<String, FileParser>` 改为 `Map<String, List<FileParser>>`。新增方法 `List<FileParser> getParsers(String filename)` 返回按优先级排序的解析器列表。PDF 扩展名返回 `[MinerUDocumentParser(priority=0), PdfBoxDocumentParser(priority=1)]`，TXT 返回 `[TxtFileParser]`。`getParser()` 保持兼容返回第一个 | (A) 引入 `@Priority` 注解 + `Ordered` 接口排序；(B) 在 `FileParser` 接口上新增 `int priority()` 方法 | 选 B 更显式——优先级是解析器的固有属性，不应依赖外部注解。`DocumentParser` 的 default 方法设为 0（最高），CsvGradeParser 默认 0 | `FileParser` 接口新增方法，所有实现类都需要实现（或通过 default 方法）。但 4 个实现类改动都很小 |
@@ -187,7 +189,7 @@ Client                    FileController         DocumentProcessingPipeline     
   │                            │                          │ ⑪ DB update: EXTRACTED     │                   │              │             │
   │                            │                          │                           │                   │              │             │
   │                            │                          │ ⑫ DB update: FUSING        │                   │              │             │
-  │                            │                          │ ⑬ fusionService.fuseIncremental(kps, subject)                │             │
+  │                            │                          │ ⑬ fusionService.fuseFull()                │             │
   │                            │                          │──────────────────────────────────────────────────────────────────────────>│
   │                            │                          │    fusion done             │                   │              │             │
   │                            │                          │<──────────────────────────────────────────────────────────────────────────│
@@ -219,19 +221,15 @@ Client                    FileController         DocumentProcessingPipeline
   │<───────────────────────────│                          │
 ```
 
-### 2.3 CSV 成绩上传链路（统一入口 → Grade Pipeline）
+### 2.3 CSV 成绩上传链路（GradeController 独立端点 → Grade Pipeline）
 
 ```
-Client                    FileController          GradeProcessingPipeline       GradeService (既有)
+Client                    GradeController         GradeProcessingPipeline       GradeService (既有)
   │                            │                          │                        │
-  │  POST /api/v1/file/document│                          │                        │
+  │  POST /api/v1/file/grade   │                          │                        │
   │  /upload (CSV + subject)   │                          │                        │
   │───────────────────────────>│                          │                        │
-  │                            │ ① FileParserRegistry     │                        │
-  │                            │    .getParser("xxx.csv") │                        │
-  │                            │    → CSV_GRADE           │                        │
-  │                            │ ② route to               │                        │
-  │                            │   GradeProcessingPipeline │                        │
+  │                            │  process(file, subject)  │                        │
   │                            │─────────────────────────>│                        │
   │                            │                          │  uploadGradeCsv(file,  │
   │                            │                          │    subject)            │
@@ -368,12 +366,76 @@ retry(documentId):
 | **R1** | **同步链路超时**：大 PDF（~50MB）MinerU 轮询 30s + LLM 抽取 30s + 融合 10s ≈ 70s 可能触发 HTTP/网关超时 | 用户上传大文件收到 504，体验差 | 中 | ① 配置 `spring.mvc.async.request-timeout=120s`；② `application-dev.yml` 设置 `mineru.api.poll-timeout=300s` 已预留；③ v2 引入异步模式（上传立即返回 UPLOADED，SSE 推送进度） |
 | **R2** | **TXT 抽取质量不达预期**：纯文本缺少 PDF 的版面结构（标题层级、公式 LaTeX 标注），LLM 抽取出的 KnowledgePoint 数量可能显著少于 PDF | 用户上传 TXT 后期望与 PDF 同等的抽取效果 | 高 | ① REQUIREMENT 已设预期"不低于 PDF 70%"不作为缺陷；② 可在 prompt 模板中增强对纯文本的指令（提示 LLM 注意段落边界和关键词）；③ 未来可引入 TXT 预处理（按空行分段、识别标题模式） |
 | **R3** | **状态机并发冲突**：同步链路执行中用户同时调 `/process` 或 `/delete`，可能导致状态不一致 | 文档卡在中间状态或数据损坏 | 低 | ① `FileServiceImpl` 已有 `@Transactional`，DB 行级锁保护状态更新；② `*ING` 状态时 `retry()` 直接拒绝（见 §3.3）；③ `DELETING` 状态同理拒绝处理 |
-| **R4** | **存量数据 `file_type` 正确性**：历史 `document` 表所有记录默认回填 `PDF`，但若有非 PDF 文件（理论上不存在）会被错误标记 | 查询 `file_type=TXT` 时漏掉本该是 TXT 的历史记录 | 极低 | DEFAULT 'PDF' 在 DDL 中设置，v1 无历史 TXT 数据，风险可控。若未来上传非 PDF 文件，`file_type` 由 Pipeline 主动写入保证正确 |
-| **R5** | **Controller 拆分导致前端/脚本断裂**：CSV 上传从 `/api/v1/file/document/upload` 迁移到 `/api/v1/grade/upload`，旧调用方未同步更新 | CSV 上传 404，成绩数据中断 | 中 | ① 前端同步更新（需求假设前端可同步调整）；② 如有外部脚本/CI，在 INTEGRATION 阶段回归 CSV 上传测试；③ 可在 v1 短期保留旧端点的兼容转发（返回 301 + 新 URL，提醒调用方迁移），v2 移除 |
-| **R6** | **LLM 抽取覆盖旧图谱数据**：同步链路每次重新抽取会先删旧子图再写新子图（既有的"全量覆盖"策略），若融合未执行即失败，图谱中残留不完整数据 | 用户查询图谱时看到不完整/不一致的知识点 | 中 | ① EXTRACTING 失败时回退到 PARSED，已经写入 Neo4j 的数据在 `GraphNodeRepository.deleteByDocumentId()` 后是空白的（抽取前先清理）；② 抽取成功但融合失败 → 图谱有抽取结果但 MASTERS 未更新，状态 EXTRACTED + failReason 明确指示 |
+| **R4** | **存量数据 `file_type` 正确性**：历史 `file` 表所有记录默认回填 `DOCUMENT`，但若有非 DOCUMENT 文件（理论上不存在）会被错误标记 | 查询 `file_type=DOCUMENT` 时漏掉本应有其他类型的记录 | 极低 | DEFAULT 'DOCUMENT' 在 DDL 中设置，v1 无历史非 DOCUMENT 数据，风险可控。若未来上传非 PDF 文件，`file_type` 由 Pipeline 主动写入保证正确 |
+| **R5** | **Controller 拆分导致前端/脚本断裂**：CSV 上传从统一入口拆为独立端点 `POST /api/v1/file/grades/upload`，旧调用方如直接调旧路径传 CSV 会收到 400（不支持的文件类型） | CSV 上传失败，成绩数据中断 | 中 | ① 前端同步更新（需求假设前端可同步调整）；② 如有外部脚本/CI，在 INTEGRATION 阶段回归 CSV 上传测试；③ 文档和成绩上传端点职责清晰，前端各维护一个上传调用 |
 | **R7** | **长期债务：Pipeline 难测试**：`DocumentProcessingPipeline.process()` 是一个长方法，依赖多个外部服务（MinIO/MinerU/LLM/Neo4j），单元测试困难 | 重构或修 bug 时回归成本高 | 中 | ① 每个子步骤（parse/extract/fuse）已有独立 Service，可单独单元测试；② Pipeline 本身的集成测试用 `@SpringBootTest` + `@ActiveProfiles("dev")` 直连 podman 真实组件（既有模式）；③ 未来可引入步骤间状态持久化（如 pipeline_execution 表），使 Pipeline 成为可恢复的状态机 |
 | **R8** | **@Table 注解不一致**：`FileDO.@Table(name = "document")` 但 DB 实际表名为 `file`（上次重构改了 DB 表名但漏了 JPA 注解）。若某处代码使用 JPA 原生查询引用 `document` 表名，与实际 DB 不一致 | 查询报错 "Table 'graphnexus.document' doesn't exist" | 低 | 本次 T02 一并修正 `@Table(name = "file")`，与 DB 实际表名一致。grep 全项目确认无硬编码 `document` 表名的 JPQL/SQL |
 
+---
+
+## 5.5 DEV 阶段修正（实现过程中发现的偏差）
+
+以下问题在 DEV 阶段执行时发现并修复，反向同步到本设计文档：
+
+### 修正 1：doParse 解析成功后状态不变
+
+- **问题**：`DocumentProcessingPipeline.doParse()` 中 `updateAfterParse` 放在 try-catch 内部，若状态更新抛异常被静默捕获，文档卡在 `PARSING` 状态
+- **修正**：将 `updateAfterParse` 移到 try-catch 外部，解析异常与状态更新异常分离；回退目标 `PARSING→UPLOADED`；`save()` 改为 `saveAndFlush()` 确保可见性
+- **影响文件**：`DocumentProcessingPipeline.java`
+
+### 修正 2：GraphServiceImpl 状态检查拒绝 v2 状态
+
+- **问题**：`GraphServiceImpl.extract()` 检查 `status != COMPLETED` 拒绝处理，v2 状态下文档卡在 `PARSED` 无法进入抽取
+- **修正**：状态检查扩展为接受 `PARSED`/`EXTRACTED`/`COMPLETED`/`EXTRACTING`（v2 全部合法抽取状态）
+- **影响文件**：`GraphServiceImpl.java`
+
+### 修正 3：LLM JSON 解析失败无重试
+
+- **问题**：`ExtractionJsonParser.parse()` 对 LLM 返回的 JSON 解析失败直接抛异常，无重试机制
+- **修正**：新增 `callAndParseWithRetry()` 方法，将 LLM 调用 + JSON 解析打包为同一重试单元（max 3 次）；每次重试在 prompt 中增加 JSON 格式强调指令
+- **影响文件**：`ExtractionService.java`
+
+### 修正 4：文档 KP 与成绩 KP 跨源融合失败
+
+- **问题**：`fuseIncremental()` 按 KP 名称精准加载 Neo4j，文档 KP 与成绩 KP 互不可见，融合仅在同源内生效
+- **修正**：`DocumentProcessingPipeline.doFuse()` 和 `GradeUploadedEventListener.onGradeUploaded()` 统一改为调用 `fuseFull()`；`fuseFull()` 加载全部 KP → Union-Find + FuzzyMatchStrategy 聚类 → selectMaster 优先 DOCUMENT → redirectEdges 动态重定向 → MASTERS 重算
+- **影响文件**：`DocumentProcessingPipeline.java`、`GradeUploadedEventListener.java`
+- **commit**：a89ba2f
+
+### 修正 5：上传与处理解耦（两阶段分离）
+
+- **问题**：`FileProcessingPipeline.process()` 在一次调用中完成 上传→解析→抽取→融合 全链路。上传接口返回慢（60-90s），且无法支持「在线文件」场景（文件已在 MinIO 中，无需重复上传）
+- **修正**：
+  - `FileProcessingPipeline` 接口拆分：`upload(file, subject)` — 仅存储入库（返回 UPLOADED + minioPath）；`processStored(documentId)` — 对已入库文件执行全链路
+  - `DocumentProcessingPipeline.process()` 拆为 `upload()`（步骤①-⑤）和 `processStored()`（原 retry 逻辑）
+  - `FileController.upload()` 通过 `FileService` 调用 Pipeline.upload()，返回 `FileVO`（含 id + minioPath + status=UPLOADED）
+  - 前端 `fileStore.upload()` 链式调用：`uploadFile()` → 拿到 id → `processFile(id)` 触发链路
+  - `GradeProcessingPipeline` 保持 upload 即处理（CSV 链路简单不需分阶段）
+- **影响文件**：`FileProcessingPipeline.java`、`DocumentProcessingPipeline.java`、`GradeProcessingPipeline.java`、`FileServiceImpl.java`、`FileController.java`、`GradeController.java`、`fileStore.ts`
+- **未来扩展**：支持 `POST /api/v1/file/document/process-by-path` 入参为 MinIO 路径/URL，直接送入 `processStored` 逻辑处理在线文件
+
+
+### 修正 6：File → Textbook 重命名（语义化）
+
+- **问题**：文档处理相关类以 `File` 命名（FileController/FileService/FileServiceImpl），语义泛化，与底层 FileDO/FileRepository 混淆。教材文档应有独立命名空间
+- **修正**：
+  - Controller: `FileController` → `TextbookController`，路径 `/api/v1/file/document` → `/api/v1/file/textbooks`
+  - Service: `FileService` → `TextbookService`，`FileServiceImpl` → `TextbookServiceImpl`
+  - 底层不变：FileDO/FileBO/FileVO/FileRepository/FileStatus/FileParseType 保留原命名（它们表示数据库实体/通用文件模型，非教材专属）
+  - Pipeline 不变：DocumentProcessingPipeline/FileProcessingPipeline 保留原命名（处理的是文档/文件抽象）
+- **影响文件**：`TextbookController.java`（新建）、`TextbookService.java`（新建）、`TextbookServiceImpl.java`（新建）、`FileController.java`（删除）、`FileService.java`（删除）、`FileServiceImpl.java`（删除）、`frontend/src/api/file.ts`（路径更新）
+
+### 修正 7：textbook 表更名 + file_path + 字段清理
+
+- **问题**：表名 `file` 语义过于泛化；`minio_path` 存储相对路径不够直观；`metadata_json` 从未被消费；`update_time` 无业务价值
+- **修正**：
+  - SQL: `file` → `textbook`；`minio_path` → `file_path`（完整访问 URL）；删除 `metadata_json` + `update_time` 列
+  - FileDO: `@Table(name = "textbook")`；`minioPath` → `filePath`；移除 `metadataJson`/`updateTime` 字段 + `@LastModifiedDate`
+  - FileStorageService: 新增 `getFileUrl(objectKey)` 构建完整 URL；`extractObjectKey(filePath)` 反解对象键
+  - DocumentProcessingPipeline: upload() 使用 `getFileUrl()` 构建全路径存库；MinIO 操作通过 `extractObjectKey()` 反解
+  - 全项目 BO/VO/DTO: `minioPath` → `filePath`；`metadataJson`/`updateTime` 全部移除
+  - 前端 types.ts: `FileVO.minioPath` → `filePath`；删除 `updateTime`
+- **影响文件**：`init.sql`、`FileDO.java`、`FileBO.java`、`FileVO.java`、`DeleteResultBO.java`、`DeleteResultVO.java`、`GradeUploadResultBO.java`、`GradeUploadResultVO.java`、`FileStorageService.java`、`DocumentProcessingPipeline.java`、`TextbookServiceImpl.java`、`GradeServiceImpl.java`、`TextbookController.java`、`types.ts`、`fileStore.ts`
 ---
 
 ## 6. 不在范围
@@ -403,22 +465,27 @@ retry(documentId):
 | 决策 | 取值 | 影响范围 | 推翻代价 |
 |------|------|---------|---------|
 | Pipeline 编排模式 | `FileProcessingPipeline` 接口 + 同步串联执行 | 所有文件类型的处理链路 | 改为异步需改动 Pipeline 接口（process 返回 Future/ListenableFuture）+ 引入消息队列，约 3-5 天 |
-| 文档状态机 v2 | 8 状态模型（UPLOADED→...→COMPLETED），`*ING` 失败回退 `*ED` | `document` 表 status 字段 + `FileStatus` 枚举 + 所有读写 document 状态的代码 | 涉及 DB 字段约束和状态转换逻辑，推翻需重写 validateTransition() + 数据迁移，约 2-3 天 |
+| 文档状态机 v2 | 8 状态模型（UPLOADED→...→COMPLETED），`*ING` 失败回退 `*ED` | `file` 表 status 字段 + `FileStatus` 枚举 + 所有读写 file 状态的代码 | 涉及 DB 字段约束和状态转换逻辑，推翻需重写 validateTransition() + 数据迁移，约 2-3 天 |
 
 ### 9.3 新增 / 修改的跨模块契约
 
 ```
 - API 端点变更：
-  - FileController: POST /api/v1/file/document/upload (统一上传入口，PDF/TXT/CSV 自动路由), GET /api/v1/file/document (列表+筛选), GET/PUT/DELETE /api/v1/file/document/{id}, POST /api/v1/file/document/{id}/process
-  - GradeController: GET /api/v1/file/grade, GET /api/v1/file/grade/exam/{examNo}, DELETE /api/v1/file/grade/exam/{examNo} — 仅查询/删除，不上传
+	  - FileController: POST /api/v1/file/document/upload (仅文档 PDF/TXT), GET /api/v1/file/document (列表+筛选), GET/PUT/DELETE /api/v1/file/document/{id}, POST /api/v1/file/document/{id}/process
+	  - GradeController: POST /api/v1/file/grades/upload (独立上传 CSV), GET /api/v1/file/grade, GET /api/v1/file/grades/exam/{examNo}, DELETE /api/v1/file/grades/exam/{examNo}
   - 废弃: FileController 中原有的 GET/DELETE /grade/exam/{examNo} → 迁入 GradeController
 - 数据库 schema：
-  - document 表: 新增 file_type VARCHAR(20) NOT NULL DEFAULT 'PDF'
-  - document.status: 扩展枚举值（PARSING/PARSED/EXTRACTING/EXTRACTED/FUSING）
+  - file 表: 新增 file_type VARCHAR(20) NOT NULL DEFAULT 'DOCUMENT'
+  - file.status: 扩展枚举值（PARSING/PARSED/EXTRACTING/EXTRACTED/FUSING）
   - exam_record 表: 无变更
 - 事件：
   - GradeUploadedEvent 发布点不变（仍在 GradeServiceImpl 中发布）
   - GraphChangedEvent 发布点新增：DocumentProcessingPipeline 融合完成后发布
+- 融合策略变更（DEV 阶段修正）：
+  - 原设计：fuseIncremental(kpNames, subject) — 按名称精准加载 KP，跨源 KP 互不可见
+  - 修正为：fuseFull() — 加载 Neo4j 全部 KP，Union-Find + FuzzyMatchStrategy 聚类跨源匹配
+  - 影响面：DocumentProcessingPipeline.doFuse() + GradeUploadedEventListener.onGradeUploaded()
+  - 见 commit a89ba2f
 ```
 
 ### 9.4 新增 / 升级的依赖

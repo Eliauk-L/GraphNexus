@@ -97,11 +97,11 @@ public class GradeServiceImpl implements GradeService {
         }
 
         // MinIO 上传
-        String minioPath = "grades/" + UUID.randomUUID() + ".csv";
+        String filePath = "grades/" + UUID.randomUUID() + ".csv";
         try (InputStream is = new ByteArrayInputStream(rawBytes)) {
-            fileStorageService.uploadFile(is, minioPath, "text/csv");
+            fileStorageService.uploadFile(is, filePath, "text/csv");
         } catch (Exception e) {
-            log.error("MinIO 上传失败: minioPath={}", minioPath, e);
+            log.error("MinIO 上传失败: filePath={}", filePath, e);
             throw new BusinessException(ErrorCode.B0001, "文件上传失败");
         }
 
@@ -127,7 +127,7 @@ public class GradeServiceImpl implements GradeService {
                     .totalScore(sr.totalScore())
                     .classRank(sr.classRank())
                     .scoreDetails(scoreDetailsJson)
-                    .csvFilePath(minioPath)
+                    .csvFilePath(filePath)
                     .csvMd5(csvMd5)
                     .build();
             records.add(rec);
@@ -173,7 +173,7 @@ public class GradeServiceImpl implements GradeService {
                 .studentCount(payload.students().size())
                 .questionCount(payload.questionCount())
                 .knowledgePoints(payload.knowledgePoints())
-                .minioPath(minioPath)
+                .filePath(filePath)
                 .csvMd5(csvMd5)
                 .build();
     }
@@ -210,7 +210,7 @@ public class GradeServiceImpl implements GradeService {
             bo.setExamName((String) row[1]);
             bo.setExamDate(row[2] != null ? ((java.sql.Date) row[2]).toLocalDate() : null);
             bo.setSubject((String) row[3]);
-            bo.setMinioPath((String) row[4]);
+            bo.setFilePath((String) row[4]);
             bo.setCsvMd5((String) row[5]);
             bo.setStudentCount(((Number) row[6]).intValue());
             return bo;
@@ -229,12 +229,12 @@ public class GradeServiceImpl implements GradeService {
             return DeleteResultBO.builder()
                     .examNo(examNo)
                     .deletedRecordCount(0)
-                    .minioPath(null)
+                    .filePath(null)
                     .deletedEdgeCount(0)
                     .build();
         }
 
-        String minioPath = records.get(0).getCsvFilePath();
+        String filePath = records.get(0).getCsvFilePath();
         int recordCount = records.size();
 
         // C3 中间状态：标记 is_deleted = 1（MySQL 事务保障）
@@ -245,12 +245,12 @@ public class GradeServiceImpl implements GradeService {
         log.info("考试 {} 已标记中间状态 is_deleted=1（C3），共 {} 条", examNo, recordCount);
 
         // C4 ① MinIO 文件删除（幂等）
-        if (minioPath != null) {
+        if (filePath != null) {
             try {
-                fileStorageService.deleteFile(minioPath);
+                fileStorageService.deleteFile(filePath);
             } catch (Exception e) {
                 log.warn("MinIO 文件删除失败（C2 容忍），将记 WARN 继续: path={}, error={}",
-                        minioPath, e.getMessage());
+                        filePath, e.getMessage());
             }
         }
 
@@ -266,12 +266,12 @@ public class GradeServiceImpl implements GradeService {
 
         int totalEdges = attendEdges + testedEdges;
         log.info("考试 {} 级联删除完成: MySQL={}条, MinIO={}, Neo4j边={}, Neo4j节点={}（C1-C5）",
-                examNo, recordCount, minioPath, totalEdges, deletedNodes);
+                examNo, recordCount, filePath, totalEdges, deletedNodes);
 
         return DeleteResultBO.builder()
                 .examNo(examNo)
                 .deletedRecordCount(recordCount)
-                .minioPath(minioPath)
+                .filePath(filePath)
                 .deletedEdgeCount(totalEdges)
                 .build();
     }

@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
  * @author Jay
  * @date 2026/06/12
  */
-public interface FileService {
+public interface TextbookService {
 
     /**
      * 上传文档文件（委托 DocumentProcessingPipeline 全链路处理）。

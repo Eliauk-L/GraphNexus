@@ -1,6 +1,5 @@
 package com.graphnexus.application.file.core.pipeline;
 
-import com.graphnexus.api.file.dto.core.FileVO;
 import com.graphnexus.application.file.core.model.FileBO;
 import com.graphnexus.application.file.parse.model.FileParseRequest;
 import com.graphnexus.application.file.parse.model.FileParseType;
@@ -14,7 +13,6 @@ import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import com.graphnexus.common.util.Md5Utils;
 import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
@@ -24,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -33,10 +30,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 文档处理 Pipeline — 同步串联 上传→解析→抽取→融合 全链路。
+ * 文档处理 Pipeline — 仅负责对已入库文件执行 解析→抽取→融合。
  *
- * <p>状态机管理见 {@link FileStatus} v2。失败回退 + 断点续跑见 retry()。
- * 见 DESIGN §2.1 同步链路 + §3 状态机。</p>
+ * <p>上传由 {@link com.graphnexus.application.file.core.upload.TextBookUploadService} 负责。
+ * processStored: 从 MinIO 读取文件 → 解析 → LLM 抽取 → 融合，支持断点续跑。
+ * 见 DESIGN §2.1 + §3 状态机。</p>
  *
  * @author Jay
  * @date 2026/06/18
@@ -45,8 +43,6 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class DocumentProcessingPipeline implements FileProcessingPipeline {
-
-    private static final long MAX_FILE_SIZE = 50L * 1024 * 1024; // 50MB
 
     private final FileRepository fileRepository;
     private final FileStorageService fileStorageService;
@@ -60,119 +56,42 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
         return FileParseType.DOCUMENT;
     }
 
-    // ======================== 全链路同步处理 ========================
+    // ======================== 处理已入库文件 ========================
 
     @Override
     @Transactional
-    public Object process(MultipartFile file, String subject) {
-        String filename = sanitizeFileName(file.getOriginalFilename());
-
-        // ① 查找解析器
-        List<FileParser> parsers = fileParserRegistry.getParsers(filename);
-        if (parsers.isEmpty()) {
-            throw new BusinessException(ErrorCode.A0004, "不支持的文件类型: " + filename);
-        }
-
-        // ② 读取字节 + MD5 + 去重
-        byte[] rawBytes = readBytes(file);
-        String documentNo = Md5Utils.computeMd5(rawBytes);
-        if (fileRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(documentNo, subject).isPresent()) {
-            throw new BusinessException(ErrorCode.A0007,
-                    "文档内容重复: subject=" + subject + ", md5=" + documentNo);
-        }
-
-        // ③ 确定文件扩展名 + MinIO 路径
-        String ext = filename.contains(".") ? filename.substring(filename.lastIndexOf('.')) : "";
-        String minioPath = "textbooks/" + UUID.randomUUID() + ext;
-
-        // ④ MinIO 上传
-        try (InputStream inputStream = file.getInputStream()) {
-            fileStorageService.uploadFile(inputStream, minioPath, file.getContentType());
-        } catch (IOException e) {
-            throw new BusinessException(ErrorCode.B0001, "文件上传失败", "文件存储服务暂时不可用");
-        }
-
-        // ⑤ DB insert: UPLOADED
-        FileDO doc = FileDO.builder()
-                .documentNo(documentNo)
-                .name(filename)
-                .subject(subject)
-                .fileType(parsers.get(0).supportedType())
-                .fileSize(file.getSize())
-                .minioPath(minioPath)
-                .status(FileStatus.UPLOADED)
-                .build();
-        doc = fileRepository.save(doc);
-        Long docId = doc.getId();
-        log.info("文档上传成功: id={}, name={}, type={}", docId, filename, doc.getFileType());
-
-        // ⑥ 解析 → PARSING → PARSED
-        ParseResult parseResult = doParse(docId, rawBytes, filename, parsers);
-        Set<String> kpNames = Collections.emptySet();
-
-        // ⑦ 抽取 → EXTRACTING → EXTRACTED
-        try {
-            ExtractionResultBO extractResult = doExtract(docId);
-            kpNames = extractKnowledgePointNames(docId);
-        } catch (Exception e) {
-            // 回退到 PARSED + failReason
-            revertTo(docId, FileStatus.PARSED, "extraction failed: " + truncate(e.getMessage(), 300));
-            throw toBusinessException(e);
-        }
-
-        // ⑧ 融合 → FUSING → COMPLETED
-        try {
-            doFuse(docId, kpNames, subject);
-        } catch (Exception e) {
-            // 回退到 EXTRACTED + failReason
-            revertTo(docId, FileStatus.EXTRACTED, "fusion failed: " + truncate(e.getMessage(), 300));
-            throw toBusinessException(e);
-        }
-
-        // ⑨ 完成 + 发布事件
-        updateStatus(docId, FileStatus.COMPLETED);
-        eventPublisher.publishEvent(new GraphChangedEvent(this));
-        log.info("文档处理全链路完成: id={}, status=COMPLETED", docId);
-
-        return toBO(docId);
-    }
-
-    // ======================== 断点续跑 ========================
-
-    @Override
-    @Transactional
-    public Object retry(Long documentId) {
+    public Object processStored(Long documentId) {
         FileDO doc = fileRepository.findById(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: id=" + documentId));
 
         FileStatus status = doc.getStatus();
-        log.info("retry 触发: id={}, currentStatus={}", documentId, status);
+        log.info("processStored 触发: id={}, currentStatus={}", documentId, status);
 
         switch (status) {
             case UPLOADED:
-                // 从头开始
-                return fullRetry(documentId);
+                // 从头开始处理
+                return fullProcess(documentId);
             case PARSED:
                 // 从抽取继续
-                return retryFromExtract(documentId);
+                return processFromExtract(documentId);
             case EXTRACTED:
                 // 从融合继续
-                return retryFromFuse(documentId);
+                return processFromFuse(documentId);
             case FAILED:
                 // 清除 failReason，从解析开始
                 clearFailReason(documentId);
-                return fullRetry(documentId);
+                return fullProcess(documentId);
             case COMPLETED:
                 // 重新处理
-                return fullRetry(documentId);
+                return fullProcess(documentId);
             case PARSING:
             case EXTRACTING:
             case FUSING:
                 throw new BusinessException(ErrorCode.A0009,
-                        "文档正在处理中，无法重试: status=" + status);
+                        "文档正在处理中，无法处理: status=" + status);
             case DELETING:
                 throw new BusinessException(ErrorCode.A0006,
-                        "文档正在删除中，无法重试: id=" + documentId);
+                        "文档正在删除中，无法处理: id=" + documentId);
             default:
                 throw new BusinessException(ErrorCode.A0009,
                         "不支持的 retry 状态: " + status);
@@ -231,18 +150,19 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
         log.info("融合完成: id={}, kpCount={}", docId, kpNames.size());
     }
 
-    private Object fullRetry(Long documentId) {
+    private Object fullProcess(Long documentId) {
         FileDO doc = fileRepository.findById(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: id=" + documentId));
 
         // 重新解析
-        try (InputStream is = fileStorageService.getFile(doc.getMinioPath())) {
+        try (InputStream is = fileStorageService.getFile(
+                fileStorageService.extractObjectKey(doc.getFilePath()))) {
             byte[] rawBytes = toByteArray(is);
             String filename = doc.getName();
             List<FileParser> parsers = fileParserRegistry.getParsers(filename);
             doParse(documentId, rawBytes, filename, parsers);
         } catch (IOException e) {
-            revertTo(documentId, FileStatus.UPLOADED, "retry read failed: " + e.getMessage());
+            revertTo(documentId, FileStatus.UPLOADED, "processStored read failed: " + e.getMessage());
             throw new BusinessException(ErrorCode.B0001, "文件读取失败", "文件存储服务暂时不可用");
         }
 
@@ -252,57 +172,57 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
             doExtract(documentId);
             kpNames = extractKnowledgePointNames(documentId);
         } catch (Exception e) {
-            revertTo(documentId, FileStatus.PARSED, "retry extraction failed: " + truncate(e.getMessage(), 300));
+            revertTo(documentId, FileStatus.PARSED, "extraction failed: " + truncate(e.getMessage(), 300));
             throw toBusinessException(e);
         }
 
         try {
             doFuse(documentId, kpNames, doc.getSubject());
         } catch (Exception e) {
-            revertTo(documentId, FileStatus.EXTRACTED, "retry fusion failed: " + truncate(e.getMessage(), 300));
+            revertTo(documentId, FileStatus.EXTRACTED, "fusion failed: " + truncate(e.getMessage(), 300));
             throw toBusinessException(e);
         }
 
         updateStatus(documentId, FileStatus.COMPLETED);
         eventPublisher.publishEvent(new GraphChangedEvent(this));
-        log.info("retry 全链路完成: id={}", documentId);
+        log.info("processStored 全链路完成: id={}", documentId);
         return toBO(documentId);
     }
 
-    private Object retryFromExtract(Long documentId) {
+    private Object processFromExtract(Long documentId) {
         FileDO doc = fileRepository.findById(documentId).get();
         Set<String> kpNames;
         try {
             doExtract(documentId);
             kpNames = extractKnowledgePointNames(documentId);
         } catch (Exception e) {
-            revertTo(documentId, FileStatus.PARSED, "retry extraction failed: " + truncate(e.getMessage(), 300));
+            revertTo(documentId, FileStatus.PARSED, "extraction failed: " + truncate(e.getMessage(), 300));
             throw toBusinessException(e);
         }
         try {
             doFuse(documentId, kpNames, doc.getSubject());
         } catch (Exception e) {
-            revertTo(documentId, FileStatus.EXTRACTED, "retry fusion failed: " + truncate(e.getMessage(), 300));
+            revertTo(documentId, FileStatus.EXTRACTED, "fusion failed: " + truncate(e.getMessage(), 300));
             throw toBusinessException(e);
         }
         updateStatus(documentId, FileStatus.COMPLETED);
         eventPublisher.publishEvent(new GraphChangedEvent(this));
-        log.info("retry(从抽取)完成: id={}", documentId);
+        log.info("processStored(从抽取)完成: id={}", documentId);
         return toBO(documentId);
     }
 
-    private Object retryFromFuse(Long documentId) {
+    private Object processFromFuse(Long documentId) {
         FileDO doc = fileRepository.findById(documentId).get();
         Set<String> kpNames = extractKnowledgePointNames(documentId);
         try {
             doFuse(documentId, kpNames, doc.getSubject());
         } catch (Exception e) {
-            revertTo(documentId, FileStatus.EXTRACTED, "retry fusion failed: " + truncate(e.getMessage(), 300));
+            revertTo(documentId, FileStatus.EXTRACTED, "fusion failed: " + truncate(e.getMessage(), 300));
             throw toBusinessException(e);
         }
         updateStatus(documentId, FileStatus.COMPLETED);
         eventPublisher.publishEvent(new GraphChangedEvent(this));
-        log.info("retry(从融合)完成: id={}", documentId);
+        log.info("processStored(从融合)完成: id={}", documentId);
         return toBO(documentId);
     }
 
@@ -322,7 +242,6 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
         doc.setStatus(FileStatus.PARSED);
         doc.setTextContent(result.textContent());
         doc.setPageCount(result.pageCount());
-        doc.setMetadataJson(toJson(result.metadata()));
         doc.setFailReason(null);
         fileRepository.save(doc);
         log.info("解析成功: id={}, parser={}, textLength={}",
@@ -352,17 +271,15 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
                 .documentNo(doc.getDocumentNo())
                 .name(doc.getName())
                 .subject(doc.getSubject())
-                .fileType(doc.getFileType() != null ? doc.getFileType().name() : null)
+                .fileType(doc.getFileType())
                 .fileSize(doc.getFileSize())
-                .minioPath(doc.getMinioPath())
+                .filePath(doc.getFilePath())
                 .pageCount(doc.getPageCount())
                 .textContent(doc.getTextContent())
-                .metadataJson(doc.getMetadataJson())
                 .status(doc.getStatus().name())
                 .failReason(doc.getFailReason())
                 .uploadedBy(doc.getUploadedBy())
                 .createTime(doc.getCreateTime())
-                .updateTime(doc.getUpdateTime())
                 .build();
     }
 
@@ -383,14 +300,6 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
         }
     }
 
-    private byte[] readBytes(MultipartFile file) {
-        try {
-            return file.getBytes();
-        } catch (IOException e) {
-            throw new BusinessException(ErrorCode.A0004, "文件读取失败", "上传文件无法读取，请重试");
-        }
-    }
-
     private byte[] toByteArray(InputStream is) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         byte[] chunk = new byte[8192];
@@ -399,31 +308,6 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
             buffer.write(chunk, 0, bytesRead);
         }
         return buffer.toByteArray();
-    }
-
-    private String sanitizeFileName(String originalFilename) {
-        if (originalFilename == null || originalFilename.isBlank()) return "unknown";
-        String name = originalFilename.replaceAll("^.*[/\\\\]", "");
-        return name.isBlank() ? "unknown" : name;
-    }
-
-    private String toJson(Map<String, String> map) {
-        if (map == null || map.isEmpty()) return "{}";
-        StringBuilder sb = new StringBuilder("{");
-        boolean first = true;
-        for (var entry : map.entrySet()) {
-            if (!first) sb.append(",");
-            sb.append("\"").append(escapeJson(entry.getKey())).append("\":");
-            sb.append("\"").append(escapeJson(entry.getValue())).append("\"");
-            first = false;
-        }
-        sb.append("}");
-        return sb.toString();
-    }
-
-    private String escapeJson(String s) {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"")
-                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
 
     private String truncate(String s, int maxLen) {

@@ -22,30 +22,30 @@
 ### AC-1 · PDF 同步上传全链路
 
 - **Given** 系统正常运行（MinerU、LLM、Neo4j 可用），本地有一份 ≤50MB 的有效 PDF 文件
-- **When** 调用 `POST /api/v1/document/upload` 上传该 PDF，指定 `subject=MATH`
-- **Then** HTTP 200 响应返回 `DocumentVO`，其中 `status = "COMPLETED"`，`textContent` 非空，`pageCount > 0`；Neo4j 中存在该文档对应的 EntityNode 和 KnowledgePointNode；MASTERS 边已更新
-- **验证方式**: `curl -X POST http://localhost:8080/api/v1/document/upload -F "file=@test.pdf" -F "subject=MATH"` → 查 MySQL `document` 表 status + Neo4j `MATCH (n:KnowledgePoint) RETURN count(n)`
+- **When** 调用 `POST /api/v1/file/document/upload` 上传该 PDF，指定 `subject=MATH`
+- **Then** HTTP 200 响应返回 `FileVO`，其中 `status = "COMPLETED"`，`textContent` 非空，`pageCount > 0`；Neo4j 中存在该文档对应的 EntityNode 和 KnowledgePointNode；MASTERS 边已更新
+- **验证方式**: `curl -X POST http://localhost:8080/api/v1/file/document/upload -F "file=@test.pdf" -F "subject=MATH"` → 查 MySQL `file` 表 status + Neo4j `MATCH (n:KnowledgePoint) RETURN count(n)`
 
 ### AC-2 · TXT 同步上传全链路
 
 - **Given** 系统正常运行，本地有一份 UTF-8 编码的 `.txt` 文件，内容为教育类文本（如数学讲义），大小 ≤50MB
-- **When** 调用 `POST /api/v1/document/upload` 上传该 TXT 文件，指定 `subject=MATH`
-- **Then** HTTP 200 响应返回 `DocumentVO`，其中 `status = "COMPLETED"`，`textContent` 等于 TXT 文件原始文本内容，`fileType = "TXT"`；Neo4j 中存在从该文档文本中抽取的 EntityNode 和 KnowledgePointNode
+- **When** 调用 `POST /api/v1/file/document/upload` 上传该 TXT 文件，指定 `subject=MATH`
+- **Then** HTTP 200 响应返回 `FileVO`，其中 `status = "COMPLETED"`，`textContent` 等于 TXT 文件原始文本内容，`fileType = "DOCUMENT"`；Neo4j 中存在从该文档文本中抽取的 EntityNode 和 KnowledgePointNode
 - **验证方式**: 准备含已知知识点名称的 TXT 文件（如"二次函数顶点坐标公式为..."），上传后查 Neo4j `MATCH (k:KnowledgePoint {name: '二次函数顶点坐标'}) RETURN k` 存在
 
 ### AC-3 · GBK 编码 TXT 自动识别
 
 - **Given** 系统正常运行，本地有一份 GBK 编码的 `.txt` 文件
-- **When** 调用 `POST /api/v1/document/upload` 上传
+- **When** 调用 `POST /api/v1/file/document/upload` 上传
 - **Then** HTTP 200，`textContent` 无乱码，中文内容正确解析
 - **验证方式**: 准备 GBK 编码 TXT（含中文字符），上传后查 `document.text_content` 无 `?` 或乱码字符
 
 ### AC-4 · 状态机阶段可观测
 
 - **Given** 上传一个较大 PDF 文件触发同步处理
-- **When** 在处理过程中，另一个请求调用 `GET /api/v1/document/{id}` 查询该文档
+- **When** 在处理过程中，另一个请求调用 `GET /api/v1/file/document/{id}` 查询该文档
 - **Then** 响应中 `status` 字段为具体阶段状态（`PARSING`/`PARSED`/`EXTRACTING`/`EXTRACTED`/`FUSING`/`COMPLETED`），而非笼统的 `PROCESSING`
-- **验证方式**: 上传大文件后立即轮询 `GET /api/v1/document/{id}`，至少观察到一次非 `UPLOADED` 且非 `COMPLETED` 的中间状态
+- **验证方式**: 上传大文件后立即轮询 `GET /api/v1/file/document/{id}`，至少观察到一次非 `UPLOADED` 且非 `COMPLETED` 的中间状态
 
 ### AC-5 · 同步链路中途失败保留已成功步骤
 
@@ -57,56 +57,56 @@
 ### AC-6 · 手动 /process 从失败点继续
 
 - **Given** 一份文档处于 `PARSED` 状态且 `failReason` 记录了抽取失败（即 AC-5 后的状态），LLM 服务已恢复
-- **When** 调用 `POST /api/v1/document/{id}/process`
+- **When** 调用 `POST /api/v1/file/document/{id}/process`
 - **Then** 从抽取步骤继续执行（跳过大成功的解析），走完抽取→融合后 `status = COMPLETED`，`failReason` 清空，Neo4j 中存在抽取结果
-- **验证方式**: 在 AC-5 基础上恢复 LLM → `curl -X POST /api/v1/document/{id}/process` → 查 status 变为 COMPLETED + Neo4j 有 KP 节点
+- **验证方式**: 在 AC-5 基础上恢复 LLM → `curl -X POST /api/v1/file/document/{id}/process` → 查 status 变为 COMPLETED + Neo4j 有 KP 节点
 
 ### AC-7 · 手动 /process 从 UPLOADED 触发全链路
 
 - **Given** 一份刚上传的文档处于 `UPLOADED` 状态（未触发同步链路，或同步链路被配置跳过）
-- **When** 调用 `POST /api/v1/document/{id}/process`
+- **When** 调用 `POST /api/v1/file/document/{id}/process`
 - **Then** 执行完整链路（解析→抽取→融合）后 `status = COMPLETED`
-- **验证方式**: 直接插一条 UPLOADED 文档记录 → `curl -X POST /api/v1/document/{id}/process` → status 变为 COMPLETED
+- **验证方式**: 直接插一条 UPLOADED 文档记录 → `curl -X POST /api/v1/file/document/{id}/process` → status 变为 COMPLETED
 
-### AC-8 · CSV 成绩独立上传端点
+### AC-8 · CSV 成绩上传（独立上传端点）
 
 - **Given** 系统正常运行，本地有一份有效 CSV 成绩文件（双行表头格式）
-- **When** 调用 `POST /api/v1/grade/upload` 上传该 CSV，指定 `subject=MATH`
-- **Then** HTTP 200，响应结构与原 `DocumentController` 的 CSV 上传结果一致；MySQL `exam_record` 表有对应记录；Neo4j 存在 ExamNode + StudentNode + ATTENDED/TESTED 边
-- **验证方式**: `curl -X POST http://localhost:8080/api/v1/grade/upload -F "file=@grades.csv" -F "subject=MATH"` → 查 exam_record 表 + Neo4j 图
+- **When** 调用 `POST /api/v1/file/grades/upload`（GradeController 独立上传端点）上传该 CSV，指定 `subject=MATH`
+- **Then** HTTP 200，由 `GradeProcessingPipeline` 直接处理；MySQL `exam_record` 表有对应记录；Neo4j 存在 ExamNode + StudentNode + ATTENDED/TESTED 边
+- **验证方式**: `curl -X POST http://localhost:8080/api/v1/file/grades/upload -F "file=@grades.csv" -F "subject=MATH"` → 查 exam_record 表 + Neo4j 图
 
 ### AC-9 · CSV 成绩分页列表查询
 
-- **Given** 已通过 `POST /api/v1/grade/upload` 上传了 15 份 CSV 成绩文件
-- **When** 调用 `GET /api/v1/grade?pageNum=1&pageSize=10`
+- **Given** 已通过 `POST /api/v1/file/grades/upload` 上传了 15 份 CSV 成绩文件
+- **When** 调用 `GET /api/v1/file/grades?pageNum=1&pageSize=10`
 - **Then** HTTP 200，返回 `PageResult` 含 10 条记录，`total = 15`
-- **验证方式**: `curl "http://localhost:8080/api/v1/grade?pageNum=1&pageSize=10"` → `total: 15, list.length: 10`
+- **验证方式**: `curl "http://localhost:8080/api/v1/file/grades?pageNum=1&pageSize=10"` → `total: 15, list.length: 10`
 
 ### AC-10 · 文档列表按 file_type 精确筛选
 
-- **Given** `document` 表中存在 `file_type = 'PDF'`（3 条）和 `file_type = 'TXT'`（2 条）
-- **When** 调用 `GET /api/v1/document?pageNum=1&pageSize=10&file_type=TXT`
-- **Then** 返回 `total = 2`，且所有记录的 `fileType` 均为 `"TXT"`
-- **验证方式**: `curl "http://localhost:8080/api/v1/document?pageNum=1&pageSize=10&file_type=TXT"` → 验证 list 中全部 fileType=TXT
+- **Given** `file` 表中存在 `file_type = 'DOCUMENT'`（3 条 PDF）和 `file_type = 'DOCUMENT'`（2 条 TXT）
+- **When** 调用 `GET /api/v1/file/document?pageNum=1&pageSize=10&file_type=DOCUMENT`
+- **Then** 返回 `total = 5`，且所有记录的 `fileType` 均为 `"DOCUMENT"`
+- **验证方式**: `curl "http://localhost:8080/api/v1/file/document?pageNum=1&pageSize=10&file_type=DOCUMENT"` → 验证 list 中全部 fileType=DOCUMENT
 
 ### AC-11 · 文档列表按 name 模糊搜索
 
-- **Given** `document` 表中存在名为 `"二次函数讲义.pdf"` 和 `"一次函数笔记.txt"` 的文档
-- **When** 调用 `GET /api/v1/document?pageNum=1&pageSize=10&name=二次函数`
+- **Given** `file` 表中存在名为 `"二次函数讲义.pdf"` 和 `"一次函数笔记.txt"` 的文档
+- **When** 调用 `GET /api/v1/file/document?pageNum=1&pageSize=10&name=二次函数`
 - **Then** 仅返回文件名包含"二次函数"的文档（1 条）
-- **验证方式**: `curl "http://localhost:8080/api/v1/document?pageNum=1&pageSize=10&name=二次函数"` → `total: 1, list[0].name 含"二次函数"`
+- **验证方式**: `curl "http://localhost:8080/api/v1/file/document?pageNum=1&pageSize=10&name=二次函数"` → `total: 1, list[0].name 含"二次函数"`
 
 ### AC-12 · 文档列表筛选条件组合
 
-- **Given** `document` 表中有 `PDF+name含"函数"`（2 条）和 `TXT+name含"函数"`（1 条）
-- **When** 调用 `GET /api/v1/document?pageNum=1&pageSize=10&file_type=PDF&name=函数`
-- **Then** 仅返回同时满足两个条件的文档（2 条），均为 PDF 且 name 含"函数"
-- **验证方式**: `curl "GET ...?file_type=PDF&name=函数"` → total=2，均为 PDF + name 含"函数"
+- **Given** `file` 表中有 `DOCUMENT+name含"函数"`（3 条）
+- **When** 调用 `GET /api/v1/file/document?pageNum=1&pageSize=10&file_type=DOCUMENT&name=函数`
+- **Then** 仅返回同时满足两个条件的文档，均为 DOCUMENT 且 name 含"函数"
+- **验证方式**: `curl "GET ...?file_type=DOCUMENT&name=函数"` → 均为 DOCUMENT + name 含"函数"
 
 ### AC-13 · 文档列表不传筛选参数向后兼容
 
-- **Given** `document` 表中有若干条记录
-- **When** 调用 `GET /api/v1/document?pageNum=1&pageSize=10`（不传 `file_type` 和 `name`）
+- **Given** `file` 表中有若干条记录
+- **When** 调用 `GET /api/v1/file/document?pageNum=1&pageSize=10`（不传 `file_type` 和 `name`）
 - **Then** 返回全部未删除文档的分页列表，行为与改造前完全一致
 - **验证方式**: 对比改造前后同一请求的响应（`total`、`list` 排序一致）
 
@@ -114,8 +114,8 @@
 
 - **Given** 需要新增 `.docx` 文件类型支持（仅验证可扩展性，不实现完整逻辑）
 - **When** 开发者：① 创建 `DocxParser implements FileParser`（返回 `supportedExtensions = {"docx"}` + `supportedType = DOCUMENT`），② 将该类标记为 Spring Bean
-- **Then** `FileParserRegistry` 自动发现该解析器；`POST /api/v1/document/upload` 上传 `.docx` 文件时可被路由到文档处理链路；Controller/Service 核心代码无任何修改
-- **验证方式**: 创建模拟 DocxParser（只做简单文本提取），上传 .docx 验证路由成功，确认 FileController/DocumentServiceImpl 未改一行
+- **Then** `FileParserRegistry` 自动发现该解析器；`POST /api/v1/file/document/upload` 上传 `.docx` 文件时可被路由到文档处理链路；Controller/Service 核心代码无任何修改
+- **验证方式**: 创建模拟 DocxParser（只做简单文本提取），上传 .docx 验证路由成功，确认 FileController/FileServiceImpl 未改一行
 
 ### AC-15 · 现有 PDF 上传行为回归
 
@@ -126,8 +126,8 @@
 
 ### AC-16 · 现有 CSV 删除行为保持
 
-- **Given** 已通过 `POST /api/v1/grade/upload` 上传了一份 CSV
-- **When** 调用 `DELETE /api/v1/grade/exam/{examNo}`
+- **Given** 已通过 `POST /api/v1/file/grades/upload` 上传了一份 CSV
+- **When** 调用 `DELETE /api/v1/file/grades/exam/{examNo}`
 - **Then** 与改造前 `DELETE /api/v1/document/grade/exam/{examNo}` 行为一致：MySQL exam_record 标记删除、Neo4j ExamNode/边清除、MinIO 文件删除
 - **验证方式**: 执行删除 → 查 exam_record.is_deleted=1 + Neo4j MATCH Exam 不存在 + MinIO 文件不存在
 
@@ -142,9 +142,9 @@
 - 8 状态文档状态机（`UPLOADED → PARSING → PARSED → EXTRACTING → EXTRACTED → FUSING → COMPLETED/FAILED` + `DELETING`）
 - PDF 同步上传全链路（上传→解析→抽取→融合→返回）
 - TXT 文件类型支持（UTF-8/GBK 编码，直接文本读取）
-- `document` 表新增 `file_type` 字段 + 存量数据回填为 `PDF`
+- `file` 表新增 `file_type` 字段 + 存量数据回填为 `DOCUMENT`
 - 分页列表条件查询（`file_type` + `name` 可选筛选）
-- CSV 成绩独立端点（`POST /api/v1/grade/upload` + `GET /api/v1/grade`）
+- CSV 成绩独立上传端点（`POST /api/v1/file/grades/upload`）+ 独立查询/删除端点（`GET /api/v1/file/grade` + `DELETE /api/v1/file/grades/exam/{examNo}`）
 - 手动 `/process` 端点保留，支持从失败步骤继续
 - 手动 `/fusion/execute` 端点保留
 - 现有行为 100% 回归通过
@@ -172,14 +172,14 @@
 - **性能**: 同步上传链路（含解析+抽取+融合）对 ≤10MB PDF 文件在 120s 内完成返回；分页查询响应 ≤500ms
 - **可观测性**: 每次状态转换记录日志（INFO 级别），含 `documentId` + `fromStatus` + `toStatus` + `elapsedMs`；失败时记录 ERROR 含 `step` + `errorDetail`
 - **安全**: 文件上传保持现有校验（类型白名单 + 大小 ≤50MB + MD5 内容指纹）；TXT 文件额外拒绝非文本 MIME 类型
-- **兼容性**: API 响应结构（`ApiResult<T>` / `PageResult<T>` 包装）不变；`DocumentVO` 仅新增 `fileType` 字段，不影响已有字段
-- **数据完整性**: `file_type` 字段 NOT NULL，存量数据通过 DDL 或启动脚本回填为 `PDF`；状态机转换规则在 DESIGN 阶段精确定义，禁止非法跳转（如 `COMPLETED → PARSING`）
+- **兼容性**: API 响应结构（`ApiResult<T>` / `PageResult<T>` 包装）不变；`FileVO` 仅新增 `fileType` 字段，不影响已有字段
+- **数据完整性**: `file_type` 字段 NOT NULL，存量数据通过 DDL 或启动脚本回填为 `DOCUMENT`；状态机转换规则在 DESIGN 阶段精确定义，禁止非法跳转（如 `COMPLETED → PARSING` 仅在手动重处理时允许）
 
 ## 依赖与假设
 
 - **依赖**: MinerU v4 API、LLMGateway、Neo4j 5.x、MinIO — 均为已有组件，本次不改动
-- **假设**: 历史 `document` 表所有记录均为 PDF 文件（`file_type` 存量回填默认值为 `PDF`）
-- **假设**: 前端 Vue 3 SPA 可同步更新 API 端点路径（`/api/v1/document/upload` 仅发文档文件；CSV 发 `/api/v1/grade/upload`）
+- **假设**: 历史 `file` 表所有记录均为 PDF 文件（`file_type` 存量回填默认值为 `DOCUMENT`）
+- **假设**: 前端 Vue 3 SPA 可同步更新 API 端点路径（`/api/v1/file/document/upload` 仅发文档文件；CSV 发独立端点 `POST /api/v1/file/grades/upload`）
 - **假设**: TXT 文件的 LLM 知识抽取质量不低于 PDF 抽取的 70%（以抽取出的 KnowledgePoint 数量为指标），若实际低于此阈值，不作为本次缺陷
 - **假设**: 同步链路各步骤（解析/抽取/融合）的顺序依赖成立，不可并行或乱序
 

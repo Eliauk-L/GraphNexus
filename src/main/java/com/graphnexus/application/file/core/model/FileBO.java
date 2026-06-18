@@ -24,14 +24,10 @@ public class FileBO {
     private String name;
     private String subject;
     private Long fileSize;
-    private String minioPath;
+    private String filePath;
     private Integer pageCount;
-    private String textContent;
-    private String metadataJson;
-    private String status;
+    private String textContent;    private String status;
     private String failReason;
     private String fileType;
     private Long uploadedBy;
-    private LocalDateTime createTime;
-    private LocalDateTime updateTime;
-}
+    private LocalDateTime createTime;}

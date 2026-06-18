@@ -1,19 +1,17 @@
 package com.graphnexus.infrastructure.mysql.file.entity;
 
 import jakarta.persistence.*;
-import com.graphnexus.application.file.parse.model.FileParseType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
 /**
- * 文档元数据实体（JPA Entity），对应 MySQL {@code document} 表。
+ * 教材文档元数据实体（JPA Entity），对应 MySQL {@code textbook} 表。
  *
  * @author Jay
  * @date 2026/06/12
@@ -23,7 +21,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "file")
+@Table(name = "textbook")
 @EntityListeners(AuditingEntityListener.class)
 public class FileDO {
 
@@ -44,20 +42,19 @@ public class FileDO {
     @Column(name = "subject", length = 20, nullable = false)
     private String subject;
 
-    /** 文件类型 */
-    @Enumerated(EnumType.STRING)
+    /** 文件类型（扩展名，如 pdf/txt/csv） */
     @Column(name = "file_type", length = 20, nullable = false)
-    private FileParseType fileType;
+    private String fileType;
 
     /** 文件大小（字节） */
     @Column(name = "file_size")
     private Long fileSize;
 
-    /** MinIO 存储路径 */
-    @Column(name = "minio_path", length = 500, nullable = false)
-    private String minioPath;
+    /** 完整文件访问路径 */
+    @Column(name = "file_path", length = 500, nullable = false)
+    private String filePath;
 
-    /** PDFBox 提取的文本内容（MEDIUMTEXT，最大 16MB） */
+    /** 提取的文本内容（MEDIUMTEXT，最大 16MB） */
     @Lob
     @Column(name = "text_content", columnDefinition = "MEDIUMTEXT")
     private String textContent;
@@ -65,10 +62,6 @@ public class FileDO {
     /** 总页数 */
     @Column(name = "page_count")
     private Integer pageCount;
-
-    /** PDF 元信息 JSON（标题/作者/创建日期等） */
-    @Column(name = "metadata_json", length = 2000)
-    private String metadataJson;
 
     /** 文档状态 */
     @Enumerated(EnumType.STRING)
@@ -93,11 +86,6 @@ public class FileDO {
     @CreatedDate
     @Column(name = "create_time", nullable = false, updatable = false)
     private LocalDateTime createTime;
-
-    /** 更新时间（自动填充） */
-    @LastModifiedDate
-    @Column(name = "update_time", nullable = false)
-    private LocalDateTime updateTime;
 
     /**
      * 标记为逻辑删除。

@@ -37,8 +37,8 @@ public class FileVO {
     @Schema(description = "文件大小（字节）", example = "2048576")
     private Long fileSize;
 
-    @Schema(description = "MinIO 存储路径", example = "documents/2026/06/math_quadratic.pdf")
-    private String minioPath;
+    @Schema(description = "完整文件访问路径", example = "documents/2026/06/math_quadratic.pdf")
+    private String filePath;
 
     @Schema(description = "PDF 页数", example = "12")
     private Integer pageCount;
@@ -52,10 +52,7 @@ public class FileVO {
     @Schema(description = "创建时间", example = "2026-06-17T10:30:00")
     private LocalDateTime createTime;
 
-    @Schema(description = "更新时间", example = "2026-06-17T10:35:00")
-    private LocalDateTime updateTime;
-
-    /**
+    @Schema(description = "更新时间", example = "2026-06-17T10:35:00")    /**
      * 从 BO 构造 VO。
      */
     public static FileVO from(FileBO bo) {
@@ -65,12 +62,10 @@ public class FileVO {
                 .name(bo.getName())
                 .subject(bo.getSubject())
                 .fileSize(bo.getFileSize())
-                .minioPath(bo.getMinioPath())
+                .filePath(bo.getFilePath())
                 .pageCount(bo.getPageCount())
                 .status(bo.getStatus())
                 .fileType(bo.getFileType())
-                .createTime(bo.getCreateTime())
-                .updateTime(bo.getUpdateTime())
-                .build();
+                .createTime(bo.getCreateTime())                .build();
     }
 }

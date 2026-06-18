@@ -2,12 +2,10 @@ package com.graphnexus.application.file.core.service;
 
 import com.graphnexus.application.file.core.model.FileBO;
 import com.graphnexus.application.file.parse.model.ParseResult;
-import com.graphnexus.application.file.core.model.UpdateFileBO;
 import com.graphnexus.application.file.parse.parser.MinerUDocumentParser;
 import com.graphnexus.application.file.parse.parser.PdfBoxDocumentParser;
-import com.graphnexus.application.file.core.service.impl.FileServiceImpl;
+import com.graphnexus.application.file.core.service.impl.TextbookServiceImpl;
 import com.graphnexus.common.exception.BusinessException;
-import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.application.file.parse.parser.mineru.config.MinerUProperties;
 import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
 import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
@@ -27,7 +25,6 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,7 +40,7 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("FileService 业务逻辑")
-class FileServiceTest {
+class TextbookServiceTest {
 
     @Mock
     private FileRepository fileRepository;
@@ -61,7 +58,7 @@ class FileServiceTest {
     private MinerUProperties minerUProperties;
 
     @InjectMocks
-    private FileServiceImpl fileService;
+    private TextbookServiceImpl fileService;
 
     private FileDO sampleDoc;
 

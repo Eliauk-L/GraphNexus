@@ -27,12 +27,15 @@ export const useFileStore = defineStore('file', () => {
     loading.value = true
     error.value = null
     try {
+      // 阶段一：上传文件（仅存储入库，返回 status=UPLOADED + filePath）
       const result = await uploadFile(file, subject)
+      // 阶段二：触发处理链路（解析→抽取→融合）
+      await processFile(result.documentId)
       await loadFiles()
       return result
     } catch {
-      error.value = '上传失败'
-      throw new Error('上传失败')
+      error.value = '上传或处理失败'
+      throw new Error('上传或处理失败')
     } finally {
       loading.value = false
     }
