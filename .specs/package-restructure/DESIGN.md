@@ -676,3 +676,17 @@ N/A（pom.xml 不变，禁动清单）
   mysql/query/repository/ → QueryTaskRepository
   ```
 - **注意**：包名不能使用 `do`（Java 关键字），使用 `entity` 代替
+
+### 追加 D11 · 消除分层架构违规（ArchUnit 清零）
+
+- **问题**：`LayeredArchitectureTest` 检测到 86 处分层违规
+  1. **L1→L3**（~50 处）：`AnalysisController`、`GraphSubgraphVO` 直接访问 `GraphNode`/`GraphEdge`（L3 neo4j）
+  2. **L3→L2**（~36 处）：`Langchain4jLlmGateway` 实现 L2 接口 `LlmGateway`；`GdsAdapter` 依赖 L2 的 `MetricsProperties`/`MetricsQuery`/`MetricResultBO`
+- **修复**：
+  1. 创建 L2 层 `GraphNodeData`/`GraphEdgeData` 记录 + `GraphDataConverter` 工具类（`application/graph/core/model/`）
+  2. `PrunedSubgraph`（analysis/model/）和 `GraphSubgraphBO`（graph/core/model/）改为持有 `GraphNodeData`/`GraphEdgeData`，不再直接暴露 L3 类型
+  3. `GraphSubgraphVO.from()` 和 `AnalysisController` 改为使用 L2 记录类型
+  4. `LlmGateway` 接口移至 `common/`（各层均可访问的合约接口）
+  5. `MetricsQuery`/`MetricResultBO` 移至 `common/model/`（跨层共享数据对象）
+  6. `MetricsProperties` 移至 `infrastructure/neo4j/gds/config/`（GDS 专属配置，属于 L3）
+- **结果**：ArchUnit 86 违例 → 0，`LayeredArchitectureTest` BUILD SUCCESS

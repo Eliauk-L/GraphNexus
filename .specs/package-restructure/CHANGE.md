@@ -307,6 +307,11 @@ com.graphnexus
 - `infrastructure/mysql/<module>/` → `entity/` + `repository/`
 - 模块：`file/`, `fusion/`, `query/`
 
+### 追加 E · 消除分层架构违规（ArchUnit 清零）
+- **L1→L3**：创建 L2 层 `GraphNodeData`/`GraphEdgeData` 记录 + `GraphDataConverter`，`PrunedSubgraph`/`GraphSubgraphBO` 持有 L2 类型，L1 VO/Controller 不再直接接触 L3 实体
+- **L3→L2**：`LlmGateway` 接口移至 `common/`；`MetricsQuery`/`MetricResultBO` 移至 `common/model/`；`MetricsProperties` 移至 `infrastructure/neo4j/gds/config/`
+- 结果：ArchUnit 86 违例 → 0
+
 ## 验收线
 
 1. **根包全小写**：`grep -r "com\.GraphNexus" src/` 返回零结果

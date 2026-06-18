@@ -679,3 +679,28 @@ Wave 7:            T15              (depends on Wave 6)
   <done>11 files changed; 三个模块均含 entity/ + repository/ 子包</done>
 </task>
 ```
+
+### 追加波次 11: 消除分层架构违规（2026-06-18）
+
+```xml
+<task id="T21" parallel="false" status="done">
+  <name>消除 86 处 LayeredArchitectureTest 分层违规</name>
+  <depends_on>T20</depends_on>
+  <action>
+    L1→L3 修复：
+    - 创建 GraphNodeData/GraphEdgeData 记录 + GraphDataConverter (application/graph/core/model/)
+    - PrunedSubgraph/GraphSubgraphBO 改为持有 L2 类型
+    - GraphSubgraphVO.from() 使用 GraphNodeData/GraphEdgeData
+    - AnalysisController 使用 record 字段而非 L3 getter
+    - StudentDiagnosisStrategy buildResult 产出 GraphNodeData/GraphEdgeData
+    - QueryServiceImpl 适配新类型
+
+    L3→L2 修复：
+    - LlmGateway 移至 common/
+    - MetricsQuery/MetricResultBO 移至 common/model/
+    - MetricsProperties 移至 infrastructure/neo4j/gds/config/
+  </action>
+  <verify>mvn test -Dtest="LayeredArchitectureTest" 2>&1 | grep "BUILD SUCCESS"</verify>
+  <done>ArchUnit 86 违例 → 0；BUILD SUCCESS；分层架构约束全部通过</done>
+</task>
+```
