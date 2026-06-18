@@ -99,7 +99,7 @@ function removeFile() {
         <UploadIcon :size="48" color="var(--color-text-tertiary)" />
         <p class="body-lead">点击选择文件</p>
         <p class="supporting" style="color: var(--color-text-tertiary)">
-          支持 PDF、TXT、CSV 格式，最大 50MB
+          支持 PDF、TXT 格式，最大 50MB
         </p>
       </div>
 
@@ -117,7 +117,7 @@ function removeFile() {
       <input
         ref="fileInputRef"
         type="file"
-        accept=".pdf,.csv,.txt"
+        accept=".pdf,.txt"
         style="display: none"
         @change="handleFileChange"
       >

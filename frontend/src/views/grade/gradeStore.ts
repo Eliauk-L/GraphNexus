@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { listGrades, queryGradeByExam, deleteGradeByExam } from '@/api/grade'
+import { listGrades, queryGradeByExam, deleteGradeByExam, uploadGradeFile } from '@/api/grade'
 import type { GradeRecordVO, GradeUploadResultVO } from '@/api/types'
 
 export const useGradeStore = defineStore('grade', () => {
@@ -49,5 +49,19 @@ export const useGradeStore = defineStore('grade', () => {
     }
   }
 
-  return { grades, exams, examNo, loading, error, loadExams, searchExamNo, remove }
+  async function upload(file: File, subject: string) {
+    loading.value = true
+    error.value = null
+    try {
+      await uploadGradeFile(file, subject)
+      await loadExams()
+    } catch {
+      error.value = '上传成绩失败'
+      throw new Error('上传成绩失败')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return { grades, exams, examNo, loading, error, loadExams, searchExamNo, remove, upload }
 })

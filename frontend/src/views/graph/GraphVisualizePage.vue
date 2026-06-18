@@ -38,7 +38,7 @@ onMounted(async () => {
 <template>
   <div>
     <div class="page-header">
-      <h1 class="headline">图谱可视化</h1>
+      <h1 class="headline">知识点可视化</h1>
     </div>
 
     <BaseCard>

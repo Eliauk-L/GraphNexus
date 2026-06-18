@@ -15,7 +15,7 @@ function handleSend(question: string) {
 <template>
   <div>
     <div class="page-header">
-      <h1 class="headline">智能问答</h1>
+      <h1 class="headline">学情诊断</h1>
     </div>
 
     <ChatInput

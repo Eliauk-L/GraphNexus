@@ -99,7 +99,7 @@ onMounted(() => {
 <template>
   <div>
     <div class="page-header">
-      <h1 class="headline">文件管理</h1>
+      <h1 class="headline">教材管理</h1>
       <NSpace>
         <FileUpload @uploaded="handleUploadFinish" />
       </NSpace>
