@@ -226,12 +226,8 @@ public class DocumentProcessingPipeline implements FileProcessingPipeline {
 
     private void doFuse(Long docId, Set<String> kpNames, String subject) {
         updateStatus(docId, FileStatus.FUSING);
-        if (!kpNames.isEmpty()) {
-            fusionService.fuseIncremental(new ArrayList<>(kpNames), subject);
-        } else {
-            // 无 KP 时仍然执行全量融合
-            fusionService.fuseFull();
-        }
+        // 全量融合 — 确保文档 KPs 与成绩 KPs 跨源匹配
+        fusionService.fuseFull();
         log.info("融合完成: id={}, kpCount={}", docId, kpNames.size());
     }
 

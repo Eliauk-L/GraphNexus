@@ -32,12 +32,12 @@ public class GradeUploadedEventListener {
         log.info("收到成绩上传事件: examNo={}, subject={}, kpCount={}",
                 event.getExamNo(), event.getSubject(), event.getKnowledgePoints().size());
 
-        // 增量融合
+        // 全量融合 — 确保成绩 KPs 与文档 KPs 跨源匹配
         try {
-            fusionService.fuseIncremental(event.getKnowledgePoints(), event.getSubject());
+            fusionService.fuseFull();
         } catch (Exception e) {
-            log.error("增量融合失败（成绩上传后），examNo={}, kps={}，可手动全量融合修复",
-                    event.getExamNo(), event.getKnowledgePoints(), e);
+            log.error("全量融合失败（成绩上传后），examNo={}，可手动重试",
+                    event.getExamNo(), e);
         }
 
         // 图谱变更事件 — 触发指标缓存失效
