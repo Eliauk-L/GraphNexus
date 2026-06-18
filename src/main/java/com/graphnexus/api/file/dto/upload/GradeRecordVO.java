@@ -1,6 +1,6 @@
 package com.graphnexus.api.file.dto.upload;
 
-import com.graphnexus.application.file.upload.model.GradeRecordBO;
+import com.graphnexus.application.file.grade.model.GradeRecordBO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

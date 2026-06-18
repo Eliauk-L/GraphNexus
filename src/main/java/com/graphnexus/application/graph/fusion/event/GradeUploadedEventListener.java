@@ -1,6 +1,6 @@
 package com.graphnexus.application.graph.fusion.event;
 
-import com.graphnexus.application.file.upload.event.GradeUploadedEvent;
+import com.graphnexus.application.file.grade.event.GradeUploadedEvent;
 import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import lombok.RequiredArgsConstructor;

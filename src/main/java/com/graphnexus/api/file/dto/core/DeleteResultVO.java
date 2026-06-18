@@ -1,6 +1,6 @@
 package com.graphnexus.api.file.dto.core;
 
-import com.graphnexus.application.file.core.model.DeleteResultBO;
+import com.graphnexus.application.file.textbook.model.DeleteResultBO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
