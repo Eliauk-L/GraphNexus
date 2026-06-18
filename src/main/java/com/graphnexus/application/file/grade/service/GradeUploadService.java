@@ -1,7 +1,6 @@
-package com.graphnexus.application.file.grade.upload;
+package com.graphnexus.application.file.grade.service;
 
 import com.graphnexus.application.file.grade.model.GradeUploadResultBO;
-import com.graphnexus.application.file.grade.service.GradeService;
 import com.graphnexus.application.file.upload.UploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

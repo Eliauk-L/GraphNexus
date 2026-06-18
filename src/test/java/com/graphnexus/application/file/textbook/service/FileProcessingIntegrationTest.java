@@ -2,7 +2,6 @@ package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.textbook.model.FileBO;
 import com.graphnexus.application.file.parse.ParseResult;
-import com.graphnexus.application.file.textbook.model.UpdateFileBO;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
 import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
@@ -121,19 +120,6 @@ class FileProcessingIntegrationTest {
     void listDocumentsShouldReturnPage() {
         var page = textBookService.listDocuments(1, 10, null, null);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(1);
-    }
-
-    @Test
-    @Order(4)
-    @DisplayName("AC-8: 更新文档名称")
-    void updateDocumentShouldSucceed() {
-        assertThat(uploadedDocId).isNotNull();
-
-        UpdateFileBO bo = new UpdateFileBO();
-        bo.setName("renamed-integration.pdf");
-
-        FileBO updated = textBookService.updateDocument(uploadedDocId, bo);
-        assertThat(updated.getName()).isEqualTo("renamed-integration.pdf");
     }
 
     @Test

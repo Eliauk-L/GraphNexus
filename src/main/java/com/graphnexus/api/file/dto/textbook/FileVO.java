@@ -66,6 +66,6 @@ public class FileVO {
                 .pageCount(bo.getPageCount())
                 .status(bo.getStatus())
                 .fileType(bo.getFileType())
-                .createTime(bo.getCreateTime())                .build();
+                .createTime(bo.getCreateTime()).build();
     }
 }

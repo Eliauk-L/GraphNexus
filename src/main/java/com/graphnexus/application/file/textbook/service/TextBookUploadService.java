@@ -1,4 +1,4 @@
-package com.graphnexus.application.file.textbook.upload;
+package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.upload.UploadService;
 

@@ -7,6 +7,7 @@ import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.application.file.parse.DocumentParser;
 import com.graphnexus.application.file.parse.FileParser;
 import com.graphnexus.application.file.parse.FileParserRegistry;
+import com.graphnexus.application.file.textbook.service.TextBookUploadService;
 import com.graphnexus.application.graph.core.model.ExtractionResultBO;
 import com.graphnexus.application.graph.core.service.GraphService;
 import com.graphnexus.application.graph.fusion.service.FusionService;
@@ -32,7 +33,7 @@ import java.util.stream.Collectors;
 /**
  * 文档处理 Pipeline — 仅负责对已入库文件执行 解析→抽取→融合。
  *
- * <p>上传由 {@link com.graphnexus.application.file.textbook.upload.TextBookUploadService} 负责。
+ * <p>上传由 {@link TextBookUploadService} 负责。
  * processStored: 从 MinIO 读取文件 → 解析 → LLM 抽取 → 融合，支持断点续跑。
  * 见 DESIGN §2.1 + §3 状态机。</p>
  *

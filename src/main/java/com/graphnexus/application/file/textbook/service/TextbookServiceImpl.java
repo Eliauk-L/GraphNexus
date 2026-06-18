@@ -2,10 +2,7 @@ package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.textbook.model.FileBO;
 import com.graphnexus.application.file.parse.ParseResult;
-import com.graphnexus.application.file.textbook.model.UpdateFileBO;
 import com.graphnexus.application.file.textbook.pipeline.DocumentProcessingPipeline;
-import com.graphnexus.application.file.textbook.service.TextbookService;
-import com.graphnexus.application.file.textbook.upload.TextBookUploadService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
@@ -73,24 +70,6 @@ public class TextbookServiceImpl implements TextbookService {
         FileDO doc = fileRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
-        return toBO(doc);
-    }
-
-    // ======================== 更新 ========================
-
-    @Override
-    @Transactional
-    public FileBO updateDocument(Long id, UpdateFileBO bo) {
-        FileDO doc = fileRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
-                        "文档不存在: id=" + id));
-
-        if (bo.getName() != null && !bo.getName().isBlank()) {
-            doc.setName(bo.getName().trim());
-        }
-
-        doc = fileRepository.save(doc);
-        log.info("文档已更新: id={}, name={}", doc.getId(), doc.getName());
         return toBO(doc);
     }
 

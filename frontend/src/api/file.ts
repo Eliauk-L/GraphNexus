@@ -1,5 +1,5 @@
 import client from './client'
-import type { FileVO, ParseResultVO, UpdateFileRequest, PageResult } from './types'
+import type { FileVO, ParseResultVO, PageResult } from './types'
 
 /** 上传文档文件（PDF/TXT） */
 export function uploadFile(file: File, subject: string): Promise<FileVO> {
@@ -24,11 +24,6 @@ export function listFiles(pageNum = 1, pageSize = 10, fileType?: string, name?: 
 /** 查询单个文件 */
 export function getFile(id: number): Promise<FileVO> {
   return client.get(`/file/textbooks/${id}`)
-}
-
-/** 更新文件名称 */
-export function updateFile(id: number, name: string): Promise<FileVO> {
-  return client.put(`/file/textbooks/${id}`, { name } satisfies UpdateFileRequest)
 }
 
 /** 删除文件 */

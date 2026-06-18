@@ -2,9 +2,7 @@ package com.graphnexus.api.file.controller;
 
 import com.graphnexus.api.file.dto.textbook.FileVO;
 import com.graphnexus.api.file.dto.textbook.ParseResultVO;
-import com.graphnexus.api.file.dto.textbook.UpdateFileRequest;
 import com.graphnexus.application.file.textbook.model.FileBO;
-import com.graphnexus.application.file.textbook.model.UpdateFileBO;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.application.file.textbook.service.TextbookService;
 import com.graphnexus.common.ApiResult;
@@ -16,7 +14,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
@@ -119,29 +116,6 @@ public class TextbookController {
             @PathVariable("id") Long id) {
         FileBO bo = textBookService.getDocument(id);
         return ApiResult.success(FileVO.from(bo));
-    }
-
-    /**
-     * 更新教材名称。
-     */
-    @Operation(summary = "更新教材名称", description = "修改教材的显示名称。仅可修改名称字段，其他字段不可变")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "更新后的教材信息"),
-            @ApiResponse(responseCode = "400", description = "A0002 名称不能为空"),
-            @ApiResponse(responseCode = "404", description = "A0006 教材不存在或已删除"),
-            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
-    })
-    @PutMapping("/{id}")
-    public ApiResult<FileVO> update(
-            @Parameter(description = "教材 ID", required = true, example = "1")
-            @PathVariable("id") Long id,
-            @Parameter(description = "更新请求体", required = true)
-            @RequestBody @Valid UpdateFileRequest request
-    ) {
-        UpdateFileBO bo = new UpdateFileBO();
-        bo.setName(request.getName());
-        FileBO updated = textBookService.updateDocument(id, bo);
-        return ApiResult.success(FileVO.from(updated));
     }
 
     /**

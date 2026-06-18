@@ -1,5 +1,6 @@
 package com.graphnexus.application.file.grade.pipeline;
 
+import com.graphnexus.application.file.grade.service.GradeUploadService;
 import com.graphnexus.application.file.textbook.pipeline.FileProcessingPipeline;
 
 import com.graphnexus.application.file.parse.FileParseType;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Component;
 /**
  * CSV 成绩处理 Pipeline — 仅占位，成绩无后续处理链路。
  *
- * <p>成绩上传由 {@link com.graphnexus.application.file.grade.upload.GradeUploadService} 负责，
+ * <p>成绩上传由 {@link GradeUploadService} 负责，
  * 直接委托 {@link com.graphnexus.application.file.grade.service.GradeService} 完成。</p>
  *
  * @author Jay

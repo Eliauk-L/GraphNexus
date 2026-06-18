@@ -4,7 +4,7 @@ import com.graphnexus.api.file.dto.textbook.DeleteResultVO;
 import com.graphnexus.api.file.dto.grade.GradeRecordVO;
 import com.graphnexus.api.file.dto.grade.GradeUploadResultVO;
 import com.graphnexus.application.file.textbook.model.DeleteResultBO;
-import com.graphnexus.application.file.grade.upload.GradeUploadService;
+import com.graphnexus.application.file.grade.service.GradeUploadService;
 import com.graphnexus.application.file.grade.model.GradeRecordBO;
 import com.graphnexus.application.file.grade.model.GradeUploadResultBO;
 import com.graphnexus.application.file.grade.service.GradeService;

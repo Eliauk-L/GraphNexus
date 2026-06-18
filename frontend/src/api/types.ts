@@ -62,10 +62,6 @@ export interface ParseResultVO {
   pageCount: number
 }
 
-export interface UpdateFileRequest {
-  name: string
-}
-
 export interface DeleteResultVO {
   deletedMySqlRecords: number
   deletedMinioPath: string
