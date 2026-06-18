@@ -46,20 +46,17 @@ public class ExtractionService {
                                      Integer pageCount, String documentId) {
         log.info("开始抽取知识图谱：docName={}, subject={}, 文本长度={}", docName, subject, textContent.length());
 
-        // 1. 构建 Prompt
+        // 1. 构建 Prompt（重试时不变）
         String systemPrompt = promptBuilder.buildSystemPrompt();
         String userMessage = promptBuilder.buildUserMessage(docName, subject, pageCount, textContent);
 
-        // 2. 调用 LLM
-        String llmResponse = callLlmWithRetry(systemPrompt, userMessage);
+        // 2. LLM 调用 + JSON 解析 — 作为可重试单元
+        ExtractionRawResult rawResult = callAndParseWithRetry(systemPrompt, userMessage);
 
-        // 3. 预处理 + 反序列化
-        ExtractionRawResult rawResult = jsonParser.parse(llmResponse);
-
-        // 4. 校验
+        // 3. 校验
         validator.validate(rawResult);
 
-        // 5. 转换为领域对象
+        // 4. 转换为领域对象
         ExtractionResult result = convertToDomain(rawResult, documentId);
 
         log.info("抽取完成：entities={}, knowledgePoints={}, categories={}, edges={}",
@@ -71,25 +68,44 @@ public class ExtractionService {
     }
 
     /**
-     * 调用 LLM，失败时重试一次。
+     * LLM 调用 + JSON 解析重试循环（最多 3 次）。
+     * LLM 调用失败或 JSON 解析失败均触发重试，重试时在 prompt 中追加格式强调。
      */
-    private String callLlmWithRetry(String systemPrompt, String userMessage) {
-        try {
-            return llmGateway.chat(systemPrompt, userMessage);
-        } catch (BusinessException e) {
-            // 已包装为 C0001，直接上抛
-            throw e;
-        } catch (Exception e) {
-            log.error("首次 LLM 调用失败，准备重试: {}", e.getMessage());
+    private ExtractionRawResult callAndParseWithRetry(String systemPrompt, String userMessage) {
+        final int maxRetries = 3;
+        Exception lastError = null;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            String prompt = attempt > 0
+                    ? userMessage + "\n\n【重要提醒】上次返回的 JSON 格式无法解析。请严格输出合法 JSON，不要添加任何 markdown 代码块标记或注释。"
+                    : userMessage;
+
             try {
-                String retryResponse = llmGateway.chat(systemPrompt, userMessage);
-                log.info("重试成功");
-                return retryResponse;
-            } catch (Exception retryEx) {
-                log.error("重试也失败: {}", retryEx.getMessage());
-                throw new BusinessException(ErrorCode.C0001, "LLM 调用失败（已重试）: " + retryEx.getMessage());
+                String llmResponse = llmGateway.chat(systemPrompt, prompt);
+                ExtractionRawResult result = jsonParser.parse(llmResponse);
+                if (attempt > 0) {
+                    log.info("LLM JSON 解析重试成功（第{}次）", attempt + 1);
+                }
+                return result;
+            } catch (BusinessException e) {
+                lastError = e;
+                if (attempt < maxRetries - 1) {
+                    log.warn("LLM/JSON 处理失败（第{}/{}次），准备重试: {}", attempt + 1, maxRetries, e.getMessage());
+                } else {
+                    log.error("LLM/JSON 处理失败，已达最大重试次数({}): {}", maxRetries, e.getMessage());
+                }
+            } catch (Exception e) {
+                lastError = e;
+                if (attempt < maxRetries - 1) {
+                    log.warn("LLM 调用异常（第{}/{}次），准备重试: {}", attempt + 1, maxRetries, e.getMessage());
+                } else {
+                    log.error("LLM 调用异常，已达最大重试次数({}): {}", maxRetries, e.getMessage());
+                }
             }
         }
+
+        throw new BusinessException(ErrorCode.C0001,
+                "LLM 抽取失败（已重试" + maxRetries + "次）: " + (lastError != null ? lastError.getMessage() : "unknown"));
     }
 
     /**
