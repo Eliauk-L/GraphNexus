@@ -11,8 +11,8 @@ import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
-import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
+import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
 import com.graphnexus.infrastructure.neo4j.node.FileNode;
@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GraphServiceImpl implements GraphService {
 
-    private final FileRepository fileRepository;
+    private final TextbookRepository textbookRepository;
     private final ExtractionService extractionService;
     private final GraphNodeRepository graphNodeRepository;
     private final FusionService fusionService;
@@ -49,7 +49,7 @@ public class GraphServiceImpl implements GraphService {
     @Transactional
     public ExtractionResultBO extract(Long documentId) {
         // 1. 查询文档
-        FileDO doc = fileRepository.findByIdAndIsDeletedFalse(documentId)
+        TextbookDO doc = textbookRepository.findByIdAndIsDeletedFalse(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: " + documentId));
 
         // 2. 校验状态（v2：PARSED/EXTRACTED/COMPLETED 均可抽取）

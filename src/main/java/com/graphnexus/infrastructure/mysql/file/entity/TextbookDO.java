@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Table(name = "textbook")
 @EntityListeners(AuditingEntityListener.class)
-public class FileDO {
+public class TextbookDO {
 
     /** 技术主键 */
     @Id

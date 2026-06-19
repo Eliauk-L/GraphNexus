@@ -3,8 +3,8 @@ package com.graphnexus.application.graph.core.service;
 import com.graphnexus.application.graph.construction.service.ExtractionService;
 import com.graphnexus.application.graph.core.service.impl.GraphServiceImpl;
 import com.graphnexus.common.exception.BusinessException;
-import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
-import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
+import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 class GraphServiceTest {
 
     @Mock
-    private FileRepository fileRepository;
+    private TextbookRepository textbookRepository;
 
     @Mock
     private ExtractionService extractionService;
@@ -42,13 +42,13 @@ class GraphServiceTest {
     @InjectMocks
     private GraphServiceImpl graphService;
 
-    private FileDO completedDoc;
-    private FileDO uploadedDoc;
-    private FileDO emptyDoc;
+    private TextbookDO completedDoc;
+    private TextbookDO uploadedDoc;
+    private TextbookDO emptyDoc;
 
     @BeforeEach
     void setUp() {
-        completedDoc = new FileDO();
+        completedDoc = new TextbookDO();
         completedDoc.setId(1L);
         completedDoc.setName("test.pdf");
         completedDoc.setSubject("数学");
@@ -56,13 +56,13 @@ class GraphServiceTest {
         completedDoc.setStatus(FileStatus.COMPLETED);
         completedDoc.setTextContent("二次函数的定义是...");
 
-        uploadedDoc = new FileDO();
+        uploadedDoc = new TextbookDO();
         uploadedDoc.setId(2L);
         uploadedDoc.setName("pending.pdf");
         uploadedDoc.setStatus(FileStatus.UPLOADED);
         uploadedDoc.setTextContent("some text");
 
-        emptyDoc = new FileDO();
+        emptyDoc = new TextbookDO();
         emptyDoc.setId(3L);
         emptyDoc.setName("empty.pdf");
         emptyDoc.setStatus(FileStatus.COMPLETED);
@@ -72,7 +72,7 @@ class GraphServiceTest {
     @Test
     @DisplayName("文档不存在 → BusinessException A0006")
     void testExtractDocumentNotFound_ShouldThrow() {
-        when(fileRepository.findByIdAndIsDeletedFalse(99L))
+        when(textbookRepository.findByIdAndIsDeletedFalse(99L))
                 .thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -83,7 +83,7 @@ class GraphServiceTest {
     @Test
     @DisplayName("文档状态为 UPLOADED（非 COMPLETED） → BusinessException A0009")
     void testExtractDocumentNotCompleted_ShouldThrow() {
-        when(fileRepository.findByIdAndIsDeletedFalse(2L))
+        when(textbookRepository.findByIdAndIsDeletedFalse(2L))
                 .thenReturn(Optional.of(uploadedDoc));
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -95,7 +95,7 @@ class GraphServiceTest {
     @Test
     @DisplayName("textContent 为空字符串 → BusinessException A0008")
     void testExtractEmptyText_ShouldThrow() {
-        when(fileRepository.findByIdAndIsDeletedFalse(3L))
+        when(textbookRepository.findByIdAndIsDeletedFalse(3L))
                 .thenReturn(Optional.of(emptyDoc));
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -106,11 +106,11 @@ class GraphServiceTest {
     @Test
     @DisplayName("textContent 为纯空白字符 → BusinessException A0008")
     void testExtractBlankText_ShouldThrow() {
-        FileDO blankDoc = new FileDO();
+        TextbookDO blankDoc = new TextbookDO();
         blankDoc.setId(4L);
         blankDoc.setStatus(FileStatus.COMPLETED);
         blankDoc.setTextContent("   \n  \t  ");
-        when(fileRepository.findByIdAndIsDeletedFalse(4L))
+        when(textbookRepository.findByIdAndIsDeletedFalse(4L))
                 .thenReturn(Optional.of(blankDoc));
 
         BusinessException ex = assertThrows(BusinessException.class,

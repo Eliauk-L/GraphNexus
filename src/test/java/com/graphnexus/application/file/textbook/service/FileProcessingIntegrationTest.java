@@ -3,8 +3,8 @@ package com.graphnexus.application.file.textbook.service;
 import com.graphnexus.application.file.textbook.model.FileBO;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
-import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
-import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
+import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,7 +68,7 @@ class FileProcessingIntegrationTest {
     private TextbookService textBookService;
 
     @Autowired
-    private FileRepository fileRepository;
+    private TextbookRepository textbookRepository;
 
     private static Long uploadedDocId;
 
@@ -90,7 +90,7 @@ class FileProcessingIntegrationTest {
         assertThat(result.getDocumentNo()).isNotBlank();
         assertThat(result.getFilePath()).isNotBlank();
 
-        FileDO doc = fileRepository.findByIdAndIsDeletedFalse(result.getId()).orElseThrow();
+        TextbookDO doc = textbookRepository.findByIdAndIsDeletedFalse(result.getId()).orElseThrow();
         assertThat(doc.getStatus()).isEqualTo(FileStatus.UPLOADED);
 
         uploadedDocId = result.getId();
@@ -109,7 +109,7 @@ class FileProcessingIntegrationTest {
         assertThat(result.textContent()).contains("GraphNexus");
         assertThat(result.pageCount()).isEqualTo(1);
 
-        FileDO doc = fileRepository.findById(uploadedDocId).orElseThrow();
+        TextbookDO doc = textbookRepository.findById(uploadedDocId).orElseThrow();
         assertThat(doc.getStatus()).isEqualTo(FileStatus.COMPLETED);
         assertThat(doc.getTextContent()).isNotBlank();
     }
@@ -145,9 +145,9 @@ class FileProcessingIntegrationTest {
 
         textBookService.deleteTextBook(uploadedDocId);
 
-        FileDO doc = fileRepository.findById(uploadedDocId).orElseThrow();
+        TextbookDO doc = textbookRepository.findById(uploadedDocId).orElseThrow();
         assertThat(doc.getIsDeleted()).isEqualTo(1);
-        assertThat(fileRepository.findByIdAndIsDeletedFalse(uploadedDocId)).isEmpty();
+        assertThat(textbookRepository.findByIdAndIsDeletedFalse(uploadedDocId)).isEmpty();
     }
 
     // ======================== 辅助方法 ========================

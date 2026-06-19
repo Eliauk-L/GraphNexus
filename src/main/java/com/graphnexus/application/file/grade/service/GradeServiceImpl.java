@@ -96,8 +96,8 @@ public class GradeServiceImpl implements GradeService {
             throw new BusinessException(ErrorCode.A0011, "CSV 解析失败: " + e.getMessage());
         }
 
-        // MinIO 上传
-        String filePath = "grades/" + UUID.randomUUID() + ".csv";
+        // MinIO 上传（以 csvMd5 为 key，内容寻址）
+        String filePath = "grades/" + csvMd5 + ".csv";
         try (InputStream is = new ByteArrayInputStream(rawBytes)) {
             fileStorageService.uploadFile(is, filePath, "text/csv");
         } catch (Exception e) {

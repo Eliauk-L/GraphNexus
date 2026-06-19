@@ -7,8 +7,8 @@ import com.graphnexus.application.file.textbook.parser.PdfBoxTextbookParser;
 import com.graphnexus.application.file.textbook.pipeline.TextbookProcessingPipeline;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.application.file.textbook.parser.mineru.config.MinerUProperties;
-import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
-import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
+import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
@@ -43,7 +43,7 @@ import static org.mockito.Mockito.*;
 class TextbookServiceTest {
 
     @Mock
-    private FileRepository fileRepository;
+    private TextbookRepository textbookRepository;
 
     @Mock
     private FileStorageService fileStorageService;
@@ -69,11 +69,11 @@ class TextbookServiceTest {
     @InjectMocks
     private TextbookServiceImpl fileService;
 
-    private FileDO sampleDoc;
+    private TextbookDO sampleDoc;
 
     @BeforeEach
     void setUp() {
-        sampleDoc = FileDO.builder()
+        sampleDoc = TextbookDO.builder()
                 .id(1L)
                 .documentNo("abc123")
                 .name("test.pdf")
@@ -149,7 +149,7 @@ class TextbookServiceTest {
     @DisplayName("解析成功：Pipeline 处理后返回解析结果（AC-2）")
     void processShouldSucceed() {
         when(textbookProcessingPipeline.processStored(1L)).thenReturn(null);
-        when(fileRepository.findById(1L))
+        when(textbookRepository.findById(1L))
                 .thenReturn(Optional.of(sampleDoc));
 
         ParseResult result = fileService.process(1L);
@@ -158,14 +158,14 @@ class TextbookServiceTest {
         assertEquals("Sample text content", result.textContent());
         assertEquals(5, result.pageCount());
         verify(textbookProcessingPipeline).processStored(1L);
-        verify(fileRepository).findById(1L);
+        verify(textbookRepository).findById(1L);
     }
 
     @Test
     @DisplayName("解析不存在文档应抛 A0006")
     void processNonExistentShouldThrow() {
         when(textbookProcessingPipeline.processStored(999L)).thenReturn(null);
-        when(fileRepository.findById(999L))
+        when(textbookRepository.findById(999L))
                 .thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -190,8 +190,8 @@ class TextbookServiceTest {
     @Test
     @DisplayName("分页查询返回正确结构（AC-4）")
     void listTextBooksShouldReturnPage() {
-        Page<FileDO> page = new PageImpl<>(List.of(sampleDoc), PageRequest.of(0, 10), 1);
-        when(fileRepository.findByConditions(null, null, PageRequest.of(0, 10)))
+        Page<TextbookDO> page = new PageImpl<>(List.of(sampleDoc), PageRequest.of(0, 10), 1);
+        when(textbookRepository.findByConditions(null, null, PageRequest.of(0, 10)))
                 .thenReturn(page);
 
         Page<FileBO> result = fileService.listTextBooks(1, 10, null, null);
@@ -204,7 +204,7 @@ class TextbookServiceTest {
     @Test
     @DisplayName("查询不存在文档应抛 A0006")
     void getNonExistentShouldThrow() {
-        when(fileRepository.findByIdAndIsDeletedFalse(999L))
+        when(textbookRepository.findByIdAndIsDeletedFalse(999L))
                 .thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -217,9 +217,9 @@ class TextbookServiceTest {
     @Test
     @DisplayName("删除：逻辑删除 + MinIO 清除（AC-5）")
     void deleteShouldMarkDeletedAndRemoveFile() {
-        when(fileRepository.findById(1L))
+        when(textbookRepository.findById(1L))
                 .thenReturn(Optional.of(sampleDoc));
-        when(fileRepository.save(any(FileDO.class)))
+        when(textbookRepository.save(any(TextbookDO.class)))
                 .thenReturn(sampleDoc);
         doNothing().when(fileStorageService).deleteFile(anyString());
         doNothing().when(graphNodeRepository).deleteByDocumentId(anyString());
@@ -227,7 +227,7 @@ class TextbookServiceTest {
 
         assertDoesNotThrow(() -> fileService.deleteTextBook(1L));
 
-        verify(fileRepository).save(argThat(doc -> doc.getIsDeleted() == 1));
+        verify(textbookRepository).save(argThat(doc -> doc.getIsDeleted() == 1));
         verify(fileStorageService).deleteFile(anyString());
         verify(graphNodeRepository).deleteByDocumentId("1");
     }

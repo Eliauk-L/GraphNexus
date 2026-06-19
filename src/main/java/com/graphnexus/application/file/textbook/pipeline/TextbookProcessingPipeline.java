@@ -15,9 +15,9 @@ import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
+import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
-import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TextbookProcessingPipeline implements FileProcessingPipeline {
 
-    private final FileRepository fileRepository;
+    private final TextbookRepository textbookRepository;
     private final FileStorageService fileStorageService;
     private final FileParserRegistry fileParserRegistry;
     private final GraphService graphService;
@@ -63,7 +63,7 @@ public class TextbookProcessingPipeline implements FileProcessingPipeline {
     @Override
     @Transactional
     public Object processStored(Long documentId) {
-        FileDO doc = fileRepository.findById(documentId)
+        TextbookDO doc = textbookRepository.findById(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: id=" + documentId));
 
         FileStatus status = doc.getStatus();
@@ -153,7 +153,7 @@ public class TextbookProcessingPipeline implements FileProcessingPipeline {
     }
 
     private Object fullProcess(Long documentId) {
-        FileDO doc = fileRepository.findById(documentId)
+        TextbookDO doc = textbookRepository.findById(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: id=" + documentId));
 
         // 重新解析
@@ -192,7 +192,7 @@ public class TextbookProcessingPipeline implements FileProcessingPipeline {
     }
 
     private Object processFromExtract(Long documentId) {
-        FileDO doc = fileRepository.findById(documentId).get();
+        TextbookDO doc = textbookRepository.findById(documentId).get();
         Set<String> kpNames;
         try {
             doExtract(documentId);
@@ -214,7 +214,7 @@ public class TextbookProcessingPipeline implements FileProcessingPipeline {
     }
 
     private Object processFromFuse(Long documentId) {
-        FileDO doc = fileRepository.findById(documentId).get();
+        TextbookDO doc = textbookRepository.findById(documentId).get();
         Set<String> kpNames = extractKnowledgePointNames(documentId);
         try {
             doFuse(documentId, kpNames, doc.getSubject());
@@ -231,43 +231,43 @@ public class TextbookProcessingPipeline implements FileProcessingPipeline {
     // ======================== DB 操作 ========================
 
     private void updateStatus(Long docId, FileStatus target) {
-        FileDO doc = fileRepository.findById(docId).orElseThrow();
+        TextbookDO doc = textbookRepository.findById(docId).orElseThrow();
         doc.getStatus().validateTransition(target);
         doc.setStatus(target);
         doc.setFailReason(null);
-        fileRepository.saveAndFlush(doc);
+        textbookRepository.saveAndFlush(doc);
     }
 
     private void updateAfterParse(Long docId, ParseResult result, String parserName) {
-        FileDO doc = fileRepository.findById(docId).orElseThrow();
+        TextbookDO doc = textbookRepository.findById(docId).orElseThrow();
         doc.getStatus().validateTransition(FileStatus.PARSED);
         doc.setStatus(FileStatus.PARSED);
         doc.setTextContent(result.textContent());
         doc.setPageCount(result.pageCount());
         doc.setFailReason(null);
-        fileRepository.save(doc);
+        textbookRepository.save(doc);
         log.info("解析成功: id={}, parser={}, textLength={}",
                 docId, parserName, result.textContent() != null ? result.textContent().length() : 0);
     }
 
     private void revertTo(Long docId, FileStatus target, String failReason) {
-        FileDO doc = fileRepository.findById(docId).orElseThrow();
+        TextbookDO doc = textbookRepository.findById(docId).orElseThrow();
         doc.setStatus(target);
         doc.setFailReason(failReason);
-        fileRepository.save(doc);
+        textbookRepository.save(doc);
         log.warn("Pipeline 回退: id={}, toStatus={}, failReason={}", docId, target, failReason);
     }
 
     private void clearFailReason(Long docId) {
-        FileDO doc = fileRepository.findById(docId).orElseThrow();
+        TextbookDO doc = textbookRepository.findById(docId).orElseThrow();
         doc.setFailReason(null);
-        fileRepository.save(doc);
+        textbookRepository.save(doc);
     }
 
     // ======================== 工具方法 ========================
 
     private FileBO toBO(Long docId) {
-        FileDO doc = fileRepository.findById(docId).orElseThrow();
+        TextbookDO doc = textbookRepository.findById(docId).orElseThrow();
         return FileBO.builder()
                 .id(doc.getId())
                 .documentNo(doc.getDocumentNo())

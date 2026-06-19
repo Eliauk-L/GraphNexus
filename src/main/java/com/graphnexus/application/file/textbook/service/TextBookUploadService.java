@@ -8,9 +8,9 @@ import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.common.util.Md5Utils;
-import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
+import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
-import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
+import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 教材文档上传服务 — 仅入库 {@code text_book} 表，不做后续处理。
@@ -37,7 +36,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TextbookUploadService implements UploadService {
 
-    private final FileRepository fileRepository;
+    private final TextbookRepository textbookRepository;
     private final FileStorageService fileStorageService;
     private final FileParserRegistry fileParserRegistry;
 
@@ -55,7 +54,7 @@ public class TextbookUploadService implements UploadService {
         // ② 读取字节 + MD5 + 去重
         byte[] rawBytes = readBytes(file);
         String documentNo = Md5Utils.computeMd5(rawBytes);
-        if (fileRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(documentNo, subject).isPresent()) {
+        if (textbookRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(documentNo, subject).isPresent()) {
             throw new BusinessException(ErrorCode.A0007,
                     "文档内容重复: subject=" + subject + ", md5=" + documentNo);
         }
@@ -69,8 +68,8 @@ public class TextbookUploadService implements UploadService {
             nameOnly = filename.substring(0, dotIdx);
         }
 
-        // ④ MinIO 对象键 + 完整文件访问路径
-        String objectKey = "textbooks/" + UUID.randomUUID() + ext;
+        // ④ MinIO 对象键（以 documentNo 为 key，内容寻址） + 完整文件访问路径
+        String objectKey = "textbooks/" + documentNo + ext;
         String filePath = fileStorageService.getFileUrl(objectKey);
 
         // ⑤ MinIO 上传
@@ -82,7 +81,7 @@ public class TextbookUploadService implements UploadService {
 
         // ⑥ DB insert: UPLOADED（仅入库，不做后续处理）
         String fileType = ext.isEmpty() ? "" : ext.substring(1).toLowerCase();
-        FileDO doc = FileDO.builder()
+        TextbookDO doc = TextbookDO.builder()
                 .documentNo(documentNo)
                 .name(nameOnly)
                 .subject(subject)
@@ -91,7 +90,7 @@ public class TextbookUploadService implements UploadService {
                 .filePath(filePath)
                 .status(FileStatus.UPLOADED)
                 .build();
-        doc = fileRepository.save(doc);
+        doc = textbookRepository.save(doc);
         log.info("教材已上传入库: id={}, name={}, type={}, filePath={}, status=UPLOADED",
                 doc.getId(), nameOnly, fileType, filePath);
 
@@ -101,7 +100,7 @@ public class TextbookUploadService implements UploadService {
     // ======================== 工具方法 ========================
 
     private FileBO toBO(Long docId) {
-        FileDO doc = fileRepository.findById(docId).orElseThrow();
+        TextbookDO doc = textbookRepository.findById(docId).orElseThrow();
         return FileBO.builder()
                 .id(doc.getId())
                 .documentNo(doc.getDocumentNo())
