@@ -7,9 +7,19 @@
 ## 当前活动
 
 - **Change ID**: `jpa-query-refactor`
-- **当前阶段**: DEV（TASK 已确认，Wave 1 执行中）
-- **当前角色**: Dev（DEV 阶段）
+- **当前阶段**: DEV ✅ 完成（T01-T05 全部 done，下一步 TEST/REVIEW）
+- **当前角色**: Dev → 下一步 Reviewer
 - **最后更新**: 2026-06-19
+
+## DEV 执行记录
+
+| Task ID | 名称 | 提交 | 状态 |
+|---------|------|------|:--:|
+| T01 | TextbookRepository 5 条 @Query → 方法名派生 | `98fd00d` | ✅ |
+| T02 | ExamRecordRepository 5 替换 + 1 改名 | `98fd00d` | ✅ |
+| T03 | TextbookRepository 调用方更新（3 Service + 3 Test） | `396b61a` | ✅ |
+| T04 | ExamRecordRepository 调用方更新（3 Service + 1 Strategy） | `396b61a` | ✅ |
+| T05 | 全量测试验证 + AC 核验 | `396b61a` | ✅ |
 
 ## 上一个活动
 

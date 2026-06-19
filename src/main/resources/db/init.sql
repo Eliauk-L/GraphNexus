@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS exam_record (
     student_no  VARCHAR(64)  NOT NULL                 COMMENT '学号',
     name        VARCHAR(128)                          COMMENT '学生姓名',
     class_name  VARCHAR(128)                          COMMENT '班级',
-    exam_no     VARCHAR(64)  NOT NULL                 COMMENT '考试编号（CSV 提供）',
+    exam_no     VARCHAR(64)  NOT NULL                 COMMENT '考试编号（文件提供）',
     exam_name   VARCHAR(255)                          COMMENT '考试名称',
     exam_date   DATE                                  COMMENT '考试日期',
     subject     VARCHAR(20)                           COMMENT '学科',
@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS exam_record (
     create_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
+    UNIQUE KEY uk_student_exam (student_no,exam_no),
     INDEX idx_exam_no (exam_no),
     INDEX idx_csv_md5 (csv_md5),
     INDEX idx_student_no (student_no)

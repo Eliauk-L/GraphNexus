@@ -1,16 +1,43 @@
 package com.graphnexus.application.file.grade.service;
 
 import com.graphnexus.application.file.grade.model.GradeUploadResultBO;
+import com.graphnexus.application.file.grade.parser.CsvGradeParser.CsvParsePayload;
+import com.graphnexus.application.file.grade.parser.CsvGradeParser.StudentRecord;
+import com.graphnexus.application.file.grade.event.GradeUploadedEvent;
+import com.graphnexus.application.file.parse.FileParseRequest;
+import com.graphnexus.application.file.parse.FileParser;
+import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.application.file.upload.UploadService;
+import com.graphnexus.common.exception.BusinessException;
+import com.graphnexus.common.exception.ErrorCode;
+import com.graphnexus.common.util.Md5Utils;
+import com.graphnexus.infrastructure.mysql.file.entity.ExamRecordDO;
+import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
+import com.graphnexus.infrastructure.neo4j.edge.AttendedEdge;
+import com.graphnexus.infrastructure.neo4j.edge.TestedEdge;
+import com.graphnexus.infrastructure.neo4j.node.ExamNode;
+import com.graphnexus.infrastructure.neo4j.node.KnowledgePointNode;
+import com.graphnexus.infrastructure.neo4j.node.StudentNode;
+import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
+import com.graphnexus.infrastructure.storage.FileStorageService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * 成绩文件上传服务 — 入库 {@code exam_record} 表。
+ * 成绩文件上传服务 — CSV 解析→MinIO→MySQL→Neo4j 全链路。
  *
- * <p>委托给既有 {@link GradeService}，CSV 解析→MinIO→MySQL→Neo4j 全链路在 GradeService 内部完成。</p>
+ * <p>实现 {@link UploadService}，自包含上传全链路逻辑。
+ * 判重时委托 {@link GradeService#deleteByExamNo(String)} 覆盖旧数据。</p>
  *
  * @author Jay
  * @date 2026/06/18
@@ -20,11 +47,131 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class GradeUploadService implements UploadService {
 
+    private final ExamRecordRepository examRecordRepository;
+    private final GraphNodeRepository graphNodeRepository;
+    private final FileStorageService fileStorageService;
+    private final FileParserRegistry fileParserRegistry;
+    private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
     private final GradeService gradeService;
 
     @Override
+    @Transactional
     public Object upload(MultipartFile file, String subject) {
-        GradeUploadResultBO bo = gradeService.uploadGradeCsv(file, subject);
+        byte[] rawBytes;
+        try {
+            rawBytes = file.getBytes();
+        } catch (Exception e) {
+            log.error("读取 CSV 文件失败", e);
+            throw new BusinessException(ErrorCode.A0011, "文件读取失败");
+        }
+
+        String csvMd5 = Md5Utils.computeMd5(rawBytes);
+
+        // 判重
+        List<ExamRecordDO> dups = examRecordRepository.findByCsvMd5AndIsDeleted(csvMd5, 0);
+        if (!dups.isEmpty()) {
+            String existExamNo = dups.get(0).getExamNo();
+            log.info("CSV 重复上传（MD5={}），将覆盖 examNo={}", csvMd5, existExamNo);
+            gradeService.deleteByExamNo(existExamNo);
+        }
+
+        // 解析 CSV
+        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown.csv";
+        CsvParsePayload payload;
+        try (InputStream is = new ByteArrayInputStream(rawBytes)) {
+            var request = new FileParseRequest(is, filename, subject, rawBytes);
+            var result = fileParserRegistry.getParser(filename, FileParser.BIZ_GRADE)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.A0011, "未找到 CSV 文件解析器"))
+                    .parse(request);
+            payload = (CsvParsePayload) result.payload();
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("CSV 解析失败", e);
+            throw new BusinessException(ErrorCode.A0011, "CSV 解析失败: " + e.getMessage());
+        }
+
+        // MinIO 上传（以 csvMd5 为 key，内容寻址）
+        String filePath = "grades/" + csvMd5 + ".csv";
+        try (InputStream is = new ByteArrayInputStream(rawBytes)) {
+            fileStorageService.uploadFile(is, filePath, "text/csv");
+        } catch (Exception e) {
+            log.error("MinIO 上传失败: filePath={}", filePath, e);
+            throw new BusinessException(ErrorCode.B0001, "文件上传失败");
+        }
+
+        // MySQL 批量写入
+        List<ExamRecordDO> records = new ArrayList<>();
+        for (StudentRecord sr : payload.students()) {
+            String scoreDetailsJson;
+            try {
+                scoreDetailsJson = objectMapper.writeValueAsString(sr.scoreDetails());
+            } catch (Exception e) {
+                throw new BusinessException(ErrorCode.B0001,
+                        "成绩明细序列化失败: " + e.getMessage());
+            }
+
+            ExamRecordDO rec = ExamRecordDO.builder()
+                    .studentNo(sr.studentNo())
+                    .name(sr.name())
+                    .className(sr.className())
+                    .examNo(payload.examNo())
+                    .examName(payload.examName())
+                    .examDate(payload.examDate())
+                    .subject(payload.subject())
+                    .totalScore(sr.totalScore())
+                    .classRank(sr.classRank())
+                    .scoreDetails(scoreDetailsJson)
+                    .csvFilePath(filePath)
+                    .csvMd5(csvMd5)
+                    .build();
+            records.add(rec);
+        }
+        examRecordRepository.saveAll(records);
+
+        // Neo4j 图构建
+        // ① MERGE ExamNode
+        ExamNode examNode = new ExamNode(
+                payload.examNo(), payload.examName(), payload.examDate(), payload.subject()
+        );
+        examNode = graphNodeRepository.save(examNode);
+
+        // ② MERGE Student → AttendedEdge → Exam
+        for (StudentRecord sr : payload.students()) {
+            StudentNode studentNode = new StudentNode(
+                    sr.studentNo(), sr.name(), sr.className(), null
+            );
+            studentNode = graphNodeRepository.save(studentNode);
+            graphNodeRepository.saveEdge(new AttendedEdge(studentNode.getId(), examNode.getId()));
+        }
+
+        // ③ MERGE KnowledgePoint → TestedEdge → Exam
+        for (String kpName : payload.knowledgePoints()) {
+            KnowledgePointNode kpNode = new KnowledgePointNode(kpName, payload.subject());
+            kpNode = graphNodeRepository.save(kpNode);
+            graphNodeRepository.saveEdge(new TestedEdge(examNode.getId(), kpNode.getId()));
+        }
+
+        log.info("CSV 成绩上传完成: examNo={}, students={}, questions={}, kps={}",
+                payload.examNo(), payload.students().size(),
+                payload.questionCount(), payload.knowledgePoints().size());
+
+        // 发布成绩上传完成事件 — 图模块监听后触发增量融合 + 指标缓存失效
+        eventPublisher.publishEvent(new GradeUploadedEvent(
+                this, payload.examNo(), payload.subject(), payload.knowledgePoints()));
+
+        GradeUploadResultBO bo = GradeUploadResultBO.builder()
+                .examNo(payload.examNo())
+                .examName(payload.examName())
+                .examDate(payload.examDate())
+                .subject(payload.subject())
+                .studentCount(payload.students().size())
+                .questionCount(payload.questionCount())
+                .knowledgePoints(payload.knowledgePoints())
+                .filePath(filePath)
+                .csvMd5(csvMd5)
+                .build();
         log.info("成绩已上传: examNo={}, students={}", bo.getExamNo(), bo.getStudentCount());
         return bo;
     }
