@@ -6,10 +6,10 @@
 
 ## 当前活动
 
-- **Change ID**: `package-restructure`
-- **当前阶段**: TASK（待确认，下一步 DEV）
-- **当前角色**: Planner → 下一步 Dev
-- **最后更新**: 2026-06-17
+- **Change ID**: `jpa-query-refactor`
+- **当前阶段**: DEV（TASK 已确认，Wave 1 执行中）
+- **当前角色**: Dev（DEV 阶段）
+- **最后更新**: 2026-06-19
 
 ## 上一个活动
 

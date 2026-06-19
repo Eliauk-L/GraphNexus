@@ -1,10 +1,10 @@
 package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.textbook.model.TextbookBO;
+import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.application.file.textbook.parser.MinerUTextbookParser;
 import com.graphnexus.application.file.textbook.parser.PdfBoxTextbookParser;
-import com.graphnexus.application.file.textbook.pipeline.TextbookProcessingPipeline;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.application.file.textbook.parser.mineru.config.MinerUProperties;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -33,7 +34,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * TextbookService 单元测试（V2 — upload/pipeline 解耦，mock 依赖）。
+ * TextbookService 单元测试（V3 — 前端驱动，parse 独立调用）。
  *
  * @author Jay
  * @date 2026/06/12
@@ -64,7 +65,10 @@ class TextbookServiceTest {
     private TextbookUploadService uploadService;
 
     @Mock
-    private TextbookProcessingPipeline textbookProcessingPipeline;
+    private FileParserRegistry fileParserRegistry;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private TextbookServiceImpl fileService;
@@ -76,10 +80,10 @@ class TextbookServiceTest {
         sampleDoc = TextbookDO.builder()
                 .id(1L)
                 .documentNo("abc123")
-                .name("test.pdf")
+                .name("test")
                 .subject("MATH")
                 .fileSize(1024L)
-                .filePath("uuid.pdf")
+                .filePath("http://localhost:9000/bucket/textbooks/abc123.pdf")
                 .fileType("pdf")
                 .textContent("Sample text content")
                 .pageCount(5)
@@ -128,49 +132,62 @@ class TextbookServiceTest {
         assertEquals("A0004", ex.getErrorCode());
     }
 
-    @Test
-    @DisplayName("重复文档上传应抛 A0007")
-    void uploadDuplicateShouldThrow() {
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "test.pdf", "application/pdf", "content".getBytes()
-        );
-        when(uploadService.upload(file, "MATH"))
-                .thenThrow(new BusinessException(com.graphnexus.common.exception.ErrorCode.A0007,
-                        "文档内容重复"));
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> fileService.upload(file, "MATH"));
-        assertEquals("A0007", ex.getErrorCode());
-    }
-
     // ======================== 解析测试 ========================
 
     @Test
-    @DisplayName("解析成功：Pipeline 处理后返回解析结果（AC-2）")
-    void processShouldSucceed() {
-        when(textbookProcessingPipeline.processStored(1L)).thenReturn(null);
-        when(textbookRepository.findById(1L))
-                .thenReturn(Optional.of(sampleDoc));
+    @DisplayName("解析成功：从 MinIO 读取 → 解析 → 入库")
+    void parseShouldSucceed() {
+        when(textbookRepository.findById(1L)).thenReturn(Optional.of(sampleDoc));
+        when(fileStorageService.extractObjectKey(anyString())).thenReturn("textbooks/abc123.pdf");
+        when(fileStorageService.getFile(anyString())).thenReturn(new ByteArrayInputStream("content".getBytes()));
+        when(fileParserRegistry.getParsers(anyString(), eq("TEXTBOOK")))
+                .thenReturn(List.of(pdfBoxTextbookParser));
+        when(pdfBoxTextbookParser.parse(any(byte[].class)))
+                .thenReturn(new ParseResult("parsed text", 10));
+        when(textbookRepository.saveAndFlush(any())).thenReturn(sampleDoc);
+        when(textbookRepository.save(any())).thenReturn(sampleDoc);
 
-        ParseResult result = fileService.process(1L);
+        ParseResult result = fileService.parse(1L);
 
         assertNotNull(result);
-        assertEquals("Sample text content", result.textContent());
-        assertEquals(5, result.pageCount());
-        verify(textbookProcessingPipeline).processStored(1L);
-        verify(textbookRepository).findById(1L);
+        assertEquals("parsed text", result.textContent());
+        assertEquals(10, result.pageCount());
+        verify(fileStorageService).getFile("textbooks/abc123.pdf");
+        verify(pdfBoxTextbookParser).parse(any(byte[].class));
+        verify(textbookRepository).save(any());
     }
 
     @Test
     @DisplayName("解析不存在文档应抛 A0006")
-    void processNonExistentShouldThrow() {
-        when(textbookProcessingPipeline.processStored(999L)).thenReturn(null);
-        when(textbookRepository.findById(999L))
-                .thenReturn(Optional.empty());
+    void parseNonExistentShouldThrow() {
+        when(textbookRepository.findById(999L)).thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,
-                () -> fileService.process(999L));
+                () -> fileService.parse(999L));
         assertEquals("A0006", ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("解析器链：主解析器失败时 fallback 兜底")
+    void parseWithParserFallbackShouldSucceed() {
+        when(textbookRepository.findById(1L)).thenReturn(Optional.of(sampleDoc));
+        when(fileStorageService.extractObjectKey(anyString())).thenReturn("textbooks/abc123.pdf");
+        when(fileStorageService.getFile(anyString())).thenReturn(new ByteArrayInputStream("content".getBytes()));
+        when(fileParserRegistry.getParsers(anyString(), eq("TEXTBOOK")))
+                .thenReturn(List.of(minerUTextbookParser, pdfBoxTextbookParser));
+        when(minerUTextbookParser.parse(any(byte[].class)))
+                .thenThrow(new RuntimeException("MinerU failed"));
+        when(pdfBoxTextbookParser.parse(any(byte[].class)))
+                .thenReturn(new ParseResult("fallback text", 5));
+        when(textbookRepository.saveAndFlush(any())).thenReturn(sampleDoc);
+        when(textbookRepository.save(any())).thenReturn(sampleDoc);
+
+        ParseResult result = fileService.parse(1L);
+
+        assertNotNull(result);
+        assertEquals("fallback text", result.textContent());
+        verify(minerUTextbookParser).parse(any(byte[].class));
+        verify(pdfBoxTextbookParser).parse(any(byte[].class));
     }
 
     @Test

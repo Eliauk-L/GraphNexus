@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { uploadFile, listFiles, processFile, deleteFile } from '@/api/file'
+import { uploadFile, listFiles, parseFile, deleteFile } from '@/api/file'
+import { extractGraph } from '@/api/graph'
+import { executeFusion } from '@/api/graph'
 import type { TextbookVO } from '@/api/types'
 
 export const useFileStore = defineStore('file', () => {
@@ -27,10 +29,14 @@ export const useFileStore = defineStore('file', () => {
     loading.value = true
     error.value = null
     try {
-      // 阶段一：上传文件（仅存储入库，返回 status=UPLOADED + filePath）
+      // 阶段一：上传文件（仅存储入库）
       const result = await uploadFile(file, subject)
-      // 阶段二：触发处理链路（解析→抽取→融合）
-      await processFile(result.documentId)
+      // 阶段二：解析文本
+      await parseFile(result.documentId)
+      // 阶段三：知识图谱抽取
+      await extractGraph(result.documentId)
+      // 阶段四：全量融合
+      await executeFusion()
       await loadFiles()
       return result
     } catch {
@@ -41,10 +47,10 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  async function process(id: number) {
+  async function parse(id: number) {
     error.value = null
     try {
-      const result = await processFile(id)
+      const result = await parseFile(id)
       await loadFiles()
       return result
     } catch {
@@ -64,5 +70,5 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  return { files, total, loading, error, loadFiles, upload, process, remove }
+  return { files, total, loading, error, loadFiles, upload, parse, remove }
 })

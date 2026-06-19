@@ -38,7 +38,7 @@ const columns: DataTableColumns<any> = [
     render(row: any) {
       return h(NSpace, { size: 'small' }, () => [
         row.status === 'UPLOADED' || row.status === 'PARSED'
-          ? h(BaseButton, { size: 'small', onClick: () => handleProcess(row.documentId) }, () => '解析')
+          ? h(BaseButton, { size: 'small', onClick: () => handleParse(row.documentId) }, () => '解析')
           : null,
         h(BaseButton, {
           variant: 'danger' as const, size: 'small',
@@ -69,9 +69,9 @@ function load() {
   )
 }
 
-async function handleProcess(id: number) {
+async function handleParse(id: number) {
   try {
-    await store.process(id)
+    await store.parse(id)
     message.success('解析完成')
   } catch {
     // handled by store

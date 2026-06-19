@@ -102,7 +102,7 @@ class FileProcessingIntegrationTest {
     void processDocumentShouldSucceed() {
         assertThat(uploadedDocId).isNotNull();
 
-        ParseResult result = textBookService.process(uploadedDocId);
+        ParseResult result = textBookService.parse(uploadedDocId);
 
         assertThat(result).isNotNull();
         assertThat(result.textContent()).isNotBlank();
@@ -110,7 +110,7 @@ class FileProcessingIntegrationTest {
         assertThat(result.pageCount()).isEqualTo(1);
 
         TextbookDO doc = textbookRepository.findById(uploadedDocId).orElseThrow();
-        assertThat(doc.getStatus()).isEqualTo(FileStatus.COMPLETED);
+        assertThat(doc.getStatus()).isEqualTo(FileStatus.PARSED);
         assertThat(doc.getTextContent()).isNotBlank();
     }
 

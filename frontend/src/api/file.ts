@@ -11,9 +11,9 @@ export function uploadFile(file: File, subject: string): Promise<TextbookVO> {
   })
 }
 
-/** 触发文档解析 */
-export function processFile(id: number): Promise<TextbookParseResultVO> {
-  return client.post(`/file/textbooks/${id}/process`)
+/** 触发教材文本解析 */
+export function parseFile(id: number): Promise<TextbookParseResultVO> {
+  return client.post(`/file/textbooks/${id}/parse`)
 }
 
 /** 分页查询文件列表 */

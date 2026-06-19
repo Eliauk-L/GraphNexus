@@ -62,19 +62,22 @@ public class TextbookController {
     }
 
     /**
-     * 触发教材解析。
+     * 触发教材解析（前端主动调用）。
+     *
+     * <p>从 MinIO 读取文件 → 文本提取 → 入库。解析完成后状态变为 PARSED。
+     * 后续抽取走 {@code POST /api/v1/graph/extract/{id}}，融合走 {@code POST /api/v1/graph/fusion/execute}。</p>
      */
-    @Operation(summary = "触发教材解析", description = "对已上传的 PDF 教材执行 MinerU v4 精准解析（主），失败自动 fallback 到 PDFBox（兜底）。解析完成后更新教材状态为 COMPLETED 并存储文本内容")
+    @Operation(summary = "解析教材文本", description = "对已上传的教材执行文本解析（MinerU 优先，PDFBox 兜底），提取文本内容并入库")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "解析完成，返回文本内容与页数"),
-            @ApiResponse(responseCode = "400", description = "A0008 教材文本为空 / A0009 教材状态不允许解析"),
+            @ApiResponse(responseCode = "400", description = "A0004 解析失败 / A0009 状态不允许解析"),
             @ApiResponse(responseCode = "404", description = "A0006 教材不存在或已删除"),
-            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常 / C0001 MinerU API 调用失败")
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
-    @PostMapping("/{id}/process")
-    public ApiResult<TextbookParseResultVO> process(
+    @PostMapping("/{id}/parse")
+    public ApiResult<TextbookParseResultVO> parse(
             @PathVariable @Parameter(description = "教材 ID", required = true, example = "1") Long id) {
-        ParseResult result = textBookService.process(id);
+        ParseResult result = textBookService.parse(id);
         return ApiResult.success(TextbookParseResultVO.from(id, result));
     }
 
