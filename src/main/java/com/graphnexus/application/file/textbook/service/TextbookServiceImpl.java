@@ -87,6 +87,11 @@ public class TextbookServiceImpl implements TextbookService {
             return;
         }
 
+        // 检查是否有其他记录引用同一文件（引用计数）
+        String objectKey = fileStorageService.extractObjectKey(doc.getFilePath());
+        long refCount = textbookRepository.countByFilePathAndNotDeleted(doc.getFilePath());
+        boolean isLastReference = (refCount <= 1); // refCount 包含当前记录
+
         if (doc.getStatus() != FileStatus.DELETING) {
             doc.setStatus(FileStatus.DELETING);
             textbookRepository.saveAndFlush(doc);
@@ -95,12 +100,17 @@ public class TextbookServiceImpl implements TextbookService {
             log.info("文档已在 DELETING 状态，从中断点继续: id={}", id);
         }
 
-        try {
-            fileStorageService.deleteFile(
-                    fileStorageService.extractObjectKey(doc.getFilePath()));
-        } catch (Exception e) {
-            log.warn("文件删除失败（可能已被删除，忽略继续）: path={}, error={}",
-                    doc.getFilePath(), e.getMessage());
+        if (isLastReference) {
+            try {
+                fileStorageService.deleteFile(objectKey);
+                log.info("MinIO 文件已删除（最后引用）: id={}, filePath={}", id, doc.getFilePath());
+            } catch (Exception e) {
+                log.warn("文件删除失败（可能已被删除，忽略继续）: path={}, error={}",
+                        doc.getFilePath(), e.getMessage());
+            }
+        } else {
+            log.info("文件仍被 {} 条其他记录引用，跳过 MinIO 删除: id={}, filePath={}",
+                    refCount - 1, id, doc.getFilePath());
         }
 
         graphNodeRepository.deleteByDocumentId(String.valueOf(id));

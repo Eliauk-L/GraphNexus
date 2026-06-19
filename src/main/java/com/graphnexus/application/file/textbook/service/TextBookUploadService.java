@@ -51,13 +51,9 @@ public class TextbookUploadService implements UploadService {
             throw new BusinessException(ErrorCode.A0004, "不支持的文件类型: " + filename);
         }
 
-        // ② 读取字节 + MD5 + 去重
+        // ② 读取字节 + MD5
         byte[] rawBytes = readBytes(file);
         String documentNo = Md5Utils.computeMd5(rawBytes);
-        if (textbookRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(documentNo, subject).isPresent()) {
-            throw new BusinessException(ErrorCode.A0007,
-                    "文档内容重复: subject=" + subject + ", md5=" + documentNo);
-        }
 
         // ③ 分离文件名与扩展名
         String ext = "";
@@ -68,15 +64,21 @@ public class TextbookUploadService implements UploadService {
             nameOnly = filename.substring(0, dotIdx);
         }
 
-        // ④ MinIO 对象键（以 documentNo 为 key，内容寻址） + 完整文件访问路径
+        // ④ MinIO 对象键（以 documentNo 为 key，内容寻址）
         String objectKey = "textbooks/" + documentNo + ext;
         String filePath = fileStorageService.getFileUrl(objectKey);
 
-        // ⑤ MinIO 上传
-        try (InputStream inputStream = file.getInputStream()) {
-            fileStorageService.uploadFile(inputStream, objectKey, file.getContentType());
-        } catch (IOException e) {
-            throw new BusinessException(ErrorCode.B0001, "文件上传失败", "文件存储服务暂时不可用");
+        // ⑤ 检查是否已有相同内容文件（复用 MinIO 路径，跳过上传）
+        var existing = textbookRepository.findFirstByDocumentNoAndNotDeleted(documentNo);
+        if (existing.isPresent()) {
+            filePath = existing.get().getFilePath();
+            log.info("内容重复文件，复用 MinIO 文件: documentNo={}, filePath={}", documentNo, filePath);
+        } else {
+            try (InputStream inputStream = file.getInputStream()) {
+                fileStorageService.uploadFile(inputStream, objectKey, file.getContentType());
+            } catch (IOException e) {
+                throw new BusinessException(ErrorCode.B0001, "文件上传失败", "文件存储服务暂时不可用");
+            }
         }
 
         // ⑥ DB insert: UPLOADED（仅入库，不做后续处理）
