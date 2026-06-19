@@ -2,7 +2,7 @@ package com.graphnexus.api.file.controller;
 
 import com.graphnexus.api.file.dto.textbook.TextbookVO;
 import com.graphnexus.api.file.dto.textbook.TextbookParseResultVO;
-import com.graphnexus.application.file.textbook.model.FileBO;
+import com.graphnexus.application.file.textbook.model.TextbookBO;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.application.file.textbook.service.TextbookService;
 import com.graphnexus.common.ApiResult;
@@ -57,7 +57,7 @@ public class TextbookController {
             @Parameter(description = "学科名称", required = true, example = "数学")
             @RequestParam("subject") String subject
     ) {
-        FileBO bo = textBookService.upload(file, subject);
+        TextbookBO bo = textBookService.upload(file, subject);
         return ApiResult.success(TextbookVO.from(bo));
     }
 
@@ -97,7 +97,7 @@ public class TextbookController {
             @Parameter(description = "文件名模糊搜索（可选）", example = "二次函数")
             @RequestParam(required = false) String name
     ) {
-        Page<FileBO> page = textBookService.listTextBooks(pageNum, pageSize, fileType, name);
+        Page<TextbookBO> page = textBookService.listTextBooks(pageNum, pageSize, fileType, name);
         return ApiResult.success(PageResult.of(page.map(TextbookVO::from)));
     }
 
@@ -114,7 +114,7 @@ public class TextbookController {
     public ApiResult<TextbookVO> get(
             @Parameter(description = "教材 ID", required = true, example = "1")
             @PathVariable("id") Long id) {
-        FileBO bo = textBookService.getTextBook(id);
+        TextbookBO bo = textBookService.getTextBook(id);
         return ApiResult.success(TextbookVO.from(bo));
     }
 

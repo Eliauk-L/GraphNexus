@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 文档业务对象（L2 内部使用）。
+ * 教材文档业务对象（L2 内部使用）。
  *
  * @author Jay
  * @date 2026/06/12
@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class FileBO {
+public class TextbookBO {
 
     private Long id;
     private String documentNo;
@@ -31,4 +31,5 @@ public class FileBO {
     private String failReason;
     private String fileType;
     private Long uploadedBy;
-    private LocalDateTime createTime;}
+    private LocalDateTime createTime;
+}

@@ -1,6 +1,6 @@
 package com.graphnexus.api.file.dto.textbook;
 
-import com.graphnexus.application.file.textbook.model.FileBO;
+import com.graphnexus.application.file.textbook.model.TextbookBO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -55,7 +55,7 @@ public class TextbookVO {
     @Schema(description = "更新时间", example = "2026-06-17T10:35:00")    /**
      * 从 BO 构造 VO。
      */
-    public static TextbookVO from(FileBO bo) {
+    public static TextbookVO from(TextbookBO bo) {
         return TextbookVO.builder()
                 .documentId(bo.getId())
                 .documentNo(bo.getDocumentNo())

@@ -1,6 +1,6 @@
 package com.graphnexus.application.file.textbook.service;
 
-import com.graphnexus.application.file.textbook.model.FileBO;
+import com.graphnexus.application.file.textbook.model.TextbookBO;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.application.file.textbook.pipeline.TextbookProcessingPipeline;
 import com.graphnexus.common.exception.BusinessException;
@@ -39,8 +39,8 @@ public class TextbookServiceImpl implements TextbookService {
 
     @Override
     @Transactional
-    public FileBO upload(MultipartFile file, String subject) {
-        return (FileBO) uploadService.upload(file, subject);
+    public TextbookBO upload(MultipartFile file, String subject) {
+        return (TextbookBO) uploadService.upload(file, subject);
     }
 
     // ======================== 处理（对已入库文件执行全链路） ========================
@@ -58,7 +58,7 @@ public class TextbookServiceImpl implements TextbookService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FileBO> listTextBooks(int pageNum, int pageSize, String fileType, String name) {
+    public Page<TextbookBO> listTextBooks(int pageNum, int pageSize, String fileType, String name) {
         return textbookRepository
                 .findByConditions(fileType, name, PageRequest.of(pageNum - 1, pageSize))
                 .map(this::toBO);
@@ -66,7 +66,7 @@ public class TextbookServiceImpl implements TextbookService {
 
     @Override
     @Transactional(readOnly = true)
-    public FileBO getTextBook(Long id) {
+    public TextbookBO getTextBook(Long id) {
         TextbookDO doc = textbookRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
@@ -113,8 +113,8 @@ public class TextbookServiceImpl implements TextbookService {
 
     // ======================== 工具方法 ========================
 
-    private FileBO toBO(TextbookDO doc) {
-        return FileBO.builder()
+    private TextbookBO toBO(TextbookDO doc) {
+        return TextbookBO.builder()
                 .id(doc.getId())
                 .documentNo(doc.getDocumentNo())
                 .name(doc.getName())

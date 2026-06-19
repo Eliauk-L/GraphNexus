@@ -1,6 +1,6 @@
 package com.graphnexus.application.file.textbook.pipeline;
 
-import com.graphnexus.application.file.textbook.model.FileBO;
+import com.graphnexus.application.file.textbook.model.TextbookBO;
 import com.graphnexus.application.file.parse.FileParseRequest;
 import com.graphnexus.application.file.textbook.model.TextbookFileType;
 import com.graphnexus.application.file.parse.FileParseType;
@@ -266,9 +266,9 @@ public class TextbookProcessingPipeline implements FileProcessingPipeline {
 
     // ======================== 工具方法 ========================
 
-    private FileBO toBO(Long docId) {
+    private TextbookBO toBO(Long docId) {
         TextbookDO doc = textbookRepository.findById(docId).orElseThrow();
-        return FileBO.builder()
+        return TextbookBO.builder()
                 .id(doc.getId())
                 .documentNo(doc.getDocumentNo())
                 .name(doc.getName())

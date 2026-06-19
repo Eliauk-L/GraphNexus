@@ -1,6 +1,6 @@
 package com.graphnexus.application.file.textbook.service;
 
-import com.graphnexus.application.file.textbook.model.FileBO;
+import com.graphnexus.application.file.textbook.model.TextbookBO;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
@@ -81,7 +81,7 @@ class FileProcessingIntegrationTest {
                 "file", "test-integration.pdf", "application/pdf", pdfContent
         );
 
-        FileBO result = textBookService.upload(file, "MATH");
+        TextbookBO result = textBookService.upload(file, "MATH");
 
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo("test-integration.pdf");

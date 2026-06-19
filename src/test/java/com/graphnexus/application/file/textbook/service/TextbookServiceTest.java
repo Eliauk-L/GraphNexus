@@ -1,6 +1,6 @@
 package com.graphnexus.application.file.textbook.service;
 
-import com.graphnexus.application.file.textbook.model.FileBO;
+import com.graphnexus.application.file.textbook.model.TextbookBO;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.application.file.textbook.parser.MinerUTextbookParser;
 import com.graphnexus.application.file.textbook.parser.PdfBoxTextbookParser;
@@ -96,7 +96,7 @@ class TextbookServiceTest {
                 "file", "test.pdf", "application/pdf", "pdf-content".getBytes()
         );
 
-        FileBO expectedBO = FileBO.builder()
+        TextbookBO expectedBO = TextbookBO.builder()
                 .id(1L)
                 .name("test.pdf")
                 .subject("MATH")
@@ -104,7 +104,7 @@ class TextbookServiceTest {
                 .build();
         when(uploadService.upload(file, "MATH")).thenReturn(expectedBO);
 
-        FileBO result = fileService.upload(file, "MATH");
+        TextbookBO result = fileService.upload(file, "MATH");
 
         assertNotNull(result);
         assertEquals("test.pdf", result.getName());
@@ -194,7 +194,7 @@ class TextbookServiceTest {
         when(textbookRepository.findByConditions(null, null, PageRequest.of(0, 10)))
                 .thenReturn(page);
 
-        Page<FileBO> result = fileService.listTextBooks(1, 10, null, null);
+        Page<TextbookBO> result = fileService.listTextBooks(1, 10, null, null);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
