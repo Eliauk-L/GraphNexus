@@ -5,6 +5,9 @@ import com.graphnexus.application.file.parse.FileParser;
 import com.graphnexus.application.file.parse.FileParseResult;
 import com.graphnexus.application.file.parse.FileParseType;
 import com.graphnexus.application.file.grade.model.GradeFileType;
+import com.graphnexus.application.file.grade.model.GradeParsePayload;
+import com.graphnexus.application.file.grade.model.GradeParsePayload.StudentRecord;
+import com.graphnexus.application.file.grade.model.GradeParsePayload.ScoreDetail;
 import com.graphnexus.application.file.parse.FileParseRequest;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
@@ -51,7 +54,7 @@ public class CsvGradeParser implements FileParser {
 
     @Override
     public FileParseType supportedType() {
-        return GradeFileType.CSV_GRADE;
+        return GradeFileType.CSV;
     }
 
     @Override
@@ -68,7 +71,7 @@ public class CsvGradeParser implements FileParser {
     @SuppressWarnings("unchecked")
     public <T> FileParseResult<T> parse(FileParseRequest request) {
         try {
-            CsvParsePayload payload = doParse(
+            GradeParsePayload payload = doParse(
                     new ByteArrayInputStream(request.rawBytes()),
                     request.subject()
             );
@@ -84,7 +87,7 @@ public class CsvGradeParser implements FileParser {
     /**
      * 核心解析逻辑。
      */
-    private CsvParsePayload doParse(InputStream inputStream, String subject) throws IOException {
+    private GradeParsePayload doParse(InputStream inputStream, String subject) throws IOException {
         // ① 读取全部字节，尝试 UTF-8 → GBK 回退
         byte[] rawBytes = inputStream.readAllBytes();
         String content = tryDecode(rawBytes);
@@ -239,7 +242,7 @@ public class CsvGradeParser implements FileParser {
         }
 
         parser.close();
-        return new CsvParsePayload(examNo, examName, examDate, subject, students, questionMetas.size(), new ArrayList<>(allKps));
+        return new GradeParsePayload(examNo, examName, examDate, subject, students, questionMetas.size(), new ArrayList<>(allKps));
     }
 
     /**
@@ -304,41 +307,6 @@ public class CsvGradeParser implements FileParser {
     }
 
     // ======================== 内部数据类 ========================
-
-    /**
-     * CSV 解析结果 payload。
-     */
-    public record CsvParsePayload(
-            String examNo,
-            String examName,
-            LocalDate examDate,
-            String subject,
-            List<StudentRecord> students,
-            int questionCount,
-            List<String> knowledgePoints
-    ) {}
-
-    /**
-     * 单个学生的成绩记录。
-     */
-    public record StudentRecord(
-            String studentNo,
-            String name,
-            String className,
-            Integer totalScore,
-            Integer classRank,
-            List<ScoreDetail> scoreDetails
-    ) {}
-
-    /**
-     * 单题得分明细。
-     */
-    public record ScoreDetail(
-            String questionLabel,
-            List<String> kpNames,
-            Integer rawScore,
-            Integer maxScore
-    ) {}
 
     /**
      * 题号-列索引-知识点映射（解析阶段内部使用）。

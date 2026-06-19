@@ -41,9 +41,6 @@ public class GradeUploadResultBO {
     /** 考查知识点名称列表（去重） */
     private List<String> knowledgePoints;
 
-    /** 完整文件访问路径 */
-    private String filePath;
-
-    /** CSV 文件 MD5 */
-    private String csvMd5;
+    /** 文件格式类型（GradeFileType.name()，如 "CSV" / "EXCEL"） */
+    private String fileType;
 }

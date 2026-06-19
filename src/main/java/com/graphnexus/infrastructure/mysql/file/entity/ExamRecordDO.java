@@ -74,14 +74,6 @@ public class ExamRecordDO {
     @Column(name = "score_details", columnDefinition = "JSON")
     private String scoreDetails;
 
-    /** CSV 文件的 MinIO 存储路径 */
-    @Column(name = "csv_file_path", length = 500)
-    private String csvFilePath;
-
-    /** CSV 文件 MD5 内容指纹（用于上传判重） */
-    @Column(name = "csv_md5", length = 32)
-    private String csvMd5;
-
     /** 逻辑删除标记：0=正常 1=已删除（中间状态，见全局删除约束 C3） */
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default

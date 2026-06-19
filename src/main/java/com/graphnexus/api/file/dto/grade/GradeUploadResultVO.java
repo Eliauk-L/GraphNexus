@@ -44,11 +44,8 @@ public class GradeUploadResultVO {
     @Schema(description = "试题对应的知识点名称列表", example = "[\"二次函数图像与性质\", \"二次函数顶点式\", \"一元二次方程\"]")
     private List<String> knowledgePoints;
 
-    @Schema(description = "CSV 文件 完整文件访问路径", example = "grades/2026/06/E20200041_scores.csv")
-    private String filePath;
-
-    @Schema(description = "CSV 文件内容 MD5（用于判重）", example = "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9")
-    private String csvMd5;
+    @Schema(description = "成绩文件格式类型", example = "CSV")
+    private String fileType;
 
     public static GradeUploadResultVO from(GradeUploadResultBO bo) {
         return GradeUploadResultVO.builder()
@@ -59,8 +56,7 @@ public class GradeUploadResultVO {
                 .studentCount(bo.getStudentCount())
                 .questionCount(bo.getQuestionCount())
                 .knowledgePoints(bo.getKnowledgePoints())
-                .filePath(bo.getFilePath())
-                .csvMd5(bo.getCsvMd5())
+                .fileType(bo.getFileType())
                 .build();
     }
 }
