@@ -90,7 +90,7 @@ class FileProcessingIntegrationTest {
         assertThat(result.getDocumentNo()).isNotBlank();
         assertThat(result.getFilePath()).isNotBlank();
 
-        TextbookDO doc = textbookRepository.findByIdAndIsDeletedFalse(result.getId()).orElseThrow();
+        TextbookDO doc = textbookRepository.findByIdAndIsDeletedAndStatusNot(result.getId(), 0, FileStatus.DELETING).orElseThrow();
         assertThat(doc.getStatus()).isEqualTo(FileStatus.UPLOADED);
 
         uploadedDocId = result.getId();
@@ -147,7 +147,7 @@ class FileProcessingIntegrationTest {
 
         TextbookDO doc = textbookRepository.findById(uploadedDocId).orElseThrow();
         assertThat(doc.getIsDeleted()).isEqualTo(1);
-        assertThat(textbookRepository.findByIdAndIsDeletedFalse(uploadedDocId)).isEmpty();
+        assertThat(textbookRepository.findByIdAndIsDeletedAndStatusNot(uploadedDocId, 0, FileStatus.DELETING)).isEmpty();
     }
 
     // ======================== 辅助方法 ========================

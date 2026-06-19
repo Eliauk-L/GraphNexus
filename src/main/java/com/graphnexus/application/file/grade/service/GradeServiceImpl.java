@@ -73,7 +73,7 @@ public class GradeServiceImpl implements GradeService {
         String csvMd5 = Md5Utils.computeMd5(rawBytes);
 
         // 判重
-        List<ExamRecordDO> dups = examRecordRepository.findByCsvMd5AndIsDeletedFalse(csvMd5);
+        List<ExamRecordDO> dups = examRecordRepository.findByCsvMd5AndIsDeleted(csvMd5, 0);
         if (!dups.isEmpty()) {
             String existExamNo = dups.get(0).getExamNo();
             log.info("CSV 重复上传（MD5={}），将覆盖 examNo={}", csvMd5, existExamNo);
@@ -183,7 +183,7 @@ public class GradeServiceImpl implements GradeService {
     @Override
     @Transactional(readOnly = true)
     public List<GradeRecordBO> queryByExam(String examNo) {
-        List<ExamRecordDO> records = examRecordRepository.findByExamNoAndIsDeletedFalse(examNo);
+        List<ExamRecordDO> records = examRecordRepository.findByExamNoAndIsDeleted(examNo, 0);
         return records.stream().map(r -> GradeRecordBO.builder()
                 .id(r.getId())
                 .studentNo(r.getStudentNo())
@@ -223,7 +223,7 @@ public class GradeServiceImpl implements GradeService {
     @Transactional
     public DeleteResultBO deleteByExamNo(String examNo) {
         // C2 幂等：查询未删除的记录
-        List<ExamRecordDO> records = examRecordRepository.findByExamNoAndIsDeletedFalse(examNo);
+        List<ExamRecordDO> records = examRecordRepository.findByExamNoAndIsDeleted(examNo, 0);
         if (records.isEmpty()) {
             log.info("考试 {} 无未删除记录，幂等返回（C2）", examNo);
             return DeleteResultBO.builder()

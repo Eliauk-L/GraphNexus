@@ -221,7 +221,7 @@ class TextbookServiceTest {
     @Test
     @DisplayName("查询不存在文档应抛 A0006")
     void getNonExistentShouldThrow() {
-        when(textbookRepository.findByIdAndIsDeletedFalse(999L))
+        when(textbookRepository.findByIdAndIsDeletedAndStatusNot(999L, 0, FileStatus.DELETING))
                 .thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,

@@ -49,7 +49,7 @@ public class GraphServiceImpl implements GraphService {
     @Transactional
     public ExtractionResultBO extract(Long documentId) {
         // 1. 查询文档
-        TextbookDO doc = textbookRepository.findByIdAndIsDeletedFalse(documentId)
+        TextbookDO doc = textbookRepository.findByIdAndIsDeletedAndStatusNot(documentId, 0, FileStatus.DELETING)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: " + documentId));
 
         // 2. 校验状态（v2：PARSED/EXTRACTED/COMPLETED 均可抽取）

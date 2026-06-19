@@ -143,7 +143,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
      * 降级路径：从 MySQL exam_record 计算原始得分率（简单算术平均，无时间衰减）。
      */
     private double calculateRawScoreRate(String studentNo, String kpName) {
-        List<ExamRecordDO> records = examRecordRepository.findByStudentNoAndSubject(studentNo, null);
+        List<ExamRecordDO> records = examRecordRepository.findByStudentNoAndSubjectAndIsDeleted(studentNo, null, 0);
         // subject 可能为 null（跨学科查询），这里按 kpName 过滤
         double totalScoreRate = 0;
         int count = 0;

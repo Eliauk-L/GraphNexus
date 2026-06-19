@@ -26,7 +26,7 @@ import java.util.List;
  * 教材文档上传服务 — 仅入库 {@code text_book} 表，不做后续处理。
  *
  * <p>校验 → MD5 去重 → MinIO 存储 → DB insert（status=UPLOADED）。
- * 解析由前端主动调用 {@code POST /{id}/parse}，抽取/融合走独立的 Graph API。</p>
+ * 解析由前端主动调用 {@code POST /parse/{id}}，抽取/融合走独立的 Graph API。</p>
  *
  * @author Jay
  * @date 2026/06/18
@@ -69,7 +69,8 @@ public class TextbookUploadService implements UploadService {
         String filePath = fileStorageService.getFileUrl(objectKey);
 
         // ⑤ 检查是否已有相同内容文件（复用 MinIO 路径，跳过上传）
-        var existing = textbookRepository.findFirstByDocumentNoAndNotDeleted(documentNo);
+        var existing = textbookRepository.findFirstByDocumentNoAndIsDeletedAndStatusNotOrderByCreateTimeAsc(
+                documentNo, 0, FileStatus.DELETING);
         if (existing.isPresent()) {
             filePath = existing.get().getFilePath();
             log.info("内容重复文件，复用 MinIO 文件: documentNo={}, filePath={}", documentNo, filePath);

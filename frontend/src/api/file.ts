@@ -13,7 +13,7 @@ export function uploadFile(file: File, subject: string): Promise<TextbookVO> {
 
 /** 触发教材文本解析 */
 export function parseFile(id: number): Promise<TextbookParseResultVO> {
-  return client.post(`/file/textbooks/${id}/parse`)
+  return client.post(`/file/textbooks/parse/${id}`)
 }
 
 /** 分页查询文件列表 */

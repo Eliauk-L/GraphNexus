@@ -22,7 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * 教材处理 REST API 控制器 — 仅教材文件（PDF/TXT）。
  *
- * <p>上传仅存储文件 + 入库（返回 filePath），后续处理通过 POST /{id}/process 触发。
+ * <p>上传仅存储文件 + 入库（返回 filePath），解析走 POST /parse/{id}，
+ * 抽取走 POST /api/v1/graph/extract/{id}，融合走 POST /api/v1/graph/fusion/execute。
  * CSV 成绩上传走独立的 {@link com.graphnexus.api.file.controller.GradeController}。</p>
  *
  * @author Jay
@@ -40,9 +41,9 @@ public class TextbookController {
      * 上传教材文件（PDF/TXT）— 仅存储 + 入库，不做后续处理。
      *
      * <p>返回的 TextbookVO 含 id + filePath，状态为 UPLOADED。
-     * 后续调用 POST /{id}/process 触发解析→抽取→融合全链路。</p>
+     * 后续调用 POST /parse/{id} 触发文本解析。</p>
      */
-    @Operation(summary = "上传教材", description = "上传 PDF 或 TXT 教材文件，仅存储入库（状态 UPLOADED）。后续需调用 /{id}/process 触发处理链路")
+    @Operation(summary = "上传教材", description = "上传 PDF 或 TXT 教材文件，仅存储入库（状态 UPLOADED）。后续需调用 /parse/{id} 触发文本解析")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "上传成功（status=UPLOADED）",
                     content = {@Content(mediaType = "application/json", schema = @Schema(implementation = TextbookVO.class))}),
@@ -74,7 +75,7 @@ public class TextbookController {
             @ApiResponse(responseCode = "404", description = "A0006 教材不存在或已删除"),
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
-    @PostMapping("/{id}/parse")
+    @PostMapping("/parse/{id}")
     public ApiResult<TextbookParseResultVO> parse(
             @PathVariable @Parameter(description = "教材 ID", required = true, example = "1") Long id) {
         ParseResult result = textBookService.parse(id);
