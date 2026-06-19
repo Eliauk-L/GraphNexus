@@ -4,7 +4,9 @@ import com.graphnexus.application.file.parse.FileParser;
 
 import com.graphnexus.application.file.parse.FileParseResult;
 import com.graphnexus.application.file.parse.FileParseType;
-import com.graphnexus.application.file.parse.FileParseRequest;import com.graphnexus.common.exception.BusinessException;
+import com.graphnexus.application.file.grade.model.GradeFileType;
+import com.graphnexus.application.file.parse.FileParseRequest;
+import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
@@ -49,7 +51,7 @@ public class CsvGradeParser implements FileParser {
 
     @Override
     public FileParseType supportedType() {
-        return FileParseType.CSV_GRADE;
+        return GradeFileType.CSV_GRADE;
     }
 
     @Override
@@ -65,7 +67,7 @@ public class CsvGradeParser implements FileParser {
                     new ByteArrayInputStream(request.rawBytes()),
                     request.subject()
             );
-            return (FileParseResult<T>) new FileParseResult<>(payload, FileParseType.CSV_GRADE);
+            return (FileParseResult<T>) new FileParseResult<>(payload, GradeFileType.CSV_GRADE);
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {

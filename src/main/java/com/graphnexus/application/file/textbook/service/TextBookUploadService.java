@@ -27,7 +27,7 @@ import java.util.UUID;
  * 教材文档上传服务 — 仅入库 {@code text_book} 表，不做后续处理。
  *
  * <p>校验 → MD5 去重 → MinIO 存储 → DB insert（status=UPLOADED）。
- * 后续处理通过 {@link com.graphnexus.application.file.textbook.pipeline.DocumentProcessingPipeline#processStored(Long)} 触发。</p>
+ * 后续处理通过 {@link com.graphnexus.application.file.textbook.pipeline.TextbookProcessingPipeline#processStored(Long)} 触发。</p>
  *
  * @author Jay
  * @date 2026/06/18
@@ -35,7 +35,7 @@ import java.util.UUID;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TextBookUploadService implements UploadService {
+public class TextbookUploadService implements UploadService {
 
     private final FileRepository fileRepository;
     private final FileStorageService fileStorageService;

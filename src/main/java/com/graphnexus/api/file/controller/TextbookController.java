@@ -1,7 +1,7 @@
 package com.graphnexus.api.file.controller;
 
-import com.graphnexus.api.file.dto.textbook.FileVO;
-import com.graphnexus.api.file.dto.textbook.ParseResultVO;
+import com.graphnexus.api.file.dto.textbook.TextbookVO;
+import com.graphnexus.api.file.dto.textbook.TextbookParseResultVO;
 import com.graphnexus.application.file.textbook.model.FileBO;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.application.file.textbook.service.TextbookService;
@@ -39,26 +39,26 @@ public class TextbookController {
     /**
      * 上传教材文件（PDF/TXT）— 仅存储 + 入库，不做后续处理。
      *
-     * <p>返回的 FileVO 含 id + filePath，状态为 UPLOADED。
+     * <p>返回的 TextbookVO 含 id + filePath，状态为 UPLOADED。
      * 后续调用 POST /{id}/process 触发解析→抽取→融合全链路。</p>
      */
     @Operation(summary = "上传教材", description = "上传 PDF 或 TXT 教材文件，仅存储入库（状态 UPLOADED）。后续需调用 /{id}/process 触发处理链路")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "上传成功（status=UPLOADED）",
-                    content = {@Content(mediaType = "application/json", schema = @Schema(implementation = FileVO.class))}),
+                    content = {@Content(mediaType = "application/json", schema = @Schema(implementation = TextbookVO.class))}),
             @ApiResponse(responseCode = "400", description = "A0004 文件类型不支持"),
             @ApiResponse(responseCode = "409", description = "A0007 该学科下已存在相同内容教材"),
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @PostMapping("/upload")
-    public ApiResult<FileVO> upload(
+    public ApiResult<TextbookVO> upload(
             @Parameter(description = "上传文件（支持 PDF/TXT）", required = true)
             @RequestParam("file") MultipartFile file,
             @Parameter(description = "学科名称", required = true, example = "数学")
             @RequestParam("subject") String subject
     ) {
         FileBO bo = textBookService.upload(file, subject);
-        return ApiResult.success(FileVO.from(bo));
+        return ApiResult.success(TextbookVO.from(bo));
     }
 
     /**
@@ -72,10 +72,10 @@ public class TextbookController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常 / C0001 MinerU API 调用失败")
     })
     @PostMapping("/{id}/process")
-    public ApiResult<ParseResultVO> process(
+    public ApiResult<TextbookParseResultVO> process(
             @PathVariable @Parameter(description = "教材 ID", required = true, example = "1") Long id) {
         ParseResult result = textBookService.process(id);
-        return ApiResult.success(ParseResultVO.from(id, result));
+        return ApiResult.success(TextbookParseResultVO.from(id, result));
     }
 
     /**
@@ -87,7 +87,7 @@ public class TextbookController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @GetMapping
-    public ApiResult<PageResult<FileVO>> list(
+    public ApiResult<PageResult<TextbookVO>> list(
             @Parameter(description = "页码（从 1 开始）", example = "1")
             @RequestParam(defaultValue = "1") int pageNum,
             @Parameter(description = "每页大小", example = "10")
@@ -97,8 +97,8 @@ public class TextbookController {
             @Parameter(description = "文件名模糊搜索（可选）", example = "二次函数")
             @RequestParam(required = false) String name
     ) {
-        Page<FileBO> page = textBookService.listDocuments(pageNum, pageSize, fileType, name);
-        return ApiResult.success(PageResult.of(page.map(FileVO::from)));
+        Page<FileBO> page = textBookService.listTextBooks(pageNum, pageSize, fileType, name);
+        return ApiResult.success(PageResult.of(page.map(TextbookVO::from)));
     }
 
     /**
@@ -111,11 +111,11 @@ public class TextbookController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @GetMapping("/{id}")
-    public ApiResult<FileVO> get(
+    public ApiResult<TextbookVO> get(
             @Parameter(description = "教材 ID", required = true, example = "1")
             @PathVariable("id") Long id) {
-        FileBO bo = textBookService.getDocument(id);
-        return ApiResult.success(FileVO.from(bo));
+        FileBO bo = textBookService.getTextBook(id);
+        return ApiResult.success(TextbookVO.from(bo));
     }
 
     /**
@@ -131,7 +131,7 @@ public class TextbookController {
     public ApiResult<Void> delete(
             @Parameter(description = "教材 ID", required = true, example = "1")
             @PathVariable("id") Long id) {
-        textBookService.deleteDocument(id);
+        textBookService.deleteTextBook(id);
         return ApiResult.success(null);
     }
 }

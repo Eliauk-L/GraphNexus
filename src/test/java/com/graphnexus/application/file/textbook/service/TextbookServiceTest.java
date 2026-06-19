@@ -2,14 +2,15 @@ package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.textbook.model.FileBO;
 import com.graphnexus.application.file.parse.ParseResult;
-import com.graphnexus.application.file.textbook.parser.MinerUDocumentParser;
-import com.graphnexus.application.file.textbook.parser.PdfBoxDocumentParser;
-import com.graphnexus.application.file.textbook.service.TextbookServiceImpl;
+import com.graphnexus.application.file.textbook.parser.MinerUTextbookParser;
+import com.graphnexus.application.file.textbook.parser.PdfBoxTextbookParser;
+import com.graphnexus.application.file.textbook.pipeline.TextbookProcessingPipeline;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.application.file.textbook.parser.mineru.config.MinerUProperties;
 import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
 import com.graphnexus.infrastructure.mysql.file.repository.FileRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
+import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +25,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,13 +33,13 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * FileService 单元测试（mock 依赖，对应 AC-1/AC-6/AC-7）。
+ * TextbookService 单元测试（V2 — upload/pipeline 解耦，mock 依赖）。
  *
  * @author Jay
  * @date 2026/06/12
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("FileService 业务逻辑")
+@DisplayName("TextbookService 业务逻辑")
 class TextbookServiceTest {
 
     @Mock
@@ -49,13 +49,22 @@ class TextbookServiceTest {
     private FileStorageService fileStorageService;
 
     @Mock
-    private MinerUDocumentParser minerUDocumentParser;
+    private GraphNodeRepository graphNodeRepository;
 
     @Mock
-    private PdfBoxDocumentParser pdfBoxDocumentParser;
+    private MinerUTextbookParser minerUTextbookParser;
+
+    @Mock
+    private PdfBoxTextbookParser pdfBoxTextbookParser;
 
     @Mock
     private MinerUProperties minerUProperties;
+
+    @Mock
+    private TextbookUploadService uploadService;
+
+    @Mock
+    private TextbookProcessingPipeline textbookProcessingPipeline;
 
     @InjectMocks
     private TextbookServiceImpl fileService;
@@ -71,6 +80,9 @@ class TextbookServiceTest {
                 .subject("MATH")
                 .fileSize(1024L)
                 .filePath("uuid.pdf")
+                .fileType("pdf")
+                .textContent("Sample text content")
+                .pageCount(5)
                 .status(FileStatus.UPLOADED)
                 .build();
     }
@@ -83,11 +95,14 @@ class TextbookServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.pdf", "application/pdf", "pdf-content".getBytes()
         );
-        when(fileRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(anyString(), eq("MATH")))
-                .thenReturn(Optional.empty());
-        when(fileRepository.save(any(FileDO.class)))
-                .thenReturn(sampleDoc);
-        doNothing().when(fileStorageService).uploadFile(any(InputStream.class), anyString(), anyString());
+
+        FileBO expectedBO = FileBO.builder()
+                .id(1L)
+                .name("test.pdf")
+                .subject("MATH")
+                .status("UPLOADED")
+                .build();
+        when(uploadService.upload(file, "MATH")).thenReturn(expectedBO);
 
         FileBO result = fileService.upload(file, "MATH");
 
@@ -95,33 +110,22 @@ class TextbookServiceTest {
         assertEquals("test.pdf", result.getName());
         assertEquals("MATH", result.getSubject());
         assertEquals("UPLOADED", result.getStatus());
-        verify(fileStorageService).uploadFile(any(InputStream.class), anyString(), eq("application/pdf"));
-        verify(fileRepository).save(any(FileDO.class));
+        verify(uploadService).upload(file, "MATH");
     }
 
     @Test
-    @DisplayName("上传非 PDF 文件应抛 A0004（AC-7）")
-    void uploadNonPdfShouldThrow() {
+    @DisplayName("上传不支持的文件类型应抛 A0004（AC-7）")
+    void uploadUnsupportedTypeShouldThrow() {
         MockMultipartFile file = new MockMultipartFile(
-                "file", "test.txt", "text/plain", "text".getBytes()
+                "file", "test.xyz", "application/octet-stream", "data".getBytes()
         );
+        when(uploadService.upload(file, "MATH"))
+                .thenThrow(new BusinessException(com.graphnexus.common.exception.ErrorCode.A0004,
+                        "不支持的文件类型: test.xyz"));
+
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> fileService.upload(file, "MATH"));
         assertEquals("A0004", ex.getErrorCode());
-        verify(fileStorageService, never()).uploadFile(any(), any(), any());
-        verify(fileRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("上传超大文件应抛 A0005（AC-7）")
-    void uploadOversizedFileShouldThrow() {
-        byte[] bigData = new byte[51 * 1024 * 1024]; // 51MB
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "big.pdf", "application/pdf", bigData
-        );
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> fileService.upload(file, "MATH"));
-        assertEquals("A0005", ex.getErrorCode());
     }
 
     @Test
@@ -130,8 +134,9 @@ class TextbookServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.pdf", "application/pdf", "content".getBytes()
         );
-        when(fileRepository.findIdByDocumentNoAndSubjectAndIsDeletedFalse(anyString(), eq("MATH")))
-                .thenReturn(Optional.of(1L));
+        when(uploadService.upload(file, "MATH"))
+                .thenThrow(new BusinessException(com.graphnexus.common.exception.ErrorCode.A0007,
+                        "文档内容重复"));
 
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> fileService.upload(file, "MATH"));
@@ -141,32 +146,26 @@ class TextbookServiceTest {
     // ======================== 解析测试 ========================
 
     @Test
-    @DisplayName("解析成功：状态 COMPLETED + 结果返回（AC-2）")
+    @DisplayName("解析成功：Pipeline 处理后返回解析结果（AC-2）")
     void processShouldSucceed() {
-        when(minerUProperties.isEnabled()).thenReturn(false);
-        when(fileRepository.findByIdAndIsDeletedFalse(1L))
+        when(textbookProcessingPipeline.processStored(1L)).thenReturn(null);
+        when(fileRepository.findById(1L))
                 .thenReturn(Optional.of(sampleDoc));
-        when(fileStorageService.getFile("uuid.pdf"))
-                .thenReturn(new ByteArrayInputStream("pdf-bytes".getBytes()));
-        when(pdfBoxDocumentParser.parse(any(byte[].class)))
-                .thenReturn(new ParseResult("Hello GraphNexus", 5));
-        when(fileRepository.save(any(FileDO.class)))
-                .thenReturn(sampleDoc);
 
         ParseResult result = fileService.process(1L);
 
         assertNotNull(result);
-        assertEquals("Hello GraphNexus", result.textContent());
+        assertEquals("Sample text content", result.textContent());
         assertEquals(5, result.pageCount());
-        verify(fileRepository, atLeastOnce()).save(argThat(doc ->
-                doc.getStatus() == FileStatus.COMPLETED
-        ));
+        verify(textbookProcessingPipeline).processStored(1L);
+        verify(fileRepository).findById(1L);
     }
 
     @Test
     @DisplayName("解析不存在文档应抛 A0006")
     void processNonExistentShouldThrow() {
-        when(fileRepository.findByIdAndIsDeletedFalse(999L))
+        when(textbookProcessingPipeline.processStored(999L)).thenReturn(null);
+        when(fileRepository.findById(999L))
                 .thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -175,13 +174,12 @@ class TextbookServiceTest {
     }
 
     @Test
-    @DisplayName("AC-6: PdfBoxDocumentParser 作为兜底可独立工作")
+    @DisplayName("AC-6: PdfBoxTextbookParser 作为兜底可独立工作")
     void pdfBoxParserShouldWorkStandalone() {
-        PdfBoxDocumentParser realParser = mock(PdfBoxDocumentParser.class);
+        PdfBoxTextbookParser realParser = mock(PdfBoxTextbookParser.class);
         when(realParser.parse(any(byte[].class)))
                 .thenReturn(new ParseResult("pdfbox result", 1));
 
-        // 验证 PDFBox 解析器可以独立工作
         ParseResult r = realParser.parse(new byte[]{1, 2, 3});
         assertEquals("pdfbox result", r.textContent());
         verify(realParser).parse(any(byte[].class));
@@ -191,12 +189,12 @@ class TextbookServiceTest {
 
     @Test
     @DisplayName("分页查询返回正确结构（AC-4）")
-    void listDocumentsShouldReturnPage() {
+    void listTextBooksShouldReturnPage() {
         Page<FileDO> page = new PageImpl<>(List.of(sampleDoc), PageRequest.of(0, 10), 1);
-        when(fileRepository.findByIsDeletedFalse(any(PageRequest.class)))
+        when(fileRepository.findByConditions(null, null, PageRequest.of(0, 10)))
                 .thenReturn(page);
 
-        Page<FileBO> result = fileService.listDocuments(1, 10, null, null);
+        Page<FileBO> result = fileService.listTextBooks(1, 10, null, null);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
@@ -210,7 +208,7 @@ class TextbookServiceTest {
                 .thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,
-                () -> fileService.getDocument(999L));
+                () -> fileService.getTextBook(999L));
         assertEquals("A0006", ex.getErrorCode());
     }
 
@@ -219,15 +217,18 @@ class TextbookServiceTest {
     @Test
     @DisplayName("删除：逻辑删除 + MinIO 清除（AC-5）")
     void deleteShouldMarkDeletedAndRemoveFile() {
-        when(fileRepository.findByIdAndIsDeletedFalse(1L))
+        when(fileRepository.findById(1L))
                 .thenReturn(Optional.of(sampleDoc));
         when(fileRepository.save(any(FileDO.class)))
                 .thenReturn(sampleDoc);
         doNothing().when(fileStorageService).deleteFile(anyString());
+        doNothing().when(graphNodeRepository).deleteByDocumentId(anyString());
+        when(fileStorageService.extractObjectKey(anyString())).thenReturn("uuid.pdf");
 
-        assertDoesNotThrow(() -> fileService.deleteDocument(1L));
+        assertDoesNotThrow(() -> fileService.deleteTextBook(1L));
 
         verify(fileRepository).save(argThat(doc -> doc.getIsDeleted() == 1));
-        verify(fileStorageService).deleteFile("uuid.pdf");
+        verify(fileStorageService).deleteFile(anyString());
+        verify(graphNodeRepository).deleteByDocumentId("1");
     }
 }

@@ -1,7 +1,7 @@
 package com.graphnexus.application.file.textbook.parser;
 
-import com.graphnexus.application.file.parse.DocumentParser;
-
+import com.graphnexus.application.file.parse.TextbookParser;
+import com.graphnexus.application.file.textbook.model.TextbookFileType;
 import com.graphnexus.application.file.parse.FileParseType;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * TXT 纯文本文件解析器 — 实现 {@link DocumentParser} 接口。
+ * TXT 纯文本文件解析器 — 实现 {@link TextbookParser} 接口。
  *
  * <p>支持 UTF-8 和 GBK 编码，直接读取文本内容，不做版面分析。
  * 文本内容原样传递给 LLM 做知识抽取，走与 PDF 相同的文档处理链路。</p>
@@ -25,11 +25,11 @@ import java.util.Set;
  */
 @Slf4j
 @Component
-public class TxtFileParser implements DocumentParser {
+public class TxtTextbookParser implements TextbookParser {
 
     @Override
     public FileParseType supportedType() {
-        return FileParseType.DOCUMENT;
+        return TextbookFileType.TXT;
     }
 
     @Override

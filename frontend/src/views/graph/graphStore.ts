@@ -2,11 +2,11 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getDocumentSubgraph } from '@/api/graph'
 import { listFiles } from '@/api/file'
-import type { GraphSubgraphVO, FileVO } from '@/api/types'
+import type { GraphSubgraphVO, TextbookVO } from '@/api/types'
 
 export const useGraphStore = defineStore('graph', () => {
   const currentGraph = ref<GraphSubgraphVO | null>(null)
-  const documents = ref<FileVO[]>([])
+  const documents = ref<TextbookVO[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 

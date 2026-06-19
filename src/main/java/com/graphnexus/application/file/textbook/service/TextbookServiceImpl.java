@@ -2,7 +2,7 @@ package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.textbook.model.FileBO;
 import com.graphnexus.application.file.parse.ParseResult;
-import com.graphnexus.application.file.textbook.pipeline.DocumentProcessingPipeline;
+import com.graphnexus.application.file.textbook.pipeline.TextbookProcessingPipeline;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.FileDO;
@@ -32,8 +32,8 @@ public class TextbookServiceImpl implements TextbookService {
     private final FileRepository fileRepository;
     private final FileStorageService fileStorageService;
     private final GraphNodeRepository graphNodeRepository;
-    private final TextBookUploadService uploadService;
-    private final DocumentProcessingPipeline documentProcessingPipeline;
+    private final TextbookUploadService uploadService;
+    private final TextbookProcessingPipeline textbookProcessingPipeline;
 
     // ======================== 上传（仅存储 + 入库） ========================
 
@@ -48,7 +48,7 @@ public class TextbookServiceImpl implements TextbookService {
     @Override
     @Transactional
     public ParseResult process(Long documentId) {
-        documentProcessingPipeline.processStored(documentId);
+        textbookProcessingPipeline.processStored(documentId);
         FileDO doc = fileRepository.findById(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: id=" + documentId));
         return new ParseResult(doc.getTextContent(), doc.getPageCount() != null ? doc.getPageCount() : 0, null);
@@ -58,7 +58,7 @@ public class TextbookServiceImpl implements TextbookService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FileBO> listDocuments(int pageNum, int pageSize, String fileType, String name) {
+    public Page<FileBO> listTextBooks(int pageNum, int pageSize, String fileType, String name) {
         return fileRepository
                 .findByConditions(fileType, name, PageRequest.of(pageNum - 1, pageSize))
                 .map(this::toBO);
@@ -66,7 +66,7 @@ public class TextbookServiceImpl implements TextbookService {
 
     @Override
     @Transactional(readOnly = true)
-    public FileBO getDocument(Long id) {
+    public FileBO getTextBook(Long id) {
         FileDO doc = fileRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
@@ -77,7 +77,7 @@ public class TextbookServiceImpl implements TextbookService {
 
     @Override
     @Transactional
-    public void deleteDocument(Long id) {
+    public void deleteTextBook(Long id) {
         FileDO doc = fileRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));

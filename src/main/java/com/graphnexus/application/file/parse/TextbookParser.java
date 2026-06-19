@@ -10,9 +10,9 @@ import com.graphnexus.application.file.parse.ParseResult;
  * <p>继承体系：</p>
  * <pre>
  * FileParser（通用文件解析）
- *   └── DocumentParser（本文档解析接口）
- *         ├── PdfBoxDocumentParser
- *         └── MinerUDocumentParser
+ *   └── TextbookParser（本文档解析接口）
+ *         ├── PdfBoxTextbookParser
+ *         └── MinerUTextbookParser
  * </pre>
  *
  * <p>实现类需提供 {@link #supportedType()} + {@link #supportedExtensions()} +
@@ -24,7 +24,7 @@ import com.graphnexus.application.file.parse.ParseResult;
  * @author Jay
  * @date 2026/06/12
  */
-public interface DocumentParser extends FileParser {
+public interface TextbookParser extends FileParser {
 
     /**
      * 解析文档字节数组，提取文本内容、页数和元信息。

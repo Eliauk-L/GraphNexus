@@ -1,8 +1,9 @@
 package com.graphnexus.application.file.textbook.parser;
 
-import com.graphnexus.application.file.parse.DocumentParser;
+import com.graphnexus.application.file.parse.TextbookParser;
 
 import com.graphnexus.application.file.parse.FileParseType;
+import com.graphnexus.application.file.textbook.model.TextbookFileType;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
@@ -20,21 +21,21 @@ import java.util.Set;
 /**
  * MinerU v4 文档解析器实现。
  *
- * <p>实现 {@link DocumentParser} 接口，通过 MinerU v4 精准解析 API（vlm 模型）
+ * <p>实现 {@link TextbookParser} 接口，通过 MinerU v4 精准解析 API（vlm 模型）
  * 将 PDF 转换为 Markdown，公式以 LaTeX 格式保留（如 {@code $E=mc^2$}）。
  * 所有异常向上抛 {@link BusinessException}，由调用方
- * {@code FileServiceImpl} 统一 catch 后 fallback 到 {@link PdfBoxDocumentParser}。</p>
+ * {@code FileServiceImpl} 统一 catch 后 fallback 到 {@link PdfBoxTextbookParser}。</p>
  *
  * <p>API 调用链：v1 submitTask → PUT 文件 → v1 pollTaskResult → downloadMarkdown</p>
  *
  * @author Jay
  * @date 2026/06/16
- * @see PdfBoxDocumentParser
+ * @see PdfBoxTextbookParser
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MinerUDocumentParser implements DocumentParser {
+public class MinerUTextbookParser implements TextbookParser {
 
     private final MinerUClient minerUClient;
     private final MinerUProperties properties;
@@ -99,7 +100,7 @@ public class MinerUDocumentParser implements DocumentParser {
 
     @Override
     public FileParseType supportedType() {
-        return FileParseType.DOCUMENT;
+        return TextbookFileType.PDF;
     }
 
     @Override

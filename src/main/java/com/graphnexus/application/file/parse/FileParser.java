@@ -1,9 +1,5 @@
 package com.graphnexus.application.file.parse;
 
-import com.graphnexus.application.file.parse.FileParseRequest;
-import com.graphnexus.application.file.parse.FileParseResult;
-import com.graphnexus.application.file.parse.FileParseType;
-
 import java.util.Set;
 
 /**
@@ -16,10 +12,10 @@ import java.util.Set;
  * <p>继承体系：</p>
  * <pre>
  * FileParser（通用文件解析）
- *   ├── DocumentParser（文档解析，如 PDF/TXT）
- *   │     ├── PdfBoxDocumentParser
- *   │     ├── MinerUDocumentParser
- *   │     └── TxtFileParser
+ *   ├── TextbookParser（文档解析，如 PDF/TXT）
+ *   │     ├── PdfBoxTextbookParser
+ *   │     ├── MinerUTextbookParser
+ *   │     └── TxtTextbookParser
  *   └── CsvGradeParser（CSV 成绩解析，直接实现 FileParser）
  * </pre>
  *

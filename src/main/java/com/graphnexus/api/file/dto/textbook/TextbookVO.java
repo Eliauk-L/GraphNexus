@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "文档元数据视图")
-public class FileVO {
+public class TextbookVO {
 
     @Schema(description = "文档 ID", example = "1")
     private Long documentId;
@@ -55,8 +55,8 @@ public class FileVO {
     @Schema(description = "更新时间", example = "2026-06-17T10:35:00")    /**
      * 从 BO 构造 VO。
      */
-    public static FileVO from(FileBO bo) {
-        return FileVO.builder()
+    public static TextbookVO from(FileBO bo) {
+        return TextbookVO.builder()
                 .documentId(bo.getId())
                 .documentNo(bo.getDocumentNo())
                 .name(bo.getName())

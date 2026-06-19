@@ -4,6 +4,7 @@ import com.graphnexus.application.file.grade.service.GradeUploadService;
 import com.graphnexus.application.file.textbook.pipeline.FileProcessingPipeline;
 
 import com.graphnexus.application.file.parse.FileParseType;
+import com.graphnexus.application.file.grade.model.GradeFileType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +23,7 @@ public class GradeProcessingPipeline implements FileProcessingPipeline {
 
     @Override
     public FileParseType supportedType() {
-        return FileParseType.CSV_GRADE;
+        return GradeFileType.CSV_GRADE;
     }
 
     @Override

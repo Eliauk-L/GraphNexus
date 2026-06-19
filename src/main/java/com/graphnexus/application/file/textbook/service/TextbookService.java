@@ -20,11 +20,11 @@ public interface TextbookService {
     ParseResult process(Long documentId);
 
     /** 分页查询教材列表（条件筛选）。 */
-    Page<FileBO> listDocuments(int pageNum, int pageSize, String fileType, String name);
+    Page<FileBO> listTextBooks(int pageNum, int pageSize, String fileType, String name);
 
     /** 按 ID 查询单个教材。 */
-    FileBO getDocument(Long id);
+    FileBO getTextBook(Long id);
 
     /** 逻辑删除教材 + MinIO 文件清除 + Neo4j 图谱清理。 */
-    void deleteDocument(Long id);
+    void deleteTextBook(Long id);
 }

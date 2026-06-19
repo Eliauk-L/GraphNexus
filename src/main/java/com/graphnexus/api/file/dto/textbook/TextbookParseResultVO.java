@@ -20,7 +20,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "文档解析结果视图")
-public class ParseResultVO {
+public class TextbookParseResultVO {
 
     @Schema(description = "文档 ID", example = "1")
     private Long documentId;
@@ -37,8 +37,8 @@ public class ParseResultVO {
     /**
      * 从 ParseResult 构造 VO。
      */
-    public static ParseResultVO from(Long documentId, ParseResult result) {
-        return ParseResultVO.builder()
+    public static TextbookParseResultVO from(Long documentId, ParseResult result) {
+        return TextbookParseResultVO.builder()
                 .documentId(documentId)
                 .textContent(result.textContent())
                 .pageCount(result.pageCount())

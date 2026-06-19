@@ -6,7 +6,7 @@ import java.util.Map;
 /**
  * PDF 解析结果（不可变 record）。
  *
- * <p>由 {@link DocumentParser} 的实现类产出，包含提取的文本、页数和元信息。</p>
+ * <p>由 {@link TextbookParser} 的实现类产出，包含提取的文本、页数和元信息。</p>
  *
  * @param textContent 提取的全文文本
  * @param pageCount   总页数

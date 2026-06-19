@@ -43,7 +43,7 @@ export type FileStatus =
   | 'COMPLETED'
   | 'FAILED'
 
-export interface FileVO {
+export interface TextbookVO {
   documentId: number
   documentNo: string
   name: string
@@ -56,10 +56,11 @@ export interface FileVO {
   createTime: string
 }
 
-export interface ParseResultVO {
+export interface TextbookParseResultVO {
   documentId: number
   textContent: string
   pageCount: number
+  metadata?: Record<string, string>
 }
 
 export interface DeleteResultVO {

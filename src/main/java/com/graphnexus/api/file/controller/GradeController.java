@@ -1,6 +1,6 @@
 package com.graphnexus.api.file.controller;
 
-import com.graphnexus.api.file.dto.textbook.DeleteResultVO;
+import com.graphnexus.api.file.dto.grade.DeleteResultVO;
 import com.graphnexus.api.file.dto.grade.GradeRecordVO;
 import com.graphnexus.api.file.dto.grade.GradeUploadResultVO;
 import com.graphnexus.application.file.textbook.model.DeleteResultBO;

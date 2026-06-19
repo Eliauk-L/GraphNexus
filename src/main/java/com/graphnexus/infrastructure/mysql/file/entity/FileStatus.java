@@ -24,7 +24,7 @@ public enum FileStatus {
     /** 已上传，文件在 MinIO，DB 有记录，等待处理 */
     UPLOADED,
 
-    /** 解析进行中（MinerU/PDFBox/TxtFileParser） */
+    /** 解析进行中（MinerUTextbookParser / PdfBoxTextbookParser / TxtTextbookParser） */
     PARSING,
 
     /** 解析成功完成，textContent + pageCount 已入库 */

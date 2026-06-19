@@ -1,7 +1,7 @@
 package com.graphnexus.application.file.textbook.parser;
 
-import com.graphnexus.application.file.parse.DocumentParser;
-
+import com.graphnexus.application.file.parse.TextbookParser;
+import com.graphnexus.application.file.textbook.model.TextbookFileType;
 import com.graphnexus.application.file.parse.FileParseType;
 import com.graphnexus.application.file.parse.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
@@ -21,15 +21,15 @@ import java.util.Set;
 /**
  * Apache PDFBox 文档解析器实现。
  *
- * <p>实现 {@link DocumentParser} 接口，使用 PDFBox 3.x 提取 PDF 文本、页数和元信息。
- * 后续可替换为 {@code MinerUDocumentParser}，调用方无需修改。</p>
+ * <p>实现 {@link TextbookParser} 接口，使用 PDFBox 3.x 提取 PDF 文本、页数和元信息。
+ * 后续可替换为 {@code MinerUTextbookParser}，调用方无需修改。</p>
  *
  * @author Jay
  * @date 2026/06/12
  */
 @Slf4j
 @Service
-public class PdfBoxDocumentParser implements DocumentParser {
+public class PdfBoxTextbookParser implements TextbookParser {
 
     /**
      * 解析 PDF 字节数组。
@@ -95,7 +95,7 @@ public class PdfBoxDocumentParser implements DocumentParser {
 
     @Override
     public FileParseType supportedType() {
-        return FileParseType.DOCUMENT;
+        return TextbookFileType.PDF;
     }
 
     @Override

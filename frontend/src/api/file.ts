@@ -1,8 +1,8 @@
 import client from './client'
-import type { FileVO, ParseResultVO, PageResult } from './types'
+import type { TextbookVO, TextbookParseResultVO, PageResult } from './types'
 
 /** 上传文档文件（PDF/TXT） */
-export function uploadFile(file: File, subject: string): Promise<FileVO> {
+export function uploadFile(file: File, subject: string): Promise<TextbookVO> {
   const form = new FormData()
   form.append('file', file)
   form.append('subject', subject)
@@ -12,17 +12,17 @@ export function uploadFile(file: File, subject: string): Promise<FileVO> {
 }
 
 /** 触发文档解析 */
-export function processFile(id: number): Promise<ParseResultVO> {
+export function processFile(id: number): Promise<TextbookParseResultVO> {
   return client.post(`/file/textbooks/${id}/process`)
 }
 
 /** 分页查询文件列表 */
-export function listFiles(pageNum = 1, pageSize = 10, fileType?: string, name?: string): Promise<PageResult<FileVO>> {
+export function listFiles(pageNum = 1, pageSize = 10, fileType?: string, name?: string): Promise<PageResult<TextbookVO>> {
   return client.get('/file/textbooks', { params: { pageNum, pageSize, fileType, name } })
 }
 
 /** 查询单个文件 */
-export function getFile(id: number): Promise<FileVO> {
+export function getFile(id: number): Promise<TextbookVO> {
   return client.get(`/file/textbooks/${id}`)
 }
 

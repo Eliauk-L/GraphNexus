@@ -117,8 +117,8 @@ class FileProcessingIntegrationTest {
     @Test
     @Order(3)
     @DisplayName("AC-4: 分页查询文档列表")
-    void listDocumentsShouldReturnPage() {
-        var page = textBookService.listDocuments(1, 10, null, null);
+    void listTextBooksShouldReturnPage() {
+        var page = textBookService.listTextBooks(1, 10, null, null);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(1);
     }
 
@@ -140,10 +140,10 @@ class FileProcessingIntegrationTest {
     @Test
     @Order(6)
     @DisplayName("AC-5: 删除文档（逻辑删除 + MinIO 清除）")
-    void deleteDocumentShouldSucceed() {
+    void deleteTextBookShouldSucceed() {
         assertThat(uploadedDocId).isNotNull();
 
-        textBookService.deleteDocument(uploadedDocId);
+        textBookService.deleteTextBook(uploadedDocId);
 
         FileDO doc = fileRepository.findById(uploadedDocId).orElseThrow();
         assertThat(doc.getIsDeleted()).isEqualTo(1);

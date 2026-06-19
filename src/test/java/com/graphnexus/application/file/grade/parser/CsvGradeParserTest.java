@@ -5,7 +5,8 @@ import com.graphnexus.application.file.grade.parser.CsvGradeParser.StudentRecord
 import com.graphnexus.application.file.grade.parser.CsvGradeParser.ScoreDetail;
 import com.graphnexus.application.file.parse.FileParseRequest;
 import com.graphnexus.application.file.parse.FileParseResult;
-import com.graphnexus.application.file.parse.FileParseType;import com.graphnexus.common.exception.BusinessException;
+import com.graphnexus.application.file.grade.model.GradeFileType;
+import com.graphnexus.common.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -269,7 +270,7 @@ class CsvGradeParserTest {
     @Test
     @DisplayName("扩展名注册: 返回 .csv 和 CSV_GRADE")
     void shouldRegisterAsCsvGradeParser() {
-        assertEquals(FileParseType.CSV_GRADE, parser.supportedType());
+        assertEquals(GradeFileType.CSV_GRADE, parser.supportedType());
         assertTrue(parser.supportedExtensions().contains(".csv"));
     }
 }

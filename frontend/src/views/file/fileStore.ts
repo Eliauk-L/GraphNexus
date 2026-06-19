@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { uploadFile, listFiles, processFile, deleteFile } from '@/api/file'
-import type { FileVO } from '@/api/types'
+import type { TextbookVO } from '@/api/types'
 
 export const useFileStore = defineStore('file', () => {
-  const files = ref<FileVO[]>([])
+  const files = ref<TextbookVO[]>([])
   const total = ref(0)
   const loading = ref(false)
   const error = ref<string | null>(null)

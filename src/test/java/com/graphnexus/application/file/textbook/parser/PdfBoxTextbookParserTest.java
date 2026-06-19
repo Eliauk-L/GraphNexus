@@ -15,15 +15,15 @@ import java.io.ByteArrayOutputStream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * PdfBoxDocumentParser 单元测试（对应 AC-2 解析部分）。
+ * PdfBoxTextbookParser 单元测试（对应 AC-2 解析部分）。
  *
  * @author Jay
  * @date 2026/06/12
  */
-@DisplayName("PdfBoxDocumentParser 解析测试")
-class PdfBoxDocumentParserTest {
+@DisplayName("PdfBoxTextbookParser 解析测试")
+class PdfBoxTextbookParserTest {
 
-    private static final PdfBoxDocumentParser parser = new PdfBoxDocumentParser();
+    private static final PdfBoxTextbookParser parser = new PdfBoxTextbookParser();
     private static byte[] samplePdf;
 
     @BeforeAll

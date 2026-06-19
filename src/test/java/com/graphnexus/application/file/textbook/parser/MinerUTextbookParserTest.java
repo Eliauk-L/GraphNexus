@@ -21,15 +21,15 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * MinerUDocumentParser 单元测试 — mock MinerUClient 验证编排逻辑。
+ * MinerUTextbookParser 单元测试 — mock MinerUClient 验证编排逻辑。
  *
  * @author Jay
  * @date 2026/06/16
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("MinerUDocumentParser 解析编排")
-class MinerUDocumentParserTest {
+@DisplayName("MinerUTextbookParser 解析编排")
+class MinerUTextbookParserTest {
 
     @Mock
     private MinerUClient minerUClient;
@@ -38,7 +38,7 @@ class MinerUDocumentParserTest {
     private MinerUProperties properties;
 
     @InjectMocks
-    private MinerUDocumentParser parser;
+    private MinerUTextbookParser parser;
 
     @BeforeEach
     void setUp() {
