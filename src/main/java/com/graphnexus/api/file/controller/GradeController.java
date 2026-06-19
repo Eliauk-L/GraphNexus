@@ -3,7 +3,6 @@ package com.graphnexus.api.file.controller;
 import com.graphnexus.api.file.dto.grade.DeleteResultVO;
 import com.graphnexus.api.file.dto.grade.GradeRecordVO;
 import com.graphnexus.api.file.dto.grade.GradeUploadResultVO;
-import com.graphnexus.application.file.textbook.model.DeleteResultBO;
 import com.graphnexus.application.file.grade.service.GradeUploadService;
 import com.graphnexus.application.file.grade.model.GradeRecordBO;
 import com.graphnexus.application.file.grade.model.GradeUploadResultBO;
@@ -17,41 +16,39 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-
 /**
- * 成绩处理 REST API 控制器 — 独立上传/查询/删除。
+ * 成绩处理 REST API 控制器 — 上传/条件查询/删除。
  *
  * @author Jay
- * @date 2026/06/18
+ * @date 2026/06/19
  */
 @RestController
 @RequestMapping("/api/v1/file/grades")
 @RequiredArgsConstructor
-@Tag(name = "成绩管理", description = "CSV 成绩上传、查询与删除管理")
+@Tag(name = "成绩管理", description = "CSV/Excel 成绩上传、条件查询与删除管理")
 public class GradeController {
 
     private final GradeService gradeService;
     private final GradeUploadService gradeUploadService;
 
     /**
-     * 上传 CSV 成绩文件。
+     * 上传成绩文件（CSV / Excel）。
      */
-    @Operation(summary = "上传成绩", description = "上传 CSV 成绩文件（双行表头格式），自动解析并写入 MySQL + Neo4j")
+    @Operation(summary = "上传成绩", description = "上传 CSV 或 Excel 成绩文件（双行表头格式），自动解析并写入 MySQL")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "上传成功",
-                    content = {@Content(mediaType = "application/json", schema = @Schema(implementation = GradeUploadResultVO.class))}),
-            @ApiResponse(responseCode = "400", description = "A0004 文件类型不支持"),
-            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+            @ApiResponse(responseCode = "200", description = "上传成功"),
+            @ApiResponse(responseCode = "400", description = "文件格式错误"),
+            @ApiResponse(responseCode = "409", description = "考试编号已存在")
     })
     @PostMapping("/upload")
     public ApiResult<GradeUploadResultVO> upload(
-            @Parameter(description = "CSV 成绩文件", required = true)
+            @Parameter(description = "成绩文件（.csv / .xlsx / .xls）", required = true)
             @RequestParam("file") MultipartFile file,
             @Parameter(description = "学科名称", required = true, example = "数学")
             @RequestParam("subject") String subject
@@ -61,46 +58,44 @@ public class GradeController {
     }
 
     /**
-     * 分页查询成绩列表（按考试分组）。
+     * 条件组合查询成绩记录（所有参数可选，支持分页）。
      */
-    @Operation(summary = "分页查询成绩列表")
+    @Operation(summary = "条件查询成绩", description = "按考试编号/名称、学号/姓名、班级、学科组合查询，支持分页")
     @GetMapping
-    public ApiResult<PageResult<GradeUploadResultVO>> list(
+    public ApiResult<PageResult<GradeRecordVO>> list(
+            @Parameter(description = "考试编号（精确匹配）", example = "E20200041")
+            @RequestParam(required = false) String examNo,
+            @Parameter(description = "考试名称（模糊匹配）", example = "月考")
+            @RequestParam(required = false) String examName,
+            @Parameter(description = "学号（精确匹配）", example = "S001")
+            @RequestParam(required = false) String studentNo,
+            @Parameter(description = "学生姓名（模糊匹配）", example = "张三")
+            @RequestParam(required = false) String name,
+            @Parameter(description = "班级（精确匹配）", example = "一班")
+            @RequestParam(required = false) String className,
+            @Parameter(description = "学科（精确匹配）", example = "数学")
+            @RequestParam(required = false) String subject,
             @Parameter(description = "页码（从 1 开始）", example = "1")
             @RequestParam(defaultValue = "1") int pageNum,
-            @Parameter(description = "每页大小", example = "10")
-            @RequestParam(defaultValue = "10") int pageSize
+            @Parameter(description = "每页大小", example = "20")
+            @RequestParam(defaultValue = "20") int pageSize
     ) {
-        Page<GradeUploadResultBO> page = gradeService.listExams(pageNum, pageSize);
-        return ApiResult.success(PageResult.of(page.map(GradeUploadResultVO::from)));
-    }
-
-    /**
-     * 按考试编号查询成绩列表。
-     */
-    @Operation(summary = "按考试编号查询成绩")
-    @GetMapping("/exam/{examNo}")
-    public ApiResult<List<GradeRecordVO>> queryGrade(
-            @Parameter(description = "考试编号", required = true, example = "E20200041")
-            @PathVariable("examNo") String examNo
-    ) {
-        List<GradeRecordBO> records = gradeService.queryByExam(examNo);
-        List<GradeRecordVO> result = records.stream()
-                .map(GradeRecordVO::from)
-                .toList();
-        return ApiResult.success(result);
+        PageResult<GradeRecordBO> result = gradeService.queryByConditions(
+                examNo, examName, studentNo, name, className, subject, pageNum, pageSize);
+        List<GradeRecordVO> voList = result.list().stream().map(GradeRecordVO::from).toList();
+        return ApiResult.success(new PageResult<>(voList, result.total(), result.pageNum(), result.pageSize()));
     }
 
     /**
      * 按考试编号级联删除成绩。
      */
-    @Operation(summary = "级联删除成绩")
+    @Operation(summary = "级联删除成绩", description = "删除整场考试的全部成绩记录，同时清理 Neo4j 图谱数据")
     @DeleteMapping("/exam/{examNo}")
     public ApiResult<DeleteResultVO> deleteGrade(
             @Parameter(description = "考试编号", required = true, example = "E20200041")
             @PathVariable("examNo") String examNo
     ) {
-        DeleteResultBO bo = gradeService.deleteByExamNo(examNo);
-        return ApiResult.success(DeleteResultVO.from(bo));
+        Object[] result = gradeService.deleteByExamNo(examNo);
+        return ApiResult.success(DeleteResultVO.of((String) result[0], (int) result[1]));
     }
 }

@@ -1,34 +1,31 @@
 package com.graphnexus.application.file.grade.service;
 
-import com.graphnexus.application.file.textbook.model.DeleteResultBO;
 import com.graphnexus.application.file.grade.model.GradeRecordBO;
-import com.graphnexus.application.file.grade.model.GradeUploadResultBO;
-import org.springframework.data.domain.Page;
-
-import java.util.List;
+import com.graphnexus.common.PageResult;
 
 /**
  * 成绩业务服务接口（L2 应用层）。
  *
- * <p>上传由 {@link GradeUploadService} 独立负责，本接口仅含查询与删除。</p>
+ * <p>上传由 {@link GradeUploadService} 独立负责，本接口仅含条件查询与删除。</p>
  *
  * @author Jay
- * @date 2026/06/15
+ * @date 2026/06/19
  */
 public interface GradeService {
 
     /**
-     * 分页查询成绩列表（按考试编号分组）。
+     * 条件组合查询成绩记录（所有参数可选，支持分页）。
      */
-    Page<GradeUploadResultBO> listExams(int pageNum, int pageSize);
+    PageResult<GradeRecordBO> queryByConditions(
+            String examNo, String examName,
+            String studentNo, String name,
+            String className, String subject,
+            int pageNum, int pageSize);
 
     /**
-     * 按考试编号查询未删除的成绩列表。
+     * 按考试编号级联删除（MySQL 物理删除 + 发布 GradeDeletedEvent）。
+     *
+     * @return [examNo, deletedRecordCount]
      */
-    List<GradeRecordBO> queryByExam(String examNo);
-
-    /**
-     * 按考试编号级联删除。
-     */
-    DeleteResultBO deleteByExamNo(String examNo);
+    Object[] deleteByExamNo(String examNo);
 }

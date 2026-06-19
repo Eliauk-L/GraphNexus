@@ -1,6 +1,7 @@
 package com.graphnexus.infrastructure.mysql.file.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,37 +14,28 @@ import java.util.List;
  * 考试成绩记录 Repository。
  *
  * <p>使用 Spring Data JPA 方法名派生查询替代简单 JPQL，
- * 复杂查询（LIKE + DISTINCT + GROUP BY + Object[] 投影）保留 {@link Query} 注解。</p>
+ * 复杂查询（LIKE + DISTINCT + GROUP BY + Object[] 投影）保留 {@link Query} 注解。
+ * 条件查询通过 {@link JpaSpecificationExecutor} 动态组合。</p>
  *
  * @author Jay
  * @date 2026/06/15
  */
 @Repository
-public interface ExamRecordRepository extends JpaRepository<ExamRecordDO, Long> {
+public interface ExamRecordRepository extends JpaRepository<ExamRecordDO, Long>,
+        JpaSpecificationExecutor<ExamRecordDO> {
 
     /**
      * 按考试编号查询未删除的成绩记录。
-     *
-     * @param examNo    考试编号
-     * @param isDeleted 逻辑删除标记，传 0 表示未删除
-     * @return 成绩记录列表
      */
     List<ExamRecordDO> findByExamNoAndIsDeleted(String examNo, Integer isDeleted);
 
     /**
-     * 按 CSV MD5 查找未删除的记录（用于上传判重，一个 CSV 对应多条学生记录）。
-     *
-     * @param csvMd5    CSV 文件 MD5
-     * @param isDeleted 逻辑删除标记，传 0
-     * @return 匹配的记录列表
+     * 判断指定考试编号是否存在未删除的记录（用于上传判重）。
      */
-    List<ExamRecordDO> findByCsvMd5AndIsDeleted(String csvMd5, Integer isDeleted);
+    boolean existsByExamNoAndIsDeletedFalse(String examNo);
 
     /**
      * 按考试编号查询所有记录（含已删除，删除流程内部使用）。
-     *
-     * @param examNo 考试编号
-     * @return 所有匹配记录（含 isDeleted=1）
      */
     List<ExamRecordDO> findByExamNo(String examNo);
 
@@ -98,10 +90,10 @@ public interface ExamRecordRepository extends JpaRepository<ExamRecordDO, Long> 
      * <p>保留 {@link Query}：涉及 DISTINCT + GROUP BY + COUNT + Object[] 投影。</p>
      */
     @Query("SELECT DISTINCT e.examNo AS examNo, e.examName AS examName, "
-         + "e.examDate AS examDate, e.subject AS subject, e.csvFilePath AS csvFilePath, "
-         + "e.csvMd5 AS csvMd5, COUNT(e) AS studentCount "
+         + "e.examDate AS examDate, e.subject AS subject, "
+         + "COUNT(e) AS studentCount "
          + "FROM ExamRecordDO e WHERE e.isDeleted = 0 "
-         + "GROUP BY e.examNo, e.examName, e.examDate, e.subject, e.csvFilePath, e.csvMd5 "
+         + "GROUP BY e.examNo, e.examName, e.examDate, e.subject "
          + "ORDER BY e.examDate DESC")
     Page<Object[]> findDistinctExams(Pageable pageable);
 }

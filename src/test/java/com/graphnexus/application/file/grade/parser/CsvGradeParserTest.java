@@ -1,8 +1,8 @@
 package com.graphnexus.application.file.grade.parser;
 
-import com.graphnexus.application.file.grade.parser.CsvGradeParser.CsvParsePayload;
-import com.graphnexus.application.file.grade.parser.CsvGradeParser.StudentRecord;
-import com.graphnexus.application.file.grade.parser.CsvGradeParser.ScoreDetail;
+import com.graphnexus.application.file.grade.model.GradeParsePayload;
+import com.graphnexus.application.file.grade.model.GradeParsePayload.StudentRecord;
+import com.graphnexus.application.file.grade.model.GradeParsePayload.ScoreDetail;
 import com.graphnexus.application.file.parse.FileParseRequest;
 import com.graphnexus.application.file.parse.FileParseResult;
 import com.graphnexus.application.file.grade.model.GradeFileType;
@@ -81,8 +81,8 @@ class CsvGradeParserTest {
                 dataRow("S003", "王五", "初三(2)班", "E20250310", "三月月考", "2025-03-10", "78", "5", "8/12", "14/18", "7/10")
         ) + "\n";
 
-        FileParseResult<CsvParsePayload> result = parser.parse(parseRequest(csv, "物理"));
-        CsvParsePayload payload = result.payload();
+        FileParseResult<GradeParsePayload> result = parser.parse(parseRequest(csv, "物理"));
+        GradeParsePayload payload = result.payload();
 
         assertEquals("E20250310", payload.examNo());
         assertEquals("三月月考", payload.examName());
@@ -114,8 +114,8 @@ class CsvGradeParserTest {
                 dataRow("S001", "张三", "一班", "E20240601", "六月月考", "2024-06-01", "90", "2", "15/20", "18/20")
         ) + "\n";
 
-        FileParseResult<CsvParsePayload> result = parser.parse(parseRequest(csv, "数学"));
-        CsvParsePayload payload = result.payload();
+        FileParseResult<GradeParsePayload> result = parser.parse(parseRequest(csv, "数学"));
+        GradeParsePayload payload = result.payload();
 
         assertEquals(3, payload.knowledgePoints().size());
         ScoreDetail sd1 = payload.students().get(0).scoreDetails().get(0);
@@ -196,7 +196,7 @@ class CsvGradeParserTest {
                 dataRow("S001", "张三", "一班", "E01", "月考", "2024-06-01", "50", "10", "-/-", "10/20")
         ) + "\n";
 
-        FileParseResult<CsvParsePayload> result = parser.parse(parseRequest(csv, "数学"));
+        FileParseResult<GradeParsePayload> result = parser.parse(parseRequest(csv, "数学"));
         StudentRecord student = result.payload().students().get(0);
 
         assertNull(student.scoreDetails().get(0).rawScore());
@@ -214,7 +214,7 @@ class CsvGradeParserTest {
                 dataRow("S001", "张三", "一班", "E01", "月考", "2024-06-01", "80", "5", "", "/")
         ) + "\n";
 
-        FileParseResult<CsvParsePayload> result = parser.parse(parseRequest(csv, "数学"));
+        FileParseResult<GradeParsePayload> result = parser.parse(parseRequest(csv, "数学"));
         StudentRecord student = result.payload().students().get(0);
         assertNull(student.scoreDetails().get(0).rawScore());
         assertNull(student.scoreDetails().get(1).rawScore());
@@ -231,7 +231,7 @@ class CsvGradeParserTest {
                 dataRow("S001", "张三", "一班", "E01", "月考", "2024-06-01", "100", "1", "10/10")
         ) + "\n";
 
-        FileParseResult<CsvParsePayload> result = parser.parse(parseRequest(csv, "数学"));
+        FileParseResult<GradeParsePayload> result = parser.parse(parseRequest(csv, "数学"));
         assertEquals(1, result.payload().students().size());
         assertEquals(1, result.payload().questionCount());
     }
@@ -245,7 +245,7 @@ class CsvGradeParserTest {
                 "S001,E01,10/12"
         ) + "\n";
 
-        FileParseResult<CsvParsePayload> result = parser.parse(parseRequest(csv, "数学"));
+        FileParseResult<GradeParsePayload> result = parser.parse(parseRequest(csv, "数学"));
         StudentRecord sr = result.payload().students().get(0);
         assertEquals("S001", sr.studentNo());
         assertEquals("", sr.name());
@@ -263,14 +263,14 @@ class CsvGradeParserTest {
                 dataRow("S002", "李四", "一班", "E01", "月考", "20240601", "90", "2", "10/12")
         ) + "\n";
 
-        FileParseResult<CsvParsePayload> result = parser.parse(parseRequest(csv, "数学"));
+        FileParseResult<GradeParsePayload> result = parser.parse(parseRequest(csv, "数学"));
         assertEquals(LocalDate.of(2024, 6, 1), result.payload().examDate());
     }
 
     @Test
     @DisplayName("扩展名注册: 返回 .csv 和 CSV_GRADE")
     void shouldRegisterAsCsvGradeParser() {
-        assertEquals(GradeFileType.CSV_GRADE, parser.supportedType());
+        assertEquals(GradeFileType.CSV, parser.supportedType());
         assertTrue(parser.supportedExtensions().contains(".csv"));
     }
 }

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
@@ -28,6 +29,7 @@ public class GradeUploadedEventListener {
     private final ApplicationEventPublisher eventPublisher;
 
     @EventListener
+    @Order(2)
     public void onGradeUploaded(GradeUploadedEvent event) {
         log.info("收到成绩上传事件: examNo={}, subject={}, kpCount={}",
                 event.getExamNo(), event.getSubject(), event.getKnowledgePoints().size());
