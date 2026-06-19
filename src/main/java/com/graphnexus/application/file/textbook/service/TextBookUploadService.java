@@ -47,7 +47,7 @@ public class TextbookUploadService implements UploadService {
         String filename = sanitizeFileName(file.getOriginalFilename());
 
         // ① 查找解析器（验证文件类型）
-        List<FileParser> parsers = fileParserRegistry.getParsers(filename);
+        List<FileParser> parsers = fileParserRegistry.getParsers(filename, FileParser.BIZ_TEXTBOOK);
         if (parsers.isEmpty()) {
             throw new BusinessException(ErrorCode.A0004, "不支持的文件类型: " + filename);
         }

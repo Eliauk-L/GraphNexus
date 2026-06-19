@@ -15,6 +15,7 @@ import com.graphnexus.infrastructure.mysql.file.entity.ExamRecordDO;
 import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
 import com.graphnexus.application.file.textbook.model.DeleteResultBO;
 import com.graphnexus.application.file.parse.FileParseRequest;
+import com.graphnexus.application.file.parse.FileParser;
 import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.application.file.grade.event.GradeUploadedEvent;
 import com.graphnexus.common.exception.BusinessException;
@@ -84,7 +85,7 @@ public class GradeServiceImpl implements GradeService {
         CsvParsePayload payload;
         try (InputStream is = new ByteArrayInputStream(rawBytes)) {
             var request = new FileParseRequest(is, filename, subject, rawBytes);
-            var result = fileParserRegistry.getParser(filename)
+            var result = fileParserRegistry.getParser(filename, FileParser.BIZ_GRADE)
                     .orElseThrow(() -> new BusinessException(ErrorCode.A0011, "未找到 CSV 文件解析器"))
                     .parse(request);
             payload = (CsvParsePayload) result.payload();

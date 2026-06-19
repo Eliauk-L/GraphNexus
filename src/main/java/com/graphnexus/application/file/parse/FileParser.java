@@ -24,10 +24,20 @@ import java.util.Set;
  */
 public interface FileParser {
 
+    /** TEXTBOOK 业务类型标识 */
+    String BIZ_TEXTBOOK = "TEXTBOOK";
+    /** GRADE 业务类型标识 */
+    String BIZ_GRADE = "GRADE";
+
     /**
      * 返回本解析器处理的文件类型枚举值。
      */
     FileParseType supportedType();
+
+    /**
+     * 返回本解析器所属的业务类型（{@value #BIZ_TEXTBOOK} 或 {@value #BIZ_GRADE}）。
+     */
+    String businessType();
 
     /**
      * 返回本解析器处理的文件扩展名集合（含点号，如 {@code ".csv"}、{@code ".pdf"}）。

@@ -161,7 +161,7 @@ public class TextbookProcessingPipeline implements FileProcessingPipeline {
                 fileStorageService.extractObjectKey(doc.getFilePath()))) {
             byte[] rawBytes = toByteArray(is);
             String filename = doc.getName();
-            List<FileParser> parsers = fileParserRegistry.getParsers(filename);
+            List<FileParser> parsers = fileParserRegistry.getParsers(filename, FileParser.BIZ_TEXTBOOK);
             doParse(documentId, rawBytes, filename, parsers);
         } catch (IOException e) {
             revertTo(documentId, FileStatus.UPLOADED, "processStored read failed: " + e.getMessage());

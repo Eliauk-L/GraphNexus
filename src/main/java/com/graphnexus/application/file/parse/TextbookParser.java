@@ -35,6 +35,11 @@ public interface TextbookParser extends FileParser {
      */
     ParseResult parse(byte[] pdfBytes);
 
+    @Override
+    default String businessType() {
+        return BIZ_TEXTBOOK;
+    }
+
     /**
      * {@inheritDoc}
      *

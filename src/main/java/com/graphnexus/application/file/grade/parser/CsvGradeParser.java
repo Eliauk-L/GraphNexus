@@ -55,6 +55,11 @@ public class CsvGradeParser implements FileParser {
     }
 
     @Override
+    public String businessType() {
+        return BIZ_GRADE;
+    }
+
+    @Override
     public Set<String> supportedExtensions() {
         return Set.of(".csv");
     }
