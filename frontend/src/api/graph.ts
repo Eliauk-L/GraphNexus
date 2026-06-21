@@ -8,7 +8,7 @@ export function extractGraph(documentId: number): Promise<ExtractionResultVO> {
 
 /** 查询文档子图 */
 export function getDocumentSubgraph(documentId: number): Promise<GraphSubgraphVO> {
-  return client.get(`/graph/document/${documentId}`)
+  return client.get(`/graph/construction/document/${documentId}`)
 }
 
 /** 查询 PageRank */
