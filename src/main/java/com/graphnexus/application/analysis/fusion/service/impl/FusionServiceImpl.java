@@ -117,7 +117,7 @@ public class FusionServiceImpl implements FusionService {
     @Override
     public FusionExecuteResult fuseIncremental(List<String> kpNames, String subject) {
         if (kpNames == null || kpNames.isEmpty()) {
-            return new FusionExecuteResult(0, 0, 0);
+            return new FusionExecuteResult(0L, 0, 0);
         }
 
         checkConcurrency();

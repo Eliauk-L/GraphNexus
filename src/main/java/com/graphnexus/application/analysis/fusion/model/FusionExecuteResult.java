@@ -7,7 +7,7 @@ package com.graphnexus.application.analysis.fusion.model;
  * @date 2026/06/15
  */
 public record FusionExecuteResult(
-        long fusionLogId,
+        Long fusionLogId,
         int mergedKpGroupCount,
         int mastersEdgeCount
 ) {}
