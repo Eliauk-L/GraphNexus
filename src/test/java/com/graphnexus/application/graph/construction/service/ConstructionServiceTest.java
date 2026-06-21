@@ -8,7 +8,6 @@ import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
-import com.graphnexus.infrastructure.neo4j.repository.QueryGraphRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,9 +40,6 @@ class ConstructionServiceTest {
 
     @Mock
     private ConstructionGraphRepository constructionGraphRepository;
-
-    @Mock
-    private QueryGraphRepository queryGraphRepository;
 
     @Mock
     private FusionService fusionService;

@@ -42,9 +42,9 @@ class FileStatusTest {
     }
 
     @Test
-    @DisplayName("EXTRACTED → ALIGNING 合法（v3：中间增加对齐阶段）")
-    void extractedToAligningShouldPass() {
-        assertDoesNotThrow(() -> FileStatus.EXTRACTED.validateTransition(FileStatus.ALIGNING));
+    @DisplayName("EXTRACTED → FUSING 合法（跨文档对齐由融合隐式完成）")
+    void extractedToFusingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.EXTRACTED.validateTransition(FileStatus.FUSING));
     }
 
     @Test
@@ -74,17 +74,17 @@ class FileStatusTest {
     }
 
     @Test
-    @DisplayName("FUSING → ALIGNED 合法（v3 可恢复失败回退到对齐完成）")
-    void fusingToAlignedShouldPass() {
-        assertDoesNotThrow(() -> FileStatus.FUSING.validateTransition(FileStatus.ALIGNED));
+    @DisplayName("FUSING → EXTRACTED 合法（可恢复失败回退）")
+    void fusingToExtractedShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.FUSING.validateTransition(FileStatus.EXTRACTED));
     }
 
     // ==================== 手动重新处理 ====================
 
     @Test
-    @DisplayName("COMPLETED → EXTRACTING 合法（v3 重新抽取）")
-    void completedToExtractingShouldPass() {
-        assertDoesNotThrow(() -> FileStatus.COMPLETED.validateTransition(FileStatus.EXTRACTING));
+    @DisplayName("COMPLETED → PARSING 合法（重新解析）")
+    void completedToParsingShouldPass() {
+        assertDoesNotThrow(() -> FileStatus.COMPLETED.validateTransition(FileStatus.PARSING));
     }
 
     @Test
