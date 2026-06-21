@@ -64,7 +64,7 @@ public class ConstructionServiceImpl implements ConstructionService {
 
         validateDocStatus(doc);
         doc.setStatus(FileStatus.EXTRACTING);
-        textbookRepository.save(doc);
+        textbookRepository.saveAndFlush(doc);
 
         String neo4jDocumentId = String.valueOf(documentId);
         String subjectName = doc.getSubject();
@@ -138,7 +138,7 @@ public class ConstructionServiceImpl implements ConstructionService {
                 doc.getId(), result.getEntityCount(), result.getKnowledgePointCount(), result.getEdgeCount());
 
         doc.setStatus(FileStatus.EXTRACTED);
-        textbookRepository.save(doc);
+        textbookRepository.saveAndFlush(doc);
         return result;
     }
 

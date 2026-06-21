@@ -68,20 +68,20 @@ public class GraphConstructedEventListener {
 
         // 状态 EXTRACTED → FUSING（同 tx JPA 一级缓存，与 extract() 同一托管实例 · D3）
         doc.setStatus(FileStatus.FUSING);
-        textbookRepository.save(doc);
+        textbookRepository.saveAndFlush(doc);
 
         try {
             fusionService.fuseIncremental(event.getKpNames(), event.getSubject());
             // 融合成功 → COMPLETED
             doc.setStatus(FileStatus.COMPLETED);
-            textbookRepository.save(doc);
+            textbookRepository.saveAndFlush(doc);
             log.info("增量融合完成 documentId={}", event.getDocumentId());
         } catch (Exception e) {
             log.error("增量融合失败 documentId={}", event.getDocumentId(), e);
             // 融合失败 → EXTRACTED + failReason（D4 · 修复 latent bug · 用户确认）
             doc.setStatus(FileStatus.EXTRACTED);
             doc.setFailReason("增量融合失败：" + e.getMessage());
-            textbookRepository.save(doc);
+            textbookRepository.saveAndFlush(doc);
             // 吞异常，不回滚构建（AC-9）
         }
     }
