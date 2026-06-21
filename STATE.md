@@ -9,7 +9,8 @@
 - **Change ID**: `graph-construction-refactor`
 - **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → TASK ✅ → DEV ✅ → 下一步 TEST/REVIEW
 - **当前角色**: Dev → 下一步 Reviewer
-- **最后更新**: 2026-06-20
+- **最后更新**: 2026-06-21
+- **关键决策**：流水线从三阶段（构建→实体对齐→融合）修订为两阶段（构建→融合），独立实体对齐阶段移除——跨文档对齐由融合 redirectEdges 隐式完成（见 ADR-022 修订记录）。FileStatus 回退 v2。
 
 ## DEV 执行记录
 
