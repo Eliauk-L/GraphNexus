@@ -1,5 +1,6 @@
 package com.graphnexus.common.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
  * @author Jay
  * @date 2026/06/11
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -90,6 +92,14 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex) {
+        // 兜底=未被预期/未被上游记录的系统故障，完整堆栈（类名+getMessage+cause 链+行号）是定位根因的唯一现场。
+        // ex 作为 SLF4J 最后一个参数（不对应 {}）→ logback 自动渲染完整堆栈（DESIGN D2）。
+        // traceId 由 logback [%X{traceId}] pattern 注入每行，不写入 message（单一来源，DESIGN D5）。
+        log.error("兜底未捕获异常 errorCode={} httpStatus={} exception={}",
+                ErrorCode.B0001.getErrorCode(),
+                500,
+                ex.getClass().getSimpleName(),
+                ex);
         ErrorResponse body = new ErrorResponse(
                 ErrorCode.B0001.getErrorCode(),
                 "系统内部异常: " + ex.getClass().getSimpleName(),
