@@ -1,6 +1,6 @@
 package com.graphnexus.application.file.textbook.service;
 
-import com.graphnexus.application.graph.construction.service.ConstructionService;
+import com.graphnexus.application.file.textbook.event.TextbookParsedEvent;
 import com.graphnexus.application.file.textbook.model.TextbookBO;
 import com.graphnexus.application.file.parse.model.FileParseRequest;
 import com.graphnexus.application.file.textbook.model.ParseResult;
@@ -30,11 +30,11 @@ import java.io.InputStream;
 import java.util.List;
 
 /**
- * 教材业务服务实现 — 解析完成后自动触发图谱构建（同步链 解析→构建→融合）。
+ * 教材业务服务实现 — 事件驱动，解析完成后发布 {@link TextbookParsedEvent}。
  *
- * <p>上传仅入库（状态 UPLOADED），解析由 {@link #parse(Long)} 触发。
- * 解析成功后自动调用 {@code ConstructionService.extract()} 执行两阶段流水线
- * （构建→融合），无需前端额外调用抽取端点。抽取端点保留用于手动重新抽取。</p>
+ * <p>教材模块不直接依赖图谱模块（单向依赖原则）。解析成功后发布事件，
+ * 由图谱构建模块的 {@code TextbookParsedEventListener} 监听并自动触发
+ * 两阶段流水线（构建→融合）。教材模块仅依赖自身事件类 + ApplicationEventPublisher。</p>
  *
  * @author Jay
  * @date 2026/06/12
@@ -47,7 +47,6 @@ public class TextbookServiceImpl implements TextbookService {
     private final TextbookRepository textbookRepository;
     private final FileStorageService fileStorageService;
     private final ConstructionGraphRepository constructionGraphRepository;
-    private final ConstructionService constructionService;
     private final TextbookUploadService uploadService;
     private final FileParserRegistry fileParserRegistry;
     private final ApplicationEventPublisher eventPublisher;
@@ -126,24 +125,19 @@ public class TextbookServiceImpl implements TextbookService {
             throw new BusinessException(ErrorCode.A0004, "文档解析失败（所有解析器均失败）");
         }
 
-        // 解析成功 → PARSED → 自动触发图谱构建（同步链 解析→构建→融合）
+        // 解析成功 → PARSED
         doc.setStatus(FileStatus.PARSED);
         doc.setTextContent(parseResult.textContent());
         doc.setPageCount(parseResult.pageCount());
         doc.setFailReason(null);
         textbookRepository.save(doc);
 
+        // 发布解析完成事件 → 图谱构建模块监听并自动触发抽取（事件驱动，单向依赖）
         log.info("解析完成: id={}, parser={}, textLength={}",
                 documentId, lastParserName,
                 parseResult.textContent() != null ? parseResult.textContent().length() : 0);
 
-        // 自动触发图谱构建（两阶段流水线：构建→融合，见 extensible-file 同步上传链路）
-        try {
-            constructionService.extract(documentId);
-            log.info("图谱构建已自动触发: id={}", documentId);
-        } catch (Exception e) {
-            log.error("解析后自动触发图谱构建失败: id={}, {}", documentId, e.getMessage());
-        }
+        eventPublisher.publishEvent(new TextbookParsedEvent(this, documentId));
 
         eventPublisher.publishEvent(new GraphChangedEvent(this));
         return parseResult;
