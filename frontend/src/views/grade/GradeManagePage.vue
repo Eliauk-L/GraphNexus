@@ -1,73 +1,74 @@
 <script setup lang="ts">
-import { onMounted, ref, h } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { NSpace, NModal, useMessage } from 'naive-ui'
+import { Search, Trash2, Upload, Settings } from '@lucide/vue'
 import { useGradeStore } from './gradeStore'
+import type { GradeRecordVO } from '@/api/types'
 import BaseButton from '@/common/components/BaseButton.vue'
 import BaseInput from '@/common/components/BaseInput.vue'
 import DataTable from '@/common/components/DataTable.vue'
-import { Search, Trash2, Upload } from '@lucide/vue'
 import type { DataTableColumns } from 'naive-ui'
-import type { GradeUploadResultVO } from '@/api/types'
 
 const store = useGradeStore()
 const message = useMessage()
-const searchExamNo = ref('')
-const page = ref(1)
-const pageSize = ref(10)
 
-// 上传相关状态
+const page = ref(1)
+const pageSize = ref(20)
+
+// ── 上传弹窗 ──
 const showUploadModal = ref(false)
 const selectedFile = ref<File | null>(null)
 const selectedSubject = ref('')
 const uploading = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
-const subjectOptions = [
-  { label: '数学', value: '数学' },
-  { label: '语文', value: '语文' },
-  { label: '英语', value: '英语' },
-  { label: '物理', value: '物理' },
-  { label: '化学', value: '化学' },
-  { label: '生物', value: '生物' },
-  { label: '历史', value: '历史' },
-  { label: '地理', value: '地理' },
-]
+// ── 管理考试弹窗 ──
+const showManageModal = ref(false)
+const manageSearch = ref('')
+// 从成绩列表中推导考试元信息
+const distinctExams = computed(() => {
+  const seen = new Set<string>()
+  const list: { examNo: string; examName: string; subject: string; count: number }[] = []
+  // 用 store.grades 推导，避免额外 API 调用
+  for (const g of store.grades) {
+    if (!seen.has(g.examNo)) {
+      seen.add(g.examNo)
+      list.push({
+        examNo: g.examNo,
+        examName: g.examName,
+        subject: g.subject,
+        count: store.grades.filter((r) => r.examNo === g.examNo).length,
+      })
+    }
+  }
+  return list
+})
 
-const columns: DataTableColumns<any> = [
-  { title: '学号', key: 'studentNo', width: 120 },
-  { title: '姓名', key: 'name', width: 100 },
-  { title: '班级', key: 'className', width: 120 },
-  { title: '总分', key: 'totalScore', width: 80 },
-  { title: '排名', key: 'classRank', width: 80 },
-  {
-    title: '得分明细', key: 'scoreDetails', ellipsis: { tooltip: true },
-    render(row: any) { return typeof row.scoreDetails === 'string' ? row.scoreDetails : JSON.stringify(row.scoreDetails) },
-  },
-]
+const filteredExams = computed(() => {
+  if (!manageSearch.value.trim()) return distinctExams.value
+  const kw = manageSearch.value.trim().toLowerCase()
+  return distinctExams.value.filter(
+    (e) => e.examNo.toLowerCase().includes(kw) || e.examName.toLowerCase().includes(kw),
+  )
+})
 
-const examColumns: DataTableColumns<GradeUploadResultVO> = [
-  { title: '考试编号', key: 'examNo', width: 140 },
-  { title: '考试名称', key: 'examName', width: 200, ellipsis: { tooltip: true } },
-  { title: '学科', key: 'subject', width: 80 },
-  { title: '考试日期', key: 'examDate', width: 120 },
-  { title: '考生数', key: 'studentCount', width: 80 },
-  { title: '试题数', key: 'questionCount', width: 80 },
+const columns: DataTableColumns<GradeRecordVO> = [
+  { title: '考试编号', key: 'examNo', width: 130 },
+  { title: '考试名称', key: 'examName', width: 160, ellipsis: { tooltip: true } },
+  { title: '学号', key: 'studentNo', width: 110 },
+  { title: '姓名', key: 'name', width: 80 },
+  { title: '班级', key: 'className', width: 110 },
+  { title: '学科', key: 'subject', width: 70 },
+  { title: '总分', key: 'totalScore', width: 70 },
+  { title: '排名', key: 'classRank', width: 60 },
 ]
 
 async function handleSearch() {
-  if (!searchExamNo.value.trim()) return
-  await store.searchExamNo(searchExamNo.value.trim())
+  page.value = 1
+  await store.loadGrades(page.value, pageSize.value)
 }
 
-async function handleDelete() {
-  try {
-    await store.remove(store.examNo)
-    message.success('删除成功')
-  } catch {
-    // handled by store
-  }
-}
-
+// ── 上传 ──
 function handleUploadClick() {
   showUploadModal.value = true
   selectedFile.value = null
@@ -76,15 +77,10 @@ function handleUploadClick() {
 
 function handleFileChange(e: Event) {
   const input = e.target as HTMLInputElement
-  if (input.files && input.files.length > 0) {
-    selectedFile.value = input.files[0]
-  }
+  if (input.files?.length) selectedFile.value = input.files[0]
 }
 
-function triggerFileInput() {
-  fileInputRef.value?.click()
-}
-
+function triggerFileInput() { fileInputRef.value?.click() }
 function removeFile() {
   selectedFile.value = null
   if (fileInputRef.value) fileInputRef.value.value = ''
@@ -94,15 +90,24 @@ async function confirmUpload() {
   if (!selectedFile.value || !selectedSubject.value.trim()) return
   uploading.value = true
   try {
-    await store.upload(selectedFile.value, selectedSubject.value)
+    await store.upload(selectedFile.value, selectedSubject.value.trim())
     message.success('成绩上传成功')
     showUploadModal.value = false
     selectedFile.value = null
-  } catch {
-    // handled by store
-  } finally {
-    uploading.value = false
-  }
+  } catch { /* handled */ } finally { uploading.value = false }
+}
+
+// ── 管理弹窗 ──
+function openManageModal() {
+  showManageModal.value = true
+  manageSearch.value = ''
+}
+
+async function confirmDeleteExam(examNo: string) {
+  try {
+    await store.remove(examNo)
+    message.success(`已删除考试 ${examNo}`)
+  } catch { /* handled */ }
 }
 
 function formatSize(bytes: number): string {
@@ -114,7 +119,7 @@ function formatSize(bytes: number): string {
 }
 
 onMounted(() => {
-  store.loadExams(page.value, pageSize.value)
+  store.loadGrades(page.value, pageSize.value)
 })
 </script>
 
@@ -122,91 +127,60 @@ onMounted(() => {
   <div>
     <div class="page-header">
       <h1 class="headline">学生成绩管理</h1>
-      <BaseButton @click="handleUploadClick">
-        <Upload :size="16" />
-        <span style="margin-left: 4px">上传成绩</span>
-      </BaseButton>
+      <NSpace>
+        <BaseButton @click="openManageModal">
+          <Settings :size="16" />
+          <span style="margin-left: 4px">管理考试</span>
+        </BaseButton>
+        <BaseButton @click="handleUploadClick">
+          <Upload :size="16" />
+          <span style="margin-left: 4px">上传成绩</span>
+        </BaseButton>
+      </NSpace>
     </div>
 
+    <!-- 搜索栏 -->
     <div class="search-bar">
-      <BaseInput
-        v-model="searchExamNo"
-        placeholder="输入考试编号，如 E20200041"
-        style="width: 280px"
-        @keyup.enter="handleSearch"
-      />
+      <BaseInput v-model="store.filters.examNo" placeholder="考试编号" style="width: 130px" @keyup.enter="handleSearch" />
+      <BaseInput v-model="store.filters.examName" placeholder="考试名称" style="width: 130px" @keyup.enter="handleSearch" />
+      <BaseInput v-model="store.filters.studentNo" placeholder="学号" style="width: 100px" @keyup.enter="handleSearch" />
+      <BaseInput v-model="store.filters.name" placeholder="学生姓名" style="width: 100px" @keyup.enter="handleSearch" />
+      <BaseInput v-model="store.filters.className" placeholder="班级" style="width: 100px" @keyup.enter="handleSearch" />
+      <BaseInput v-model="store.filters.subject" placeholder="学科" style="width: 80px" @keyup.enter="handleSearch" />
       <BaseButton @click="handleSearch">
-        <Search :size="16" style="margin-right: 4px" />
-        查询
+        <Search :size="16" style="margin-right: 4px" />查询
       </BaseButton>
-      <BaseButton
-        v-if="store.grades.length > 0"
-        variant="danger"
-        @click="handleDelete"
-        style="margin-left: auto"
-      >
-        <Trash2 :size="16" style="margin-right: 4px" />
-        删除此考试
-      </BaseButton>
-    </div>
-
-    <div v-if="store.grades.length > 0" class="exam-info supporting" style="color: var(--color-text-secondary)">
-      考试 {{ store.examNo }} | {{ store.grades[0].examName }} | 学科: {{ store.grades[0].subject }} | 共 {{ store.grades.length }} 名考生
     </div>
 
     <DataTable
       :columns="columns"
       :data="store.grades"
       :loading="store.loading"
-      empty-text="请先输入考试编号查询"
+      :page="page"
+      :page-size="pageSize"
+      :total="store.total"
+      empty-text="点击查询按钮或上传成绩开始使用"
+      @update:page="(p: number) => { page = p; store.loadGrades(p, pageSize); }"
     />
 
-    <div v-if="store.exams.length > 0" style="margin-top: var(--spacing-2xl)">
-      <h2 class="title" style="margin-bottom: var(--spacing-md)">历史考试</h2>
-      <DataTable
-        :columns="examColumns"
-        :data="store.exams"
-        empty-text="暂无考试记录"
-      />
-    </div>
-
-    <!-- 上传成绩弹窗 -->
+    <!-- 上传弹窗 -->
     <NModal v-model:show="showUploadModal" title="上传成绩" style="width: 480px">
       <div class="upload-modal">
         <div class="field">
           <label class="label">学科 <span style="color: var(--color-error)">*</span></label>
-          <BaseInput
-            v-model="selectedSubject"
-            placeholder="请输入学科，如 数学"
-          />
+          <BaseInput v-model="selectedSubject" placeholder="请输入学科，如 数学" />
         </div>
-
         <div v-if="!selectedFile" class="upload-zone" @click="triggerFileInput">
           <Upload :size="48" color="var(--color-text-tertiary)" />
-          <p class="body-lead">点击选择 CSV 成绩文件</p>
-          <p class="supporting" style="color: var(--color-text-tertiary)">
-            支持 .csv 格式，双行表头，最大 50MB
-          </p>
+          <p class="body-lead">点击选择成绩文件</p>
+          <p class="supporting" style="color: var(--color-text-tertiary)">支持 .csv / .xlsx / .xls 格式</p>
         </div>
-
         <div v-else class="file-selected">
-          <div class="supporting" style="font-weight: 500">{{ selectedFile.name }}</div>
-          <div class="supporting" style="color: var(--color-text-tertiary); margin-top: 4px">
-            {{ formatSize(selectedFile.size) }}
-          </div>
-          <BaseButton variant="danger" size="small" style="margin-top: 8px" @click="removeFile">
-            移除
-          </BaseButton>
+          <div class="supporting" style="font-weight:500">{{ selectedFile.name }}</div>
+          <div class="supporting" style="color:var(--color-text-tertiary);margin-top:4px">{{ formatSize(selectedFile.size) }}</div>
+          <BaseButton variant="danger" size="small" style="margin-top:8px" @click="removeFile">移除</BaseButton>
         </div>
-
-        <input
-          ref="fileInputRef"
-          type="file"
-          accept=".csv"
-          style="display: none"
-          @change="handleFileChange"
-        >
-
+        <input ref="fileInputRef" type="file" accept=".csv,.xlsx,.xls" style="display:none" @change="handleFileChange">
         <div class="modal-footer">
           <NSpace justify="end">
             <BaseButton variant="danger" @click="showUploadModal = false">取消</BaseButton>
@@ -217,35 +191,61 @@ onMounted(() => {
         </div>
       </div>
     </NModal>
+
+    <!-- 管理考试弹窗 -->
+    <NModal v-model:show="showManageModal" title="管理考试" style="width: 600px">
+      <div class="manage-modal">
+        <div class="manage-search">
+          <BaseInput v-model="manageSearch" placeholder="搜索考试编号或名称..." style="flex:1" @keyup.enter />
+        </div>
+        <div class="manage-list">
+          <div v-if="filteredExams.length === 0" class="supporting" style="color:var(--color-text-tertiary);text-align:center;padding:var(--spacing-2xl)">
+            暂无考试记录
+          </div>
+          <div
+            v-for="exam in filteredExams"
+            :key="exam.examNo"
+            class="manage-row"
+          >
+            <div class="manage-row__info">
+              <span class="supporting" style="font-weight:500">{{ exam.examNo }}</span>
+              <span class="supporting" style="color:var(--color-text-secondary);margin-left:var(--spacing-sm)">{{ exam.examName }}</span>
+              <span class="supporting" style="color:var(--color-text-tertiary);margin-left:var(--spacing-sm)">{{ exam.subject }} · {{ exam.count }}人</span>
+            </div>
+            <BaseButton variant="danger" size="small" @click="confirmDeleteExam(exam.examNo)">
+              <Trash2 :size="14" style="margin-right:2px" />删除
+            </BaseButton>
+          </div>
+        </div>
+      </div>
+    </NModal>
   </div>
 </template>
 
 <style scoped>
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--spacing-lg); }
-.search-bar { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-md); }
-.exam-info { margin-bottom: var(--spacing-md); }
-
-.upload-modal { padding: var(--spacing-md); }
-.field { margin-bottom: var(--spacing-md); }
-.field .label {
-  display: block; margin-bottom: 4px;
-  font-size: 0.75rem; font-weight: 500;
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--spacing-lg); }
+.search-bar { display:flex; align-items:center; gap:var(--spacing-sm); margin-bottom:var(--spacing-md); flex-wrap:wrap; }
+.upload-modal { padding:var(--spacing-md); }
+.field { margin-bottom:var(--spacing-md); }
+.field .label { display:block; margin-bottom:4px; font-size:0.75rem; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; }
 .upload-zone {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: var(--spacing-2xl) var(--spacing-xl);
-  border: 2px dashed var(--color-border); border-radius: var(--rounded-md);
-  cursor: pointer;
-  transition: border-color var(--duration-fast) var(--ease-out);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:var(--spacing-2xl) var(--spacing-xl);
+  border:2px dashed var(--color-border); border-radius:var(--rounded-md);
+  cursor:pointer; transition:border-color var(--duration-fast) var(--ease-out);
 }
-.upload-zone:hover { border-color: var(--color-border-focus); }
-.file-selected {
-  padding: var(--spacing-md);
-  border: 1px solid var(--color-border); border-radius: var(--rounded-md);
+.upload-zone:hover { border-color:var(--color-border-focus); }
+.file-selected { padding:var(--spacing-md); border:1px solid var(--color-border); border-radius:var(--rounded-md); }
+.modal-footer { margin-top:var(--spacing-lg); padding-top:var(--spacing-md); border-top:1px solid var(--color-border); }
+
+.manage-modal { padding:var(--spacing-md); }
+.manage-search { display:flex; margin-bottom:var(--spacing-md); }
+.manage-list { max-height:400px; overflow-y:auto; }
+.manage-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:var(--spacing-sm) var(--spacing-md);
+  border-bottom:1px solid var(--color-border);
+  transition: background var(--duration-fast);
 }
-.modal-footer {
-  margin-top: var(--spacing-lg); padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border);
-}
+.manage-row:hover { background: var(--color-bg); }
 </style>

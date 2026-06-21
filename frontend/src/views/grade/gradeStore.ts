@@ -1,48 +1,47 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { listGrades, queryGradeByExam, deleteGradeByExam, uploadGradeFile } from '@/api/grade'
-import type { GradeRecordVO, GradeUploadResultVO } from '@/api/types'
+import { listGrades, deleteGradeByExam, uploadGradeFile } from '@/api/grade'
+import type { GradeRecordVO } from '@/api/types'
 
 export const useGradeStore = defineStore('grade', () => {
   const grades = ref<GradeRecordVO[]>([])
-  const exams = ref<GradeUploadResultVO[]>([])
-  const examNo = ref('')
+  const total = ref(0)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function loadExams(pageNum = 1, pageSize = 10) {
+  // 筛选条件
+  const filters = ref({
+    examNo: '',
+    examName: '',
+    studentNo: '',
+    name: '',
+    className: '',
+    subject: '',
+  })
+
+  async function loadGrades(pageNum = 1, pageSize = 20) {
     loading.value = true
     error.value = null
     try {
-      const result = await listGrades(pageNum, pageSize)
-      exams.value = result.list
+      const params: Record<string, string | number> = { pageNum, pageSize }
+      for (const [k, v] of Object.entries(filters.value)) {
+        if (v) params[k] = v
+      }
+      const result = await listGrades(params)
+      grades.value = result.list
+      total.value = result.total
     } catch {
-      error.value = '加载成绩列表失败'
+      error.value = '加载成绩失败'
     } finally {
       loading.value = false
     }
   }
 
-  async function searchExamNo(no: string) {
-    loading.value = true
-    examNo.value = no
+  async function remove(examNo: string) {
     error.value = null
     try {
-      grades.value = await queryGradeByExam(no)
-    } catch {
-      error.value = '查询成绩失败'
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function remove(no: string) {
-    error.value = null
-    try {
-      await deleteGradeByExam(no)
-      grades.value = []
-      examNo.value = ''
-      await loadExams()
+      await deleteGradeByExam(examNo)
+      await loadGrades()
     } catch {
       error.value = '删除失败'
       throw new Error('删除失败')
@@ -54,7 +53,7 @@ export const useGradeStore = defineStore('grade', () => {
     error.value = null
     try {
       await uploadGradeFile(file, subject)
-      await loadExams()
+      await loadGrades()
     } catch {
       error.value = '上传成绩失败'
       throw new Error('上传成绩失败')
@@ -63,5 +62,5 @@ export const useGradeStore = defineStore('grade', () => {
     }
   }
 
-  return { grades, exams, examNo, loading, error, loadExams, searchExamNo, remove, upload }
+  return { grades, total, loading, error, filters, loadGrades, remove, upload }
 })

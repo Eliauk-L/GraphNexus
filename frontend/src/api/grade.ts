@@ -1,7 +1,7 @@
 import client from './client'
 import type { GradeRecordVO, GradeUploadResultVO, DeleteResultVO, PageResult } from './types'
 
-/** 上传 CSV 成绩文件 */
+/** 上传成绩文件（CSV/Excel） */
 export function uploadGradeFile(file: File, subject: string): Promise<GradeUploadResultVO> {
   const form = new FormData()
   form.append('file', file)
@@ -11,17 +11,21 @@ export function uploadGradeFile(file: File, subject: string): Promise<GradeUploa
   })
 }
 
-/** 分页查询成绩列表（按考试分组） */
-export function listGrades(pageNum = 1, pageSize = 10): Promise<PageResult<GradeUploadResultVO>> {
-  return client.get('/file/grades', { params: { pageNum, pageSize } })
+/** 条件组合查询学生成绩（所有参数可选，支持分页） */
+export function listGrades(params: {
+  examNo?: string
+  examName?: string
+  studentNo?: string
+  name?: string
+  className?: string
+  subject?: string
+  pageNum?: number
+  pageSize?: number
+} = {}): Promise<PageResult<GradeRecordVO>> {
+  return client.get('/file/grades', { params })
 }
 
-/** 按考试编号查询成绩 */
-export function queryGradeByExam(examNo: string): Promise<GradeRecordVO[]> {
-  return client.get(`/file/grades/exam/${examNo}`)
-}
-
-/** 按考试编号删除成绩 */
+/** 按考试编号级联删除成绩 */
 export function deleteGradeByExam(examNo: string): Promise<DeleteResultVO> {
   return client.delete(`/file/grades/exam/${examNo}`)
 }
