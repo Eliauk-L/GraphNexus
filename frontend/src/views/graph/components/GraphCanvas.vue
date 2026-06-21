@@ -1,63 +1,99 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { Network } from 'vis-network'
-import { DataSet } from 'vis-data'
-import type { VisGraphData } from '../graphAdapter'
+import cytoscape from 'cytoscape'
+import type { CyElements } from '../graphAdapter'
 
 const props = defineProps<{
-  data: VisGraphData | null
+  data: CyElements | null
 }>()
 
 const container = ref<HTMLDivElement>()
-let network: Network | null = null
+let cy: cytoscape.Core | null = null
 
-function createNetwork() {
+function createCy() {
   if (!container.value || !props.data) return
-  if (network) { network.destroy(); network = null }
+  if (cy) { cy.destroy(); cy = null }
 
-  network = new Network(
-    container.value,
-    {
-      nodes: new DataSet(props.data.nodes),
-      edges: new DataSet(props.data.edges),
-    },
-    {
-      physics: {
-        solver: 'forceAtlas2Based',
-        forceAtlas2Based: {
-          gravitationalConstant: -50,
-          centralGravity: 0.01,
-          springLength: 150,
-          springConstant: 0.08,
+  const elements: cytoscape.ElementDefinition[] = [
+    ...props.data.nodes.map((n) => ({ group: 'nodes' as const, data: n.data })),
+    ...props.data.edges.map((e) => ({ group: 'edges' as const, data: e.data })),
+  ]
+
+  cy = cytoscape({
+    container: container.value,
+    elements,
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'background-color': 'data(color)',
+          'width': 'data(size)',
+          'height': 'data(size)',
+          'label': 'data(label)',
+          'font-size': '11px',
+          'color': '#333',
+          'text-valign': 'bottom',
+          'text-halign': 'center',
+          'text-margin-y': 6,
+          'border-width': 2,
+          'border-color': '#fff',
         },
-        stabilization: { iterations: 100 },
       },
-      edges: {
-        smooth: { enabled: true, type: 'continuous', roundness: 0.5 },
-        font: { size: 9, color: '#666', strokeWidth: 2, strokeColor: '#fff' },
+      {
+        selector: 'edge',
+        style: {
+          'width': 'data(width)',
+          'line-color': 'data(color)',
+          'target-arrow-color': 'data(color)',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'line-style': (el: any) => el.data('lineStyle') ?? 'solid',
+          'arrow-scale': 0.8,
+        },
       },
-      interaction: {
-        hover: true,
-        tooltipDelay: 200,
-        zoomView: true,
-        dragView: true,
+      {
+        selector: 'edge[label]',
+        style: {
+          'label': 'data(type)',
+          'font-size': '9px',
+          'color': '#666',
+          'text-background-color': '#fff',
+          'text-background-opacity': 0.8,
+          'text-background-padding': '2px',
+        },
       },
+      {
+        selector: ':selected',
+        style: {
+          'border-color': '#4A90D9',
+          'border-width': 3,
+        },
+      },
+    ],
+    layout: {
+      name: 'cose',
+      animate: false,
+      nodeRepulsion: () => 8000,
+      idealEdgeLength: () => 120,
+      gravity: 0.25,
+      numIter: 1000,
     },
-  )
+    wheelSensitivity: 0.3,
+  })
 }
 
 watch(() => props.data, () => {
-  createNetwork()
+  createCy()
 }, { deep: true })
 
 onMounted(() => {
-  nextTick(() => createNetwork())
+  nextTick(() => createCy())
 })
 
 onBeforeUnmount(() => {
-  if (network) {
-    network.destroy()
-    network = null
+  if (cy) {
+    cy.destroy()
+    cy = null
   }
 })
 </script>

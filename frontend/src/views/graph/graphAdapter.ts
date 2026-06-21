@@ -1,9 +1,31 @@
 import type { GraphSubgraphVO, SubgraphResponse } from '@/api/types'
-import type { Node, Edge } from 'vis-network'
 
-export interface VisGraphData {
-  nodes: Node[]
-  edges: Edge[]
+export interface CyElements {
+  nodes: CyNode[]
+  edges: CyEdge[]
+}
+
+interface CyNode {
+  data: {
+    id: string
+    label: string
+    nodeType: string
+    color: string
+    size: number
+    [key: string]: unknown
+  }
+}
+
+interface CyEdge {
+  data: {
+    id: string
+    source: string
+    target: string
+    type: string
+    color: string
+    width: number
+    lineStyle: 'solid' | 'dashed'
+  }
 }
 
 const NODE_COLORS: Record<string, string> = {
@@ -15,6 +37,15 @@ const NODE_COLORS: Record<string, string> = {
   Document: '#BFBFBF',
 }
 
+const NODE_SIZES: Record<string, number> = {
+  KnowledgePoint: 40,
+  Student: 35,
+  Exam: 32,
+  KnowledgeCategory: 38,
+  Document: 32,
+  Entity: 28,
+}
+
 const EDGE_COLORS: Record<string, string> = {
   PREREQUISITE_OF: '#4A90D9',
   ALIGNED_TO: '#52C41A',
@@ -23,74 +54,61 @@ const EDGE_COLORS: Record<string, string> = {
   CHILD_OF: '#722ED1',
 }
 
-export function transformGraphSubgraphVO(vo: GraphSubgraphVO): VisGraphData {
+export function transformGraphSubgraphVO(vo: GraphSubgraphVO): CyElements {
   const nodeIds = new Set(vo.nodes.map((n) => n.id))
 
   return {
     nodes: vo.nodes.map((n) => ({
-      id: n.id,
-      label: nodeLabel(n.nodeType, {}),
-      color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
-      size: nodeSize(n.nodeType),
-      font: { size: 12, color: '#333' },
-    } satisfies Node)),
+      data: {
+        id: n.id,
+        label: n.id.substring(0, 8),
+        nodeType: n.nodeType,
+        color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
+        size: NODE_SIZES[n.nodeType] ?? 28,
+      },
+    })),
     edges: vo.edges
       .filter((e) => nodeIds.has(e.sourceNodeId) && nodeIds.has(e.targetNodeId))
-      .map((e) => ({
-        from: e.sourceNodeId,
-        to: e.targetNodeId,
-        label: shortLabel(e.edgeType),
-        color: { color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C' },
-        dashes: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType),
-        arrows: 'to',
-      } satisfies Edge)),
+      .map((e, i) => ({
+        data: {
+          id: `e-${i}`,
+          source: e.sourceNodeId,
+          target: e.targetNodeId,
+          type: e.edgeType,
+          color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
+          width: 1.5,
+          lineStyle: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType) ? 'dashed' as const : 'solid' as const,
+        },
+      })),
   }
 }
 
-export function transformSubgraphResponse(res: SubgraphResponse): VisGraphData {
+export function transformSubgraphResponse(res: SubgraphResponse): CyElements {
   const nodeIds = new Set(res.nodes.map((n) => n.id))
 
   return {
     nodes: res.nodes.map((n) => ({
-      id: n.id,
-      label: nodeLabel(n.nodeType, n.properties),
-      color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
-      size: nodeSize(n.nodeType),
-      font: { size: 12, color: '#333' },
-      title: formatProperties(n.properties),
-    } satisfies Node)),
+      data: {
+        id: n.id,
+        label: (n.properties.name as string) ?? (n.properties.label as string) ?? n.id.substring(0, 8),
+        nodeType: n.nodeType,
+        color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
+        size: NODE_SIZES[n.nodeType] ?? 28,
+        ...n.properties,
+      },
+    })),
     edges: res.edges
       .filter((e) => nodeIds.has(e.sourceNodeId) && nodeIds.has(e.targetNodeId))
-      .map((e) => ({
-        from: e.sourceNodeId,
-        to: e.targetNodeId,
-        label: shortLabel(e.edgeType),
-        color: { color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C' },
-        width: 1 + Math.min(e.weight, 3),
-        dashes: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType),
-        arrows: 'to',
-      } satisfies Edge)),
+      .map((e, i) => ({
+        data: {
+          id: `e-${i}`,
+          source: e.sourceNodeId,
+          target: e.targetNodeId,
+          type: e.edgeType,
+          color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
+          width: 1 + Math.min(e.weight, 3),
+          lineStyle: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType) ? 'dashed' as const : 'solid' as const,
+        },
+      })),
   }
-}
-
-function nodeLabel(nodeType: string, props: Record<string, unknown>): string {
-  return (props.name as string) ?? (props.label as string) ?? nodeType
-}
-
-function nodeSize(nodeType: string): number {
-  const map: Record<string, number> = {
-    KnowledgePoint: 36, Student: 32, Exam: 30,
-    KnowledgeCategory: 34, Document: 30, Entity: 28,
-  }
-  return map[nodeType] ?? 28
-}
-
-function shortLabel(type: string): string {
-  return type.length > 12 ? type.substring(0, 11) + '…' : type
-}
-
-function formatProperties(props: Record<string, unknown>): string {
-  return Object.entries(props)
-    .map(([k, v]) => `<b>${k}:</b> ${String(v)}`)
-    .join('<br>')
 }
