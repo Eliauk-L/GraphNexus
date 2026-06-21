@@ -4,7 +4,7 @@ import { uploadFile, listFiles, parseFile, deleteFile } from '@/api/file'
 import type { TextbookVO, FileStatus } from '@/api/types'
 
 // 需要轮询的中间态
-const INTERMEDIATE_STATES: FileStatus[] = ['UPLOADED', 'PARSING', 'PARSED', 'EXTRACTING', 'EXTRACTED', 'FUSING']
+const INTERMEDIATE_STATES: FileStatus[] = ['UPLOADED', 'PARSING']
 
 export const useFileStore = defineStore('file', () => {
   const files = ref<TextbookVO[]>([])
