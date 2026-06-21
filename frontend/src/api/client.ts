@@ -1,5 +1,9 @@
 import axios from 'axios'
-import type { ApiResult } from './types'
+import { createDiscreteApi } from 'naive-ui'
+import type { ApiResult, ErrorResponse } from './types'
+
+// 组件外可用的 message 实例（适用于 Axios 拦截器等非组件上下文）
+const { message } = createDiscreteApi(['message'])
 
 const client = axios.create({
   baseURL: '/api/v1',
@@ -18,27 +22,92 @@ client.interceptors.request.use((config) => {
   return config
 })
 
-// response 拦截器：unwrap ApiResult.data + 错误 toast
+// 业务错误码 → 用户友好提示映射（来源：后端 ErrorCode.java）
+const FRIENDLY_TIPS: Record<string, string> = {
+  A0001: '请求的资源不存在，请检查参数',
+  A0002: '请求参数不符合要求，请检查输入',
+  A0003: '您没有权限执行此操作',
+  A0004: '仅支持 PDF 或 TXT 格式文件',
+  A0005: '文件大小不能超过 50MB',
+  A0006: '文档记录不存在或已被删除',
+  A0007: '该学科下已存在相同内容的文档',
+  A0008: '文档文本内容为空，无法进行图谱抽取',
+  A0009: '文档状态不允许抽取，请先完成文档解析',
+  A0010: 'AI 返回结果格式不符合预期，请稍后重试',
+  A0011: 'CSV 文件格式不符合要求，请检查表头和成绩格式',
+  A0012: 'CSV 文件缺少必要列（学号或考试编号），请检查文件',
+  A0013: 'CSV 文件编码不支持，请使用 UTF-8 或 GBK 编码',
+  A0014: '考试编号不存在，无法执行操作',
+  A0015: '待删除的考试记录不存在或已被删除',
+  A0016: '融合日志记录不存在，请检查融合 ID',
+  A0017: '融合操作正在进行中，请稍后重试',
+  A0018: '图状态已发生变更，无法回滚到指定融合点',
+  A0019: '无法识别查询意图，请更明确地描述问题',
+  A0020: '存在多个同名或相似学生，请使用学号精确指定',
+  A0021: '问答任务不存在或已过期',
+  A0022: '考试编号已存在，请先删除该考试再重新上传',
+  B0001: '系统内部异常，请联系管理员',
+  B0002: '服务暂时不可用，请稍后重试',
+  C0001: '外部服务调用失败，请稍后重试',
+}
+
+// response 拦截器：unwrap ApiResult.data + 用户友好错误提示
 client.interceptors.response.use(
   (response) => {
     const body = response.data as ApiResult<unknown>
-    // 直接返回 data 字段，调用方拿到的是 unwrap 后的业务数据
     return body.data as never
   },
   (error) => {
-    // 从 error.response.data 取 ErrorResponse
-    const errData = error.response?.data
-    if (errData?.userTip) {
-      import('naive-ui').then(({ useMessage }) => {
-        useMessage().error(errData.userTip as string)
-      }).catch(() => {})
+    const errData: ErrorResponse | undefined = error.response?.data
+    const errorCode = errData?.errorCode
+
+    if (errorCode) {
+      // 业务错误：优先用 userTip，回退到错误码映射
+      const friendlyTip = errData?.userTip || FRIENDLY_TIPS[errorCode] || '操作失败，请稍后重试'
+      showErrorToast(friendlyTip, errorCode)
+    } else if (error.code === 'ECONNABORTED') {
+      // 请求超时
+      showErrorToast('请求超时，请检查网络后重试', 'TIMEOUT')
+    } else if (!error.response) {
+      // 网络错误（后端不可达）
+      showErrorToast('无法连接到服务器，请确认服务是否启动', 'NETWORK')
+    } else {
+      // 其他 HTTP 错误
+      const status = error.response.status
+      const tip = HTTP_STATUS_TIPS[status] ?? `请求失败（HTTP ${status}）`
+      showErrorToast(tip, `HTTP_${status}`)
     }
+
+    // 控制台完整日志（含 traceId 便于排查）
     console.error(
-      `[API] ${errData?.errorCode ?? 'NETWORK_ERROR'}: ${errData?.errorMessage ?? error.message}`,
+      `[API] ${errorCode ?? 'UNKNOWN'}: ${errData?.errorMessage ?? error.message}`,
       `(traceId: ${errData?.traceId ?? 'N/A'})`,
     )
     return Promise.reject(error)
   },
 )
+
+const HTTP_STATUS_TIPS: Record<number, string> = {
+  400: '请求参数有误，请检查输入',
+  401: '登录状态已失效，请重新登录',
+  403: '您没有权限执行此操作',
+  404: '请求的资源不存在',
+  409: '操作冲突，请刷新后重试',
+  413: '文件大小超过限制',
+  500: '服务器内部错误，请联系管理员',
+  502: '网关错误，请稍后重试',
+  503: '服务暂时不可用，请稍后重试',
+  504: '网关超时，请稍后重试',
+}
+
+function showErrorToast(tip: string, code: string) {
+  // 错误码前缀决定提示类型与持续时间
+  const isSystemError = code.startsWith('B') || code.startsWith('C') || code.startsWith('HTTP_5')
+  if (isSystemError) {
+    message.error(tip, { duration: 5000 })
+  } else {
+    message.warning(tip, { duration: 3500 })
+  }
+}
 
 export default client
