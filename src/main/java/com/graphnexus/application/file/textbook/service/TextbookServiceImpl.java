@@ -7,7 +7,6 @@ import com.graphnexus.application.file.textbook.model.ParseResult;
 import com.graphnexus.application.file.parse.FileParser;
 import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.application.file.textbook.parser.TextbookParser;
-import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
@@ -138,8 +137,6 @@ public class TextbookServiceImpl implements TextbookService {
                 parseResult.textContent() != null ? parseResult.textContent().length() : 0);
 
         eventPublisher.publishEvent(new TextbookParsedEvent(this, documentId));
-
-        eventPublisher.publishEvent(new GraphChangedEvent(this));
         return parseResult;
     }
 

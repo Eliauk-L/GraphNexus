@@ -1,6 +1,7 @@
 package com.graphnexus.application.graph.metrics.event;
 
 import com.graphnexus.application.graph.metrics.service.MetricsService;
+import com.graphnexus.common.event.GraphChangedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

@@ -1,6 +1,7 @@
 package com.graphnexus.application.graph.metrics.event;
 
 import com.graphnexus.application.graph.metrics.service.MetricsService;
+import com.graphnexus.common.event.GraphChangedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

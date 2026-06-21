@@ -6,7 +6,7 @@ import com.graphnexus.application.analysis.fusion.config.FusionProperties;
 import com.graphnexus.application.analysis.fusion.model.*;
 import com.graphnexus.application.analysis.fusion.service.FusionService;
 import com.graphnexus.application.analysis.fusion.strategy.KpMatchingStrategy;
-import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
+import com.graphnexus.common.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.fusion.entity.FusionLogDO;

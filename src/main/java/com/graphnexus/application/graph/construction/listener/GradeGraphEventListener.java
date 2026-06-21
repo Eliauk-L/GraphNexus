@@ -3,6 +3,7 @@ package com.graphnexus.application.graph.construction.listener;
 import com.graphnexus.application.file.grade.event.GradeDeletedEvent;
 import com.graphnexus.application.file.grade.event.GradeUploadedEvent;
 import com.graphnexus.application.graph.construction.event.GraphConstructedEvent;
+import com.graphnexus.common.event.GraphChangedEvent;
 import com.graphnexus.infrastructure.mysql.file.entity.ExamRecordDO;
 import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
 import com.graphnexus.infrastructure.neo4j.edge.AttendedEdge;
@@ -85,6 +86,9 @@ public class GradeGraphEventListener {
                 this, GraphConstructedEvent.SOURCE_CSV, GraphConstructedEvent.MODE_FULL,
                 event.getSubject(), event.getKnowledgePoints(), null, event.getExamNo()));
 
+        // 图结构已变更（新节点/边已写入），触发指标缓存失效
+        eventPublisher.publishEvent(new GraphChangedEvent(this));
+
         log.info("图谱构建完成: examNo={}, students={}, kps={}",
                 examNo, records.size(), event.getKnowledgePoints().size());
     }
@@ -99,6 +103,9 @@ public class GradeGraphEventListener {
         int attendEdges = constructionGraphRepository.deleteEdgesByExamNo(examNo, "ATTENDED");
         int testedEdges = constructionGraphRepository.deleteEdgesByExamNo(examNo, "TESTED");
         int deletedNodes = constructionGraphRepository.deleteExamNode(examNo);
+
+        // 图结构已变更（节点/边已删除），触发指标缓存失效
+        eventPublisher.publishEvent(new GraphChangedEvent(this));
 
         log.info("图谱清理完成: examNo={}, attendEdges={}, testedEdges={}, examNodes={}",
                 examNo, attendEdges, testedEdges, deletedNodes);

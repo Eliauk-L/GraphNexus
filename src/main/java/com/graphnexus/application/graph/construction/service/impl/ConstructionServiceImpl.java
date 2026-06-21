@@ -3,6 +3,7 @@ package com.graphnexus.application.graph.construction.service.impl;
 import com.graphnexus.application.graph.construction.extract.ExtractionService;
 import com.graphnexus.application.graph.construction.event.GraphConstructedEvent;
 import com.graphnexus.application.graph.construction.model.ExtractionResultBO;
+import com.graphnexus.common.event.GraphChangedEvent;
 import com.graphnexus.application.graph.construction.model.GraphDataConverter;
 import com.graphnexus.application.graph.construction.model.GraphSubgraphBO;
 import com.graphnexus.application.graph.construction.service.ConstructionService;
@@ -77,6 +78,9 @@ public class ConstructionServiceImpl implements ConstructionService {
 
         // ==================== 阶段一：图谱构建 ====================
         ExtractionResultBO result = phase1_build(doc, extracted, subjectNode, neo4jDocumentId);
+
+        // 图结构已变更（新节点/边已写入 Neo4j），发布事件触发指标缓存失效
+        eventPublisher.publishEvent(new GraphChangedEvent(this));
 
         // ==================== 阶段二：图谱融合（事件驱动） ====================
         // 跨文档实体对齐由融合隐式完成：KP 合并时 ALIGNED_TO 边自动重定向到规范 KP
