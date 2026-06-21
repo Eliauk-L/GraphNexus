@@ -40,6 +40,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex) {
+        log.warn("业务异常 errorCode={} httpStatus={} errorMessage={}",
+                ex.getErrorCode(), ex.getHttpStatus(), ex.getErrorMessage());
         ErrorResponse body = ErrorResponse.of(ex, getTraceId());
         return ResponseEntity.status(ex.getHttpStatus()).body(body);
     }
@@ -55,6 +57,7 @@ public class GlobalExceptionHandler {
         String fieldErrors = ex.getBindingResult().getFieldErrors().stream()
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                 .collect(Collectors.joining("; "));
+        log.warn("参数校验失败 fieldErrors={}", fieldErrors);
         ErrorResponse body = new ErrorResponse(
                 ErrorCode.A0002.getErrorCode(),
                 "参数校验失败: " + fieldErrors,
@@ -73,6 +76,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        log.warn("权限不足 errorCode={} message={}",
+                ErrorCode.A0003.getErrorCode(), ex.getMessage());
         ErrorResponse body = new ErrorResponse(
                 ErrorCode.A0003.getErrorCode(),
                 "权限不足: " + ex.getMessage(),
