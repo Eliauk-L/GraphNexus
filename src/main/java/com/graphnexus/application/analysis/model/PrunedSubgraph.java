@@ -1,7 +1,7 @@
 package com.graphnexus.application.analysis.model;
 
-import com.graphnexus.application.graph.core.model.GraphEdgeData;
-import com.graphnexus.application.graph.core.model.GraphNodeData;
+import com.graphnexus.application.graph.construction.model.GraphEdgeData;
+import com.graphnexus.application.graph.construction.model.GraphNodeData;
 
 import java.util.List;
 

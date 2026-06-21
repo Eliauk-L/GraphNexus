@@ -56,7 +56,7 @@ class GraphNodeAbstractionTest {
     @DisplayName("NodeType 包含全部 6 种已注册类型且 nodeClass 非空")
     void testNodeTypeHasAllRegisteredTypes() {
         NodeType[] types = NodeType.values();
-        assertEquals(6, types.length);
+        assertEquals(7, types.length);
         assertTrue(containsLabel(types, "Document"));
         assertTrue(containsLabel(types, "Entity"));
         assertTrue(containsLabel(types, "KnowledgePoint"));

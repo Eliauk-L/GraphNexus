@@ -30,7 +30,7 @@
 | **PREREQUISITE_OF 边** | KnowledgePoint → KnowledgePoint 的前置依赖关系（如"对称轴"是"顶点坐标"的前置知识），含 `strength`(0-1) 和 `description` 属性 |
 | **GraphNode / GraphEdge 抽象** | 图节点和边的抽象基类/接口，定义通用契约（label/type/properties），通过类型注册机制支持扩展，新增子类无需修改核心持久化链路 |
 | **抽取 JSON Schema** | LLM 抽取结果的结构定义，约束 entities/knowledgePoints/categories/relationships 各字段类型和枚举值，用于入库前校验 |
-| **exam_record** | MySQL 独立表，存储 CSV 成绩文件的原始记录。每行 = 一个学生的一次考试，`score_details` 为 JSON 列存各题成绩与知识点明细，通过 `csv_md5` 判重，含 `csv_file_path` 指向 MinIO 原始文件 |
+| **exam_record** | MySQL 独立表，存储成绩文件的原始记录。每行 = 一个学生的一次考试，`score_details` 为 JSON 列存各题成绩与知识点明细（`{questionLabel, kpNames, rawScore, maxScore}`），通过 `exam_no` 判重。v2（`grade-management-refactor`）已删除 `csv_file_path` 和 `csv_md5` 列（不再存储 MinIO 路径和文件 MD5） |
 | **StudentNode** | Neo4j 节点（Label `:Student`），表示学生。唯一标识 `studentNo`（学号），属性含 `name`、`className`、`grade`。通过 `ATTENDED` 边连接 ExamNode，通过 `MASTERS` 边（未来）连接 KnowledgePointNode |
 | **ExamNode** | Neo4j 节点（Label `:Exam`），表示一次考试。唯一标识 `examNo`（来源于 CSV `考试编号` 列，格式如 `E20200041`），属性含 `name`、`examDate`、`subject`。同一 CSV 文件生成一个 Exam 节点 |
 | **ATTENDED 边** | Neo4j 关系边 `(:Student)-[:ATTENDED]->(:Exam)`，表示学生参加了某次考试。纯结构边，无属性 |
@@ -68,6 +68,22 @@
 | **MASTERS 降级处理** | 若融合从未执行（MASTERS 边不存在），系统降级为直接查询 TESTED 路径并计算原始得分率（不做时间衰减），在 prompt 中标注"融合数据不可用，以下为原始考试得分率" |
 | **CSV 双行表头** | 成绩 CSV 的特殊格式：第 1 行为列名（`题1~题N`），第 2 行为每题对应的知识点名称。同一题含多个知识点时用 `;` 分隔（如 `二次函数图像与性质;二次函数顶点式`）。数据行成绩格式为 `raw_score/max_score`，缺考标记为 `-/-` |
 | **成绩事件图谱（简化模型）** | 区别于文档参考中的完整事件模型（Student → Event → Exam + Event → KnowledgePoint），本次采用简化三元路径 `Student → Exam → KnowledgePoint`，不创建 EventNode，ATTENDED + TESTED 边直接携带成绩属性 |
+| **GradeFileType** | 成绩文件格式枚举（`FileParseType` 实现），v2 拆分为 `CSV` 和 `EXCEL` 两个值，分别表示 CSV 和 Excel（.xlsx/.xls）格式。业务类型统一由 `FileParser.BIZ_GRADE` 表达，格式细节由 `FileParserRegistry` 按扩展名路由 |
+| **ExcelGradeParser** | `FileParser` 接口的 Excel 实现，支持 `.xlsx`/`.xls` 双行表头成绩文件解析。使用 Apache POI 读取工作簿，解析结果与 `CsvGradeParser` 一致（`CsvParsePayload`），业务类型 = `BIZ_GRADE`，格式类型 = `GradeFileType.EXCEL` |
+| **成绩统一条件查询** | `GET /api/v1/file/grades` 端点支持 6 个可选查询参数（`studentNo`、`name`、`className`、`examNo`、`examName`、`subject`）任意组合 + 分页。取代原有的 `GET /api/v1/file/grades/exam/{examNo}` 单一考试查询端点。Repository 层通过 Spring Data JPA 方法名派生或 `@Query` + Specification 实现动态条件查询 |
+| **exam_no 去重拒绝** | 成绩上传去重策略：以 `exam_no`（考试编号）为判重键，上传时若数据库中已存在相同 `exam_no` 且 `is_deleted=0` 的记录，返回 HTTP 409 + 错误码 A0016，提示用户先手动删除再重新上传。不自动覆盖，不使用文件 MD5 判重 |
+| **ConstructionController** | 原 `GraphController`，图谱构建模块的 L1 API 控制器，端点 `/api/v1/graph/construction`。负责文档知识图谱抽取（`extract`）和文档子图查询（`getSubgraph`）。与 FusionController（融合）、MetricsController（指标）并列，三者均在 `api/graph/controller/` 包下 |
+| **ConstructionService** | 原 `GraphService`，图谱构建模块的 L2 服务接口。编排"图谱构建 → 实体对齐 → 图谱融合"三阶段流水线。位于 `application/graph/construction/service/`，与 `ExtractionService` 同包 |
+| **ConstructionGraphRepository** | 图谱构建模块的 Neo4j 数据访问组件（L3）。负责图谱构建和成绩事件图谱的 Neo4j 操作：节点/边 CRUD（save/saveEdge）、文档子图查询（findByDocumentId/findEdgesByDocumentId）、文档子图删除（deleteByDocumentId）、考试图谱清理（deleteEdgesByExamNo/deleteExamNode）。从原 `GraphNodeRepository` 拆分而来 |
+| **FusionGraphRepository** | 融合模块的 Neo4j 数据访问组件（L3）。负责融合和 MASTERS 的 Neo4j 操作：全量 KP 查询（findAllKnowledgePoints）、按名称查询 KP（findKnowledgePointsByNamesAndSubject）、边重定向（redirectEdges）、KP 删除（deleteKnowledgePoints）、MASTERS 批量 upsert（batchUpsertMastersEdges）、学生查询（findStudentsBySubject/findStudentsByKpNames）、回滚辅助方法。从原 `GraphNodeRepository` 拆分而来 |
+| **QueryGraphRepository** | 智能问答和指标模块的 Neo4j 只读查询组件（L3）。负责：按姓名/学号查 Student（findStudentByName/findStudentByNo）、查 MASTERS（findMastersByStudentAndSubject/findMastersByStudentAndKpIds）、查 TESTED 路径（findTestedKpsByStudentAndSubject）、查前置依赖链（findPrerequisitesUpstream）、查学科列表（findDistinctSubjects）。从原 `GraphNodeRepository` 拆分而来 |
+| **SubjectNode** | 新增 Neo4j 节点类型（Label `:Subject`），表示学科（如"数学""物理""英语"）。唯一标识 `name`。取代原 KnowledgePoint / Exam / FileNode 上的 `subject` 字符串属性。各节点通过 BELONGS_TO_SUBJECT 边指向对应的 SubjectNode。预留 `(:Subject)-[:CHILD_OF]->(:Subject)` 层级扩展 |
+| **BELONGS_TO_SUBJECT** | 新增 Neo4j 关系边类型。方向：`(KnowledgePoint|Exam|FileNode)-[:BELONGS_TO_SUBJECT]->(:Subject)`。表示节点归属于某学科。融合分组从 `groupBy(subject string)` 改为按 BELONGS_TO_SUBJECT 边指向的 Subject 节点引用分组 |
+| **三阶段流水线** | 图谱构建的显式工作流：「阶段一·图谱构建」（LLM 抽取 + 单文档内节点/边创建）→「阶段二·实体对齐」（新 Entity 跨文档对齐到图谱已有 KP）→「阶段三·图谱融合」（跨源 KP 合并 + MASTERS 重算）。每阶段有独立的文档状态追踪（`EXTRACTING→EXTRACTED→ALIGNING→ALIGNED→FUSING→COMPLETED`） |
+| **实体对齐（跨文档）** | 流水线阶段二：将新抽取的 EntityNode 与图谱中**已有**的 KnowledgePointNode 做匹配（通过 `KpMatchingStrategy`），创建额外的 ALIGNED_TO 边。使不同文档中讨论同一知识点的实体能关联到同一个 KP，而非仅对齐到本次抽取创建的 KP |
+| **跨源 KP 融合** | 全量/增量融合中显式合并 `fusionSource=DOCUMENT`（文档抽取）和 `fusionSource=CSV_IMPORT`（考试成绩）两种来源的同名知识点。策略：先按 `name + subject`（或 Subject 节点引用）精确匹配前置 pass，再走 FuzzyMatch。考试 KP 创建改为 `MERGE ON (name, subject)` 避免产生冗余节点 |
+| **融合原子性** | 全量/增量融合的全部 merge + MASTERS 重算操作具备事务性：全部成功则提交，任一失败则回滚。具体方案（Neo4j 事务包装 vs 先记后做补偿回滚）由 DESIGN 阶段选型。融合失败时图谱状态不变，`fusion_log.status=FAILED` |
+| **Subject 名称规范化** | LLM 抽取提示词中新增的指令：要求 LLM 输出标准化学科名（如"数学"而非"高中数学"或"初中数学"），优先使用文档元数据中提供的学科名（来自 `buildUserMessage` 的 `subject` 参数）。确保不同文档抽取出的 subject 名称一致，配合 Subject 节点引用分组 |
 
 ## 已锁技术决策
 
@@ -101,8 +117,9 @@
 | Repository 方法命名规范 | Spring Data JPA Repository 方法名：① 不含 DO/Entity 后缀（如 `findByStudentNo` 而非 `findExamRecordDOByStudentNo`）；② 方法名完整反映查询条件（如含 `IsDeletedFalse` 和 `StatusNot` 时须显式出现在方法名中）；③ 复杂查询（LIKE + NULL 可选参数、Object[] 投影、GROUP BY）保留 `@Query` | 2026-06-19 | `jpa-query-refactor` REQUIREMENT |
 | Hibernate Boolean/TINYINT 谓词 bug 修复 | 升级 Hibernate 到修复 Boolean/TINYINT 谓词生成 bug 的版本，使 `findByIsDeletedFalse()` 方法名派生查询正常工作。来源：Hibernate 6.5 对 MySQL TINYINT + Boolean 属性的 `isFalse()` 谓词构建异常，升级后无需再用 `@Query("... WHERE d.isDeleted = 0")` 规避 | 2026-06-19 | `jpa-query-refactor` REQUIREMENT |
 | CSV 成绩解析模型 | v1 采用双行表头格式（第 1 行列名 + 第 2 行知识点名称），成绩 `raw/max`，缺考 `-/-`。第 1 行元数据列含 `考试编号`（examNo 来源）。动态列数，解析为 `ScoreDetail` 列表存入 MySQL JSON 列。编码默认 UTF-8，兼容 GBK | 2026-06-15 | `csv-grade-import` REQUIREMENT |
-| 成绩事件图谱模型（简化版） | Neo4j 采用三元路径 `(:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(:KnowledgePoint)`，边均为纯结构无属性，不创建 EventNode。所有分数（各题得分/总分/排名）仅存 MySQL `exam_record`。CSV 解析的 KnowledgePoint 独立存在，不与文档图谱 KP 融合 | 2026-06-15 | `csv-grade-import` DESIGN |
-| CSV 上传幂等策略 | 以 CSV 文件 MD5 为判重键，重复上传覆盖 MySQL 记录 + 更新 Neo4j 边属性（非新增节点/边） | 2026-06-15 | `csv-grade-import` REQUIREMENT |
+| 成绩事件图谱模型（简化版） | Neo4j 采用三元路径 `(:Student)-[:ATTENDED]->(:Exam)-[:TESTED]->(:KnowledgePoint)`，边均为纯结构无属性，不创建 EventNode。所有分数（各题得分/总分/排名）仅存 MySQL `exam_record`。成绩解析的 KnowledgePoint 独立存在，不与文档图谱 KP 融合。v2 已移除 MinIO 文件存储，原始文件解析后不保留 | 2026-06-15 / 更新 2026-06-19 | `csv-grade-import` DESIGN → `grade-management-refactor` |
+| CSV 上传幂等策略（已废弃） | ~~以 CSV 文件 MD5 为判重键，重复上传覆盖 MySQL 记录 + 更新 Neo4j 边属性（非新增节点/边）~~ → 由 `grade-management-refactor` 替换为 exam_no 判重拒绝策略 | 2026-06-15 | `csv-grade-import` REQUIREMENT |
+| 成绩上传去重策略 | 以 `exam_no`（考试编号）为判重键，上传时若 exam_no 已存在则返回 HTTP 409 拒绝，提示用户先手动删除再重新上传。不再使用文件 MD5 判重，不再自动覆盖 | 2026-06-19 | `grade-management-refactor` REQUIREMENT |
 | 全局删除约束 | 所有多存储系统实体的删除操作必须遵守：① 级联删除所有关联数据；② 幂等（删除已删除资源无报错）；③ 中间状态（先标记 DELETING/is_deleted，再清理外部系统，最后物理删除）；④ 共享节点保留不级联 | 2026-06-15 | `csv-grade-import` DESIGN（全局约束） |
 | KP 融合策略模式 | 定义 `KpMatchingStrategy` 接口（`double match(KpCandidate a, KpCandidate b)`），v1 首发 `FuzzyMatchStrategy`（名称归一化 + 编辑距离/Jaccard + subject 约束，阈值 0.85 可配置）。新增匹配算法只需实现接口 + yml 配置切换，不修改融合引擎核心逻辑 | 2026-06-15 | `wide-graph-fusion` REQUIREMENT |
 | MASTERS 权重策略模式 | 定义 `WeightCalculationStrategy` 接口（输入 `List<TestedRecord>` → 输出 `weight` + 摘要 JSON），v1 首发 `TimeDecayStrategy`（月衰减因子 0.9，缺考不计入，同考试多次取平均）。新增聚合算法只需实现接口 + yml 配置切换 | 2026-06-15 | `wide-graph-fusion` REQUIREMENT |
@@ -130,6 +147,21 @@
 | 同步上传链路 | 文档上传后串联执行 解析→抽取→融合，一次 HTTP 请求返回最终结果（`COMPLETED` 或中间失败状态）。不引入异步队列。手动 `/process` 端点保留用于异常恢复和断点续跑 | 2026-06-18 | `extensible-file` REQUIREMENT |
 | `file_type` 字段 | `document` 表新增 `file_type` VARCHAR(20) NOT NULL 字段，值来源于 `FileParseType` 枚举（如 `PDF`、`TXT`）。用途：① 上传时路由到对应 Pipeline；② 列表筛选条件。存量数据回填为 `PDF` | 2026-06-18 | `extensible-file` REQUIREMENT |
 | 文档列表条件查询 | `GET /api/v1/document`（FileController）支持可选查询参数 `file_type`（精确匹配）+ `name`（LIKE 模糊搜索），配合 `pageNum`/`pageSize` 分页。不传筛选参数时行为不变。MySQL LIKE 实现，不引入全文检索 | 2026-06-18 | `extensible-file` REQUIREMENT |
+| 成绩文件不存 MinIO | 成绩文件上传后即时解析，仅保留 MySQL 结构化数据 + Neo4j 图数据，原始文件不存入 MinIO。上传链路简化为 解析 → MySQL → Neo4j；删除链路简化为 MySQL → Neo4j（无 MinIO 清理） | 2026-06-19 | `grade-management-refactor` REQUIREMENT |
+| 成绩去重策略 | 以 `exam_no` 为判重键，重复上传返回 HTTP 409 拒绝（错误码 A0016），提示用户先手动删除。不使用 MD5 判重，不自动覆盖 | 2026-06-19 | `grade-management-refactor` REQUIREMENT |
+| 成绩删除粒度 | 仅支持按 `exam_no` 整场考试删除，不支持单条学生记录删除。与上传粒度（一个文件 = 一个 exam_no = 一次考试）对称 | 2026-06-19 | `grade-management-refactor` REQUIREMENT |
+| GradeFileType 枚举拆分 | `GradeFileType` 由单一 `CSV_GRADE` 拆为 `CSV` 和 `EXCEL` 两个值，分别表示 CSV 和 Excel 文件格式。业务类型统一由 `FileParser.BIZ_GRADE` 表达 | 2026-06-19 | `grade-management-refactor` REQUIREMENT |
+| 成绩条件查询统一端点 | `GET /api/v1/file/grades` 通过可选参数支持多维度组合查询，合并原 `GET /api/v1/file/grades/exam/{examNo}` 功能。查询参数：`studentNo`、`name`（模糊）、`className`、`examNo`、`examName`（模糊）、`subject` | 2026-06-19 | `grade-management-refactor` REQUIREMENT |
+| 成绩模块事件驱动解耦 | 成绩处理模块（`application/file/grade/`）不直接调用图谱代码。上传链路：解析 → MySQL → 发布 `GradeUploadedEvent` → 结束；删除链路：MySQL 删除 → 发布 `GradeDeletedEvent` → 结束。图谱构建/清理由独立的 `GradeGraphEventListener` 监听事件完成。成绩模块仅依赖 `ApplicationEventPublisher` + 事件类，不注入 `GraphNodeRepository` 或图谱 Service | 2026-06-19 | `grade-management-refactor` REQUIREMENT |
+| GradeDeletedEvent | Spring 事件，成绩删除后发布，携带 `examNo`、关联学生数、知识点列表。由 `GradeGraphEventListener` 消费，负责清理 Neo4j 中对应 Exam 节点及 ATTENDED/TESTED 边 | 2026-06-19 | `grade-management-refactor` REQUIREMENT |
+| 图谱构建模块命名规范 | `GraphController` → `ConstructionController`，`GraphService` → `ConstructionService`。URL `/api/v1/graph` → `/api/v1/graph/construction`（与 `/api/v1/graph/fusion`、`/api/v1/graph/metrics` 形成命名空间层次）。Service 包从 `core/service/` 移至 `construction/service/` | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
+| GraphNodeRepository 三模块拆分 | 原 `GraphNodeRepository`（666 行）按子域拆为三个独立 Repository 并删除原类：`ConstructionGraphRepository`（构建+成绩事件）、`FusionGraphRepository`（融合+MASTERS）、`QueryGraphRepository`（智能问答+指标只读）。各模块 Service/EventListener 注入对应 Repository | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
+| Subject 节点化 | Neo4j 中学科信息从 KnowledgePoint/Exam/FileNode 的 `subject` 字符串属性改为独立 `SubjectNode`（Label `:Subject`）+ `BELONGS_TO_SUBJECT` 边。融合分组从 `groupBy(subject string)` 改为按 Subject 节点引用分组。存量数据迁移脚本幂等执行。MySQL 中 `document.subject` / `exam_record.subject` 保留不删。预留 `(:Subject)-[:CHILD_OF]->(:Subject)` 学科层级扩展（v2） | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
+| 三阶段流水线（构建→对齐→融合） | 图谱构建实现显式三阶段工作流：① 图谱构建（LLM抽取+单文档内节点/边）→ ② 实体对齐（新Entity跨文档对齐到图谱已有KP）→ ③ 图谱融合（跨源KP合并+MASTERS重算）。`document.status` 状态机扩展：`EXTRACTING→EXTRACTED→ALIGNING→ALIGNED→FUSING→COMPLETED`。每阶段开始/完成/失败记日志 | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
+| 跨源 KP 融合策略 | 全量/增量融合均显式处理 `DOCUMENT` ↔ `CSV_IMPORT` 跨源 KP 合并。先按 `name + subject`（或 Subject 节点引用）精确匹配前置 pass，再走 FuzzyMatch（阈值 0.85）。考试 KP 创建改为 `MERGE ON (name, subject)` 而非 `MERGE ON id`（UUID），避免与文档 KP 产生冗余节点 | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
+| 融合原子性方案 | 融合操作必须具备原子性：全部 merge + MASTERS 重算成功提交，任一失败回滚。具体方案（Neo4j 事务包装 vs 先记后做补偿回滚）由 DESIGN 阶段选型确定。失败时 `fusion_log.status=FAILED`，Neo4j 图谱状态不变 | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
+| 文档状态机 v3 | 在 v2（8 状态）基础上新增 `ALIGNING` / `ALIGNED` 两状态。完整成功路径：`UPLOADED → PARSING → PARSED → EXTRACTING → EXTRACTED → ALIGNING → ALIGNED → FUSING → COMPLETED`。任意 `*ING` 失败回退到前一个 `*ED` | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
+| LLM 提示词 subject 规范化 | `ExtractionPromptBuilder` 的 System Prompt 增加 subject 名称规范化指令：要求 LLM 使用标准化学科名（如"数学"而非"高中数学"），优先使用文档元数据中提供的学科名。`ExtractionService.convertToDomain()` 不再设置 KnowledgePointNode 的 `subject` 属性，改为创建/查找 SubjectNode + BELONGS_TO_SUBJECT 边 | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
 
 ## 默认行为
 
@@ -190,7 +222,7 @@
 | 实体 | 主存储 | 级联目标 | 中间状态字段 | 保留节点 |
 |------|--------|---------|-------------|---------|
 | Document（教辅 PDF） | MySQL `document` | MinIO PDF 文件 + Neo4j EntityNode/边 | `status = 'DELETING'` | KnowledgePoint |
-| Exam（考试成绩） | MySQL `exam_record` | MinIO CSV 文件 + Neo4j Exam 节点/ATTENDED/TESTED 边 | `is_deleted = 1` | Student、KnowledgePoint |
+| Exam（考试成绩） | MySQL `exam_record` | Neo4j Exam 节点/ATTENDED/TESTED 边（v2 已移除 MinIO 文件级联，成绩文件不再存入 MinIO） | `is_deleted = 1` | Student、KnowledgePoint |
 
 
 ## 既有抽象索引
@@ -211,8 +243,9 @@
 | `application/llmgateway/service/` | LLM 网关服务（v1 最小调用） | LLM API 调用（chat 方法） |
 | `infrastructure/llm/client/SpringAiLlmGateway.java` | LlmGateway 的 Spring AI 实现 | LLM 调用 |
 | `infrastructure/llm/config/LlmConfig.java` | ChatModel bean 手动创建 | 绕过 Spring AI 自动配置 |
-| `api/document/controller/` | PDF 文档 + CSV 成绩上传与查询 API（L1） | 文档 CRUD + CSV 成绩文件上传/查询 |
-| `application/document/service/` | 文档处理 + CSV 解析 + 成绩入库编排（L2） | PDF 解析 + CSV 上传 → MySQL/MinIO/Neo4j 全链路 |
+| `api/file/controller/GradeController.java` | 成绩上传/查询/删除 API（L1） | CSV/Excel 成绩文件上传、条件查询、级联删除 |
+| `application/file/grade/parser/` | 成绩文件解析器（L2） | `CsvGradeParser`（.csv）+ `ExcelGradeParser`（.xlsx/.xls），均实现 `FileParser` 接口，业务类型统一为 `BIZ_GRADE` |
+| `application/file/grade/service/` | 成绩上传编排 + 查询 + 删除（L2） | 成绩上传（解析 → MySQL → Neo4j，无 MinIO）+ 条件查询 + exam_no 级联删除 |
 | `application/graph/fusion/strategy/` | KP 匹配策略 + MASTERS 权重计算策略接口与实现 | 融合匹配算法替换 + 权重算法替换 |
 | `application/graph/fusion/service/` | 融合引擎服务（KP 合并 + MASTERS 聚合 + 回滚） | 手动/增量融合触发 + 回滚 |
 | `infrastructure/mysql/fusion/` | `fusion_log` 表 DO/Repository（L3） | 融合日志持久化与查询 |

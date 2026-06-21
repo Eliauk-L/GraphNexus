@@ -1,5 +1,9 @@
 package com.graphnexus.application.file.parse;
 
+import com.graphnexus.application.file.parse.model.FileParseRequest;
+import com.graphnexus.application.file.parse.model.FileParseResult;
+import com.graphnexus.application.file.parse.model.FileParseType;
+
 import java.util.Set;
 
 /**

@@ -1,0 +1,65 @@
+package com.graphnexus.api.graph.controller;
+
+import com.graphnexus.api.graph.dto.construction.ExtractionResultVO;
+import com.graphnexus.api.graph.dto.construction.GraphSubgraphVO;
+import com.graphnexus.application.graph.construction.model.ExtractionResultBO;
+import com.graphnexus.application.graph.construction.model.GraphSubgraphBO;
+import com.graphnexus.application.graph.construction.service.ConstructionService;
+import com.graphnexus.common.ApiResult;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * 图谱构建 REST API 控制器 — 三阶段流水线（构建→实体对齐→图谱融合）。
+ *
+ * @author Jay
+ * @date 2026/06/20
+ */
+@RestController
+@RequestMapping("/api/v1/graph/construction")
+@RequiredArgsConstructor
+@Tag(name = "图谱构建", description = "文档知识图谱抽取、文档子图查询与实体对齐 — 三阶段流水线（构建→实体对齐→图谱融合）")
+public class ConstructionController {
+
+    private final ConstructionService constructionService;
+
+    /**
+     * 触发文档知识图谱构建（三阶段流水线：构建→实体对齐→图谱融合）。
+     */
+    @Operation(summary = "触发知识图谱构建", description = "对已解析完成的文档执行三阶段流水线：① 图谱构建（LLM 抽取 Entity/KP/Category + 关系边）→ ② 实体对齐（跨文档 Entity→已有KP 匹配）→ ③ 图谱融合（跨源 KP 合并 + MASTERS 重算）。重复抽取将全量覆盖旧子图数据")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "构建完成，返回各类型节点和边的数量（含 BELONGS_TO_SUBJECT 边）。若融合失败则附 fusionWarning"),
+            @ApiResponse(responseCode = "400", description = "A0008 文档文本为空 / A0009 文档状态不允许抽取 / A0010 LLM 抽取结果校验失败"),
+            @ApiResponse(responseCode = "404", description = "A0006 文档不存在或已删除"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常 / C0001 LLM API 调用失败")
+    })
+    @PostMapping("/extract/{documentId}")
+    public ApiResult<ExtractionResultVO> extract(
+            @Parameter(description = "文档 ID", required = true, example = "1")
+            @PathVariable Long documentId) {
+        ExtractionResultBO bo = constructionService.extract(documentId);
+        return ApiResult.success(ExtractionResultVO.from(bo));
+    }
+
+    /**
+     * 查询文档的知识子图（节点 + 边）。
+     */
+    @Operation(summary = "查询文档子图", description = "返回指定文档关联的所有 EntityNode、KnowledgePointNode、KnowledgeCategoryNode 及它们之间的关系边（ALIGNED_TO / BELONGS_TO / BELONGS_TO_SUBJECT / CHILD_OF / PREREQUISITE_OF / DERIVES / CONTAINS / REFERENCES / EXTRACTS）")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "文档子图（节点列表 + 边列表）"),
+            @ApiResponse(responseCode = "404", description = "A0006 文档不存在或已删除"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+    })
+    @GetMapping("/document/{documentId}")
+    public ApiResult<GraphSubgraphVO> getSubgraph(
+            @Parameter(description = "文档 ID", required = true, example = "1")
+            @PathVariable Long documentId) {
+        GraphSubgraphBO bo = constructionService.getSubgraph(documentId);
+        return ApiResult.success(GraphSubgraphVO.from(bo));
+    }
+}

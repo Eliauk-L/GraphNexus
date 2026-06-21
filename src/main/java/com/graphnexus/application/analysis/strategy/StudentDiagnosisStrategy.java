@@ -3,14 +3,14 @@ package com.graphnexus.application.analysis.strategy;
 import com.graphnexus.application.analysis.model.PruningRequest;
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.analysis.model.PrunedSubgraph.PruningMeta;
-import com.graphnexus.application.graph.core.model.GraphDataConverter;
-import com.graphnexus.application.graph.core.model.GraphEdgeData;
-import com.graphnexus.application.graph.core.model.GraphNodeData;
+import com.graphnexus.application.graph.construction.model.GraphDataConverter;
+import com.graphnexus.application.graph.construction.model.GraphEdgeData;
+import com.graphnexus.application.graph.construction.model.GraphNodeData;
 import com.graphnexus.infrastructure.mysql.file.entity.ExamRecordDO;
 import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
 import com.graphnexus.infrastructure.neo4j.node.KnowledgePointNode;
 import com.graphnexus.infrastructure.neo4j.node.StudentNode;
-import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
+import com.graphnexus.infrastructure.neo4j.repository.QueryGraphRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
 
-    private final GraphNodeRepository graphNodeRepository;
+    private final QueryGraphRepository queryGraphRepository;
     private final ExamRecordRepository examRecordRepository;
     private final ObjectMapper objectMapper;
 
@@ -59,7 +59,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         int maxHops = (int) getParam(request.params(), "maxHops", (double) DEFAULT_MAX_HOPS);
 
         // Step 1: 确认学生存在
-        var studentOpt = graphNodeRepository.findStudentByNo(studentNo);
+        var studentOpt = queryGraphRepository.findStudentByNo(studentNo);
         if (studentOpt.isEmpty()) {
             log.warn("Student 不存在: studentNo={}", studentNo);
             return emptyResult("STUDENT_NOT_FOUND");
@@ -69,7 +69,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
 
         // Step 2: 查找弱掌握 KP（MASTERS 优先，降级走 TESTED）
         String studentNodeId = (String) studentRow.get("id");
-        var mastersRows = graphNodeRepository.findMastersByStudentAndSubject(studentNodeId, subject);
+        var mastersRows = queryGraphRepository.findMastersByStudentAndSubject(studentNodeId, subject);
         boolean mastersAvailable = !mastersRows.isEmpty();
 
         Map<String, Double> kpMasteryMap;      // kpId → mastery weight
@@ -92,7 +92,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
                     .collect(Collectors.toList());
         } else {
             // MASTERS 降级：查 TESTED 路径 + MySQL exam_record 计算原始得分率
-            var testedKps = graphNodeRepository.findTestedKpsByStudentAndSubject(studentNo, subject);
+            var testedKps = queryGraphRepository.findTestedKpsByStudentAndSubject(studentNo, subject);
             kpMasteryMap = new HashMap<>();
             kpNameMap = new HashMap<>();
             for (var row : testedKps) {
@@ -111,7 +111,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         // Step 3: 展开前置依赖链
         List<Map<String, Object>> prereqRows = weakKpIds.isEmpty()
                 ? Collections.emptyList()
-                : graphNodeRepository.findPrerequisitesUpstream(weakKpIds, maxHops);
+                : queryGraphRepository.findPrerequisitesUpstream(weakKpIds, maxHops);
         Set<String> preKpIds = new HashSet<>();
         for (var row : prereqRows) {
             String toKpId = (String) row.get("toKpId");
@@ -123,7 +123,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         // Step 4: 补全前置 KP 的掌握度
         if (!preKpIds.isEmpty()) {
             List<String> preKpIdList = new ArrayList<>(preKpIds);
-            var preMasters = graphNodeRepository.findMastersByStudentAndKpIds(studentNodeId, preKpIdList);
+            var preMasters = queryGraphRepository.findMastersByStudentAndKpIds(studentNodeId, preKpIdList);
             for (var row : preMasters) {
                 String kpId = (String) row.get("kpId");
                 double weight = ((Number) row.get("weight")).doubleValue();
@@ -260,7 +260,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
     }
 
     private GraphNodeData buildKpNode(String id, String name, String subject) {
-        KnowledgePointNode kp = new KnowledgePointNode(name, subject);
+        KnowledgePointNode kp = new KnowledgePointNode(name);
         kp.setId(id);
         return GraphDataConverter.toNodeData(kp);
     }

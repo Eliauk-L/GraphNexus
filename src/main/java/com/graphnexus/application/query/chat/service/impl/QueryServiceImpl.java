@@ -12,9 +12,9 @@ import com.graphnexus.application.query.prompt.service.PromptTemplateService;
 import com.graphnexus.application.query.chat.service.QueryService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import com.graphnexus.application.graph.core.model.GraphNodeData;
+import com.graphnexus.application.graph.construction.model.GraphNodeData;
 import com.graphnexus.infrastructure.neo4j.node.StudentNode;
-import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
+import com.graphnexus.infrastructure.neo4j.repository.QueryGraphRepository;
 import com.graphnexus.infrastructure.mysql.query.entity.QueryTaskDO;
 import com.graphnexus.infrastructure.mysql.query.repository.QueryTaskRepository;
 import com.graphnexus.infrastructure.mysql.query.entity.QueryTaskStatus;
@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class QueryServiceImpl implements QueryService {
 
-    private final GraphNodeRepository graphNodeRepository;
+    private final QueryGraphRepository queryGraphRepository;
     private final ExamRecordRepository examRecordRepository;
     private final StudentDiagnosisStrategy diagnosisStrategy;
     private final PromptTemplateService promptTemplateService;
@@ -419,7 +419,7 @@ public class QueryServiceImpl implements QueryService {
         String className = (String) row[2];
 
         // 从 Neo4j 获取 StudentNode（用于后续 MASTERS 剪枝）
-        var neo4jRow = graphNodeRepository.findStudentByNo(studentNo);
+        var neo4jRow = queryGraphRepository.findStudentByNo(studentNo);
         if (neo4jRow.isPresent()) {
             return buildStudentNode(neo4jRow.get());
         }
@@ -459,7 +459,7 @@ public class QueryServiceImpl implements QueryService {
         String name = (String) row[1];
         String className = (String) row[2];
 
-        var neo4jRow = graphNodeRepository.findStudentByNo(studentNo);
+        var neo4jRow = queryGraphRepository.findStudentByNo(studentNo);
         if (neo4jRow.isPresent()) {
             return buildStudentNode(neo4jRow.get());
         }

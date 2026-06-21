@@ -9,7 +9,7 @@ import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.ExamRecordDO;
 import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
-import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
+import com.graphnexus.infrastructure.neo4j.repository.FusionGraphRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,7 +29,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class MastersRecalculationService {
 
-    private final GraphNodeRepository graphNodeRepository;
+    private final FusionGraphRepository fusionGraphRepository;
     private final ExamRecordRepository examRecordRepository;
     private final FusionProperties fusionProperties;
     private final Map<String, WeightCalculationStrategy> weightStrategies;
@@ -40,7 +40,7 @@ public class MastersRecalculationService {
      */
     public int recalculateAll(String subject) {
         List<Map<String, Object>> allStudents =
-                graphNodeRepository.findAllStudentsBySubject(subject);
+                fusionGraphRepository.findAllStudentsBySubject(subject);
         return recalculate(allStudents, subject);
     }
 
@@ -63,17 +63,17 @@ public class MastersRecalculationService {
 
             Map<String, List<TestedRecord>> byKp = groupScoresByKp(studentNo);
 
-            List<GraphNodeRepository.MastersEdgeData> edges = new ArrayList<>();
+            List<FusionGraphRepository.MastersEdgeData> edges = new ArrayList<>();
             for (var entry : byKp.entrySet()) {
                 String kpName = entry.getKey();
                 WeightResult result = weightCalc.calculate(entry.getValue());
                 String kpId = findKpId(kpName, subject);
                 if (kpId != null) {
-                    edges.add(new GraphNodeRepository.MastersEdgeData(
+                    edges.add(new FusionGraphRepository.MastersEdgeData(
                             studentNodeId, kpId, result.weight(), result.summaryJson()));
                 }
             }
-            graphNodeRepository.batchUpsertMastersEdges(studentNodeId, edges);
+            fusionGraphRepository.batchUpsertMastersEdges(studentNodeId, edges);
             totalEdges += edges.size();
         }
         return totalEdges;
@@ -134,7 +134,7 @@ public class MastersRecalculationService {
 
     private String findKpId(String kpName, String subject) {
         List<Map<String, Object>> kps =
-                graphNodeRepository.findKnowledgePointsByNamesAndSubject(List.of(kpName), subject);
+                fusionGraphRepository.findKnowledgePointsByNamesAndSubject(List.of(kpName), subject);
         return kps.stream().map(m -> (String) m.get("id")).findFirst().orElse(null);
     }
 }

@@ -1,6 +1,7 @@
 package com.graphnexus.application.file.textbook.parser;
 
-import com.graphnexus.application.file.parse.ParseResult;
+import com.graphnexus.application.file.textbook.model.ParseResult;
+import com.graphnexus.application.file.textbook.parser.pdf.PdfBoxTextbookParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;

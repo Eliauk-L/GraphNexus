@@ -31,7 +31,10 @@ public enum NodeType {
     STUDENT("Student", StudentNode.class),
 
     /** 考试节点（CSV 成绩导入） */
-    EXAM("Exam", ExamNode.class);
+    EXAM("Exam", ExamNode.class),
+
+    /** 学科节点（标准化科目名称，如"数学""物理"） */
+    SUBJECT("Subject", SubjectNode.class);
 
     /**
      * Neo4j label 名称（如 {@code "Entity"}、{@code "KnowledgePoint"}）。

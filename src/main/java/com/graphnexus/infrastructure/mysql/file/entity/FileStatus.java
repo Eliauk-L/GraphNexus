@@ -9,10 +9,12 @@ package com.graphnexus.infrastructure.mysql.file.entity;
  *   PARSING    → PARSED | UPLOADED(failReason) | FAILED(failReason)
  *   PARSED     → EXTRACTING
  *   EXTRACTING → EXTRACTED | PARSED(failReason) | FAILED(failReason)
- *   EXTRACTED  → FUSING
- *   FUSING     → COMPLETED | EXTRACTED(failReason) | FAILED(failReason)
- *   COMPLETED  → PARSING | EXTRACTING | FUSING（手动重新处理）
- *   UPLOADED | PARSED | EXTRACTED | COMPLETED | FAILED → DELETING
+ *   EXTRACTED  → ALIGNING
+ *   ALIGNING   → ALIGNED | EXTRACTED(failReason) | FAILED(failReason)
+ *   ALIGNED    → FUSING
+ *   FUSING     → COMPLETED | ALIGNED(failReason) | FAILED(failReason)
+ *   COMPLETED  → EXTRACTING | ALIGNING | FUSING（手动重新处理）
+ *   UPLOADED | PARSED | EXTRACTED | ALIGNED | COMPLETED | FAILED → DELETING
  *   DELETING   → (terminal · 所有组件清除后逻辑删除)
  * </pre>
  *
@@ -35,6 +37,12 @@ public enum FileStatus {
 
     /** 抽取完成，Neo4j 子图已写入 */
     EXTRACTED,
+
+    /** 实体对齐进行中（跨文档 Entity→已有KP 匹配） */
+    ALIGNING,
+
+    /** 实体对齐完成 */
+    ALIGNED,
 
     /** 融合进行中（增量 KP 融合 + MASTERS 重算） */
     FUSING,
@@ -71,11 +79,13 @@ public enum FileStatus {
             case PARSING    -> java.util.Set.of(PARSED, FAILED, UPLOADED);
             case PARSED     -> java.util.Set.of(EXTRACTING, DELETING);
             case EXTRACTING -> java.util.Set.of(EXTRACTED, FAILED, PARSED);
-            case EXTRACTED  -> java.util.Set.of(FUSING, DELETING);
-            case FUSING     -> java.util.Set.of(COMPLETED, FAILED, EXTRACTED);
-            case COMPLETED  -> java.util.Set.of(PARSING, EXTRACTING, FUSING, DELETING);
+            case EXTRACTED  -> java.util.Set.of(ALIGNING, DELETING);
+            case ALIGNING   -> java.util.Set.of(ALIGNED, FAILED, EXTRACTED);
+            case ALIGNED    -> java.util.Set.of(FUSING, DELETING);
+            case FUSING     -> java.util.Set.of(COMPLETED, FAILED, ALIGNED);
+            case COMPLETED  -> java.util.Set.of(EXTRACTING, ALIGNING, FUSING, DELETING);
             case FAILED     -> java.util.Set.of(PARSING, DELETING);
-            case DELETING   -> java.util.Set.of(); // 终态
+            case DELETING   -> java.util.Set.of();
         };
     }
 }

@@ -1,7 +1,7 @@
 package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.textbook.model.TextbookBO;
-import com.graphnexus.application.file.parse.ParseResult;
+import com.graphnexus.application.file.textbook.model.ParseResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;

@@ -3,11 +3,10 @@ package com.graphnexus.application.file.grade.parser;
 import com.graphnexus.application.file.grade.model.GradeParsePayload;
 import com.graphnexus.application.file.grade.model.GradeParsePayload.StudentRecord;
 import com.graphnexus.application.file.grade.model.GradeParsePayload.ScoreDetail;
-import com.graphnexus.application.file.parse.FileParseRequest;
-import com.graphnexus.application.file.parse.FileParseResult;
+import com.graphnexus.application.file.parse.model.FileParseRequest;
+import com.graphnexus.application.file.parse.model.FileParseResult;
 import com.graphnexus.application.file.grade.model.GradeFileType;
 import com.graphnexus.common.exception.BusinessException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

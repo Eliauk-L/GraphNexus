@@ -119,6 +119,12 @@ public class ExtractionPromptBuilder {
                 6. 每类至少返回 1 条，实在没有返回空数组 []
                 7. **仅输出纯 JSON，禁止使用 markdown 代码块包裹**
                 8. JSON 顶层字段名必须为：entities, knowledgePoints, categories, alignments, entityRelations, prerequisites, categoryRelations
+
+                ## subject 命名规范（重要）
+                - knowledgePoint 中的 `subject` 字段使用**标准学科名称**，如"数学""物理""英语"
+                - 禁止使用含年级/学段的限定名，如"高中数学""初中数学"→ 统一为"数学"
+                - **必须与文档元数据中的学科名保持一致**（见下文 User Message 中的"学科"字段）
+                - 如果文档内容涵盖多个学科，知识点的 subject 仍与文档元数据学科一致
                 """;
     }
 

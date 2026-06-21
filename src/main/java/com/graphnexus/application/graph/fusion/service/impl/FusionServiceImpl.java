@@ -11,10 +11,11 @@ import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.fusion.entity.FusionLogDO;
 import com.graphnexus.infrastructure.mysql.fusion.repository.FusionLogRepository;
-import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
+import com.graphnexus.infrastructure.neo4j.repository.FusionGraphRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.neo4j.core.Neo4jTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -35,11 +36,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FusionServiceImpl implements FusionService {
 
-    private final GraphNodeRepository graphNodeRepository;
+    private final FusionGraphRepository fusionGraphRepository;
     private final FusionLogRepository fusionLogRepository;
     private final FusionProperties fusionProperties;
     private final Map<String, KpMatchingStrategy> matchingStrategies;
     private final ObjectMapper objectMapper;
+    private final Neo4jTemplate neo4jTemplate;
 
     private final FusionGroupBuilder groupBuilder;
     private final MastersRecalculationService mastersService;
@@ -55,7 +57,8 @@ public class FusionServiceImpl implements FusionService {
         LocalDateTime startTime = LocalDateTime.now();
 
         try {
-            List<Map<String, Object>> allKps = graphNodeRepository.findAllKnowledgePoints();
+            // ① 预计算阶段（事务外，纯内存计算）：查询全部 KP → 按 subject 构建融合组
+            List<Map<String, Object>> allKps = fusionGraphRepository.findAllKnowledgePoints();
             Set<String> subjects = allKps.stream()
                     .map(m -> (String) m.get("subject"))
                     .filter(Objects::nonNull)
@@ -63,29 +66,38 @@ public class FusionServiceImpl implements FusionService {
 
             KpMatchingStrategy matcher = getMatchingStrategy();
             double threshold = fusionProperties.getMatching().getThreshold();
-            List<FusionGroup> allGroups = new ArrayList<>();
-            int totalMasters = 0;
+            Map<String, List<FusionGroup>> groupsBySubject = new LinkedHashMap<>();
 
             for (String subject : subjects) {
                 List<Map<String, Object>> kps = allKps.stream()
                         .filter(m -> subject.equals(m.get("subject")))
                         .collect(Collectors.toList());
-
                 List<FusionGroup> groups = groupBuilder.build(kps, subject, matcher, threshold);
-                allGroups.addAll(groups);
-                groupBuilder.merge(groups);
-                totalMasters += mastersService.recalculateAll(subject);
+                if (!groups.isEmpty()) {
+                    groupsBySubject.put(subject, groups);
+                }
             }
 
+            // ② Neo4j 事务内：执行全部 merge + MASTERS 重算（见 ADR-020）
+            int totalMasters = neo4jTemplate.doInTransaction(tx -> {
+                int mastersCount = 0;
+                for (var entry : groupsBySubject.entrySet()) {
+                    groupBuilder.merge(entry.getValue());
+                    mastersCount += mastersService.recalculateAll(entry.getKey());
+                }
+                return mastersCount;
+            });
+
+            // ③ 事务成功后：记录 fusion log
+            List<FusionGroup> allGroups = groupsBySubject.values().stream()
+                    .flatMap(List::stream).collect(Collectors.toList());
             String detailJson = buildFusionDetailJson(allGroups);
             updateLogCompleted(logEntry, allGroups.size(), totalMasters, detailJson, startTime);
 
             log.info("全量融合完成: {} 组 KP 合并, {} 条 MASTERS 边, fusionLogId={}",
                     allGroups.size(), totalMasters, logEntry.getId());
 
-            // 图谱变更事件 — 触发指标缓存失效（见 ADR-013 §4）
             eventPublisher.publishEvent(new GraphChangedEvent(this));
-
             return new FusionExecuteResult(logEntry.getId(), allGroups.size(), totalMasters);
 
         } catch (BusinessException e) {
@@ -93,7 +105,7 @@ public class FusionServiceImpl implements FusionService {
             throw e;
         } catch (Exception e) {
             updateLogFailed(logEntry);
-            log.error("全量融合失败: {}", e.getMessage(), e);
+            log.error("全量融合失败（Neo4j 事务已回滚）: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.B0001, "融合操作失败: " + e.getMessage());
         }
     }
@@ -111,8 +123,9 @@ public class FusionServiceImpl implements FusionService {
         LocalDateTime startTime = LocalDateTime.now();
 
         try {
+            // ① 预计算阶段（事务外）
             List<Map<String, Object>> affectedKps =
-                    graphNodeRepository.findKnowledgePointsByNamesAndSubject(kpNames, subject);
+                    fusionGraphRepository.findKnowledgePointsByNamesAndSubject(kpNames, subject);
             if (affectedKps.size() < 2) {
                 updateLogCompleted(logEntry, 0, 0, "[]", startTime);
                 return new FusionExecuteResult(logEntry.getId(), 0, 0);
@@ -120,13 +133,15 @@ public class FusionServiceImpl implements FusionService {
 
             KpMatchingStrategy matcher = getMatchingStrategy();
             double threshold = fusionProperties.getMatching().getThreshold();
-
             List<FusionGroup> groups = groupBuilder.build(affectedKps, subject, matcher, threshold);
-            groupBuilder.merge(groups);
-
             List<Map<String, Object>> affectedStudents =
-                    graphNodeRepository.findStudentsByKpNamesAndSubject(kpNames, subject);
-            int totalMasters = mastersService.recalculate(affectedStudents, subject);
+                    fusionGraphRepository.findStudentsByKpNamesAndSubject(kpNames, subject);
+
+            // ② Neo4j 事务内：执行 merge + MASTERS 重算（见 ADR-020）
+            int totalMasters = neo4jTemplate.doInTransaction(tx -> {
+                groupBuilder.merge(groups);
+                return mastersService.recalculate(affectedStudents, subject);
+            });
 
             String detailJson = buildFusionDetailJson(groups);
             updateLogCompleted(logEntry, groups.size(), totalMasters, detailJson, startTime);

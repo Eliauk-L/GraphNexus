@@ -6,7 +6,7 @@ import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.fusion.entity.FusionLogDO;
 import com.graphnexus.infrastructure.mysql.fusion.repository.FusionLogRepository;
-import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
+import com.graphnexus.infrastructure.neo4j.repository.FusionGraphRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -28,7 +28,7 @@ import java.util.Map;
 public class FusionRollbackService {
 
     private final FusionLogRepository fusionLogRepository;
-    private final GraphNodeRepository graphNodeRepository;
+    private final FusionGraphRepository fusionGraphRepository;
     private final ObjectMapper objectMapper;
 
     /**
@@ -78,7 +78,7 @@ public class FusionRollbackService {
         for (Map<String, Object> group : fusionDetails) {
             String targetKpId = (String) group.get("targetKpId");
             // 删除规范 KP
-            graphNodeRepository.deleteKnowledgePoints(List.of(targetKpId));
+            fusionGraphRepository.deleteKnowledgePoints(List.of(targetKpId));
 
             // 重建源 KP
             @SuppressWarnings("unchecked")
@@ -86,7 +86,7 @@ public class FusionRollbackService {
                     (List<Map<String, Object>>) group.get("sourceKpProperties");
             if (sourceKpPropsList != null) {
                 for (Map<String, Object> props : sourceKpPropsList) {
-                    graphNodeRepository.createNode("KnowledgePoint", props);
+                    fusionGraphRepository.createNode("KnowledgePoint", props);
                     restoredKpCount++;
                 }
             }
@@ -114,18 +114,18 @@ public class FusionRollbackService {
             if (studentNodeId == null) continue;
 
             if (oldWeightObj == null) {
-                graphNodeRepository.deleteMastersEdge(studentNodeId, kpName);
+                fusionGraphRepository.deleteMastersEdge(studentNodeId, kpName);
             } else {
                 double oldWeight = ((Number) oldWeightObj).doubleValue();
                 String oldDesc = (String) snap.getOrDefault("oldDescription", "");
-                graphNodeRepository.updateMastersWeight(studentNodeId, kpName, oldWeight, oldDesc);
+                fusionGraphRepository.updateMastersWeight(studentNodeId, kpName, oldWeight, oldDesc);
             }
         }
     }
 
     private String findStudentNodeId(String studentNo, String kpName) {
         List<Map<String, Object>> students =
-                graphNodeRepository.findStudentsByKpNames(List.of(kpName));
+                fusionGraphRepository.findStudentsByKpNames(List.of(kpName));
         return students.stream()
                 .filter(s -> studentNo.equals(s.get("studentNo")))
                 .map(s -> (String) s.get("studentNodeId"))

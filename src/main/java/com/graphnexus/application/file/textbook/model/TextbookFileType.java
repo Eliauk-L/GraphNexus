@@ -1,6 +1,6 @@
 package com.graphnexus.application.file.textbook.model;
 
-import com.graphnexus.application.file.parse.FileParseType;
+import com.graphnexus.application.file.parse.model.FileParseType;
 
 public enum TextbookFileType implements FileParseType {
     PDF,

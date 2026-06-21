@@ -3,7 +3,7 @@ package com.graphnexus.api.file.controller;
 import com.graphnexus.api.file.dto.textbook.TextbookVO;
 import com.graphnexus.api.file.dto.textbook.TextbookParseResultVO;
 import com.graphnexus.application.file.textbook.model.TextbookBO;
-import com.graphnexus.application.file.parse.ParseResult;
+import com.graphnexus.application.file.textbook.model.ParseResult;
 import com.graphnexus.application.file.textbook.service.TextbookService;
 import com.graphnexus.common.ApiResult;
 import com.graphnexus.common.PageResult;

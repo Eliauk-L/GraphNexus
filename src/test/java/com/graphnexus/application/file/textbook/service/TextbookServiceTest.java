@@ -2,15 +2,15 @@ package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.textbook.model.TextbookBO;
 import com.graphnexus.application.file.parse.FileParserRegistry;
-import com.graphnexus.application.file.parse.ParseResult;
-import com.graphnexus.application.file.textbook.parser.MinerUTextbookParser;
-import com.graphnexus.application.file.textbook.parser.PdfBoxTextbookParser;
+import com.graphnexus.application.file.textbook.model.ParseResult;
+import com.graphnexus.application.file.textbook.parser.pdf.mineru.MinerUTextbookParser;
+import com.graphnexus.application.file.textbook.parser.pdf.PdfBoxTextbookParser;
 import com.graphnexus.common.exception.BusinessException;
-import com.graphnexus.application.file.textbook.parser.mineru.config.MinerUProperties;
+import com.graphnexus.application.file.textbook.parser.pdf.mineru.config.MinerUProperties;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
-import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
+import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,7 +50,7 @@ class TextbookServiceTest {
     private FileStorageService fileStorageService;
 
     @Mock
-    private GraphNodeRepository graphNodeRepository;
+    private ConstructionGraphRepository graphNodeRepository;
 
     @Mock
     private MinerUTextbookParser minerUTextbookParser;

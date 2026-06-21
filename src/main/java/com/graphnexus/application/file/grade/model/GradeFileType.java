@@ -1,6 +1,6 @@
 package com.graphnexus.application.file.grade.model;
 
-import com.graphnexus.application.file.parse.FileParseType;
+import com.graphnexus.application.file.parse.model.FileParseType;
 
 /**
  * 成绩文件格式枚举，表示具体的文件扩展名类型。

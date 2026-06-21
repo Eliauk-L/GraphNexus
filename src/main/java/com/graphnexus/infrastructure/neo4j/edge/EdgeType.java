@@ -46,7 +46,10 @@ public enum EdgeType {
     TESTED("TESTED"),
 
     /** 学生掌握度：Student → KnowledgePoint（聚合边，见 ADR-007） */
-    MASTERS("MASTERS");
+    MASTERS("MASTERS"),
+
+    /** 学科归属：KnowledgePoint|Exam|FileNode → SubjectNode */
+    BELONGS_TO_SUBJECT("BELONGS_TO_SUBJECT");
 
     /**
      * Neo4j relationship type 名称（如 {@code "EXTRACTS"}、{@code "PREREQUISITE_OF"}）。

@@ -3,7 +3,7 @@ package com.graphnexus.application.graph.fusion.service.impl;
 import com.graphnexus.application.graph.fusion.model.FusionGroup;
 import com.graphnexus.application.graph.fusion.model.KpCandidate;
 import com.graphnexus.application.graph.fusion.strategy.KpMatchingStrategy;
-import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
+import com.graphnexus.infrastructure.neo4j.repository.FusionGraphRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FusionGroupBuilder {
 
-    private final GraphNodeRepository graphNodeRepository;
+    private final FusionGraphRepository fusionGraphRepository;
 
     /**
      * 构建融合分组：两两匹配 → Union-Find 聚类 → 选主 KP。
@@ -51,6 +51,21 @@ public class FusionGroupBuilder {
         int[] parent = new int[n];
         for (int i = 0; i < n; i++) parent[i] = i;
 
+        // 前置 pass：跨源精确名称匹配（name 归一化后 equals + 跨源 DOCUMENT↔CSV_IMPORT）
+        // 确保文档 KP 和考试 KP 同名必然合并，不依赖 FuzzyMatch 阈值
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                KpCandidate a = candidates.get(i);
+                KpCandidate b = candidates.get(j);
+                if (a.name() != null && b.name() != null
+                        && a.name().trim().equalsIgnoreCase(b.name().trim())
+                        && !a.fusionSource().equals(b.fusionSource())) {
+                    union(parent, i, j);
+                }
+            }
+        }
+
+        // FuzzyMatch pass：对未在前置 pass 中合并的 KP 做模糊匹配
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
                 if (matcher.match(candidates.get(i), candidates.get(j)) >= threshold) {
@@ -98,10 +113,10 @@ public class FusionGroupBuilder {
     public void merge(List<FusionGroup> groups) {
         for (FusionGroup group : groups) {
             for (String sourceId : group.sourceKpIds()) {
-                graphNodeRepository.redirectEdges(sourceId, group.targetKpId());
+                fusionGraphRepository.redirectEdges(sourceId, group.targetKpId());
             }
-            graphNodeRepository.deleteKnowledgePoints(group.sourceKpIds());
-            graphNodeRepository.updateNodeProperties("KnowledgePoint", group.targetKpProps());
+            fusionGraphRepository.deleteKnowledgePoints(group.sourceKpIds());
+            fusionGraphRepository.updateNodeProperties("KnowledgePoint", group.targetKpProps());
             log.debug("融合组 {}: {} → {}", group.groupId(), group.sourceKpIds(), group.targetKpId());
         }
     }

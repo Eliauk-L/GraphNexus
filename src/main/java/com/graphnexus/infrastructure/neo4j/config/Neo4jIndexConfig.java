@@ -64,15 +64,15 @@ public class Neo4jIndexConfig {
             log.warn("创建索引 graphnode_id 失败（可能已存在）: {}", e.getMessage());
         }
 
-        // Student 与 KnowledgePoint 查询索引（intelligent-qa T14）
+        // Student 查询索引 + Subject 节点名称索引
         try {
             neo4jClient.query(
                     "CREATE INDEX student_student_no IF NOT EXISTS FOR (s:Student) ON (s.studentNo)"
             ).run();
             neo4jClient.query(
-                    "CREATE INDEX kp_subject IF NOT EXISTS FOR (kp:KnowledgePoint) ON (kp.subject)"
+                    "CREATE INDEX subject_name IF NOT EXISTS FOR (s:Subject) ON (s.name)"
             ).run();
-            log.info("QA 查询索引就绪（Student.studentNo, KnowledgePoint.subject）");
+            log.info("QA 查询索引就绪（Student.studentNo, Subject.name）");
         } catch (Exception e) {
             log.warn("创建 QA 索引失败（可能已存在）: {}", e.getMessage());
         }

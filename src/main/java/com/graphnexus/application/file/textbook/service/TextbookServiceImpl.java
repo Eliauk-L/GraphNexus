@@ -1,18 +1,18 @@
 package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.textbook.model.TextbookBO;
-import com.graphnexus.application.file.parse.FileParseRequest;
-import com.graphnexus.application.file.parse.ParseResult;
+import com.graphnexus.application.file.parse.model.FileParseRequest;
+import com.graphnexus.application.file.textbook.model.ParseResult;
 import com.graphnexus.application.file.parse.FileParser;
 import com.graphnexus.application.file.parse.FileParserRegistry;
-import com.graphnexus.application.file.parse.TextbookParser;
+import com.graphnexus.application.file.textbook.parser.TextbookParser;
 import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
-import com.graphnexus.infrastructure.neo4j.repository.GraphNodeRepository;
+import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +44,7 @@ public class TextbookServiceImpl implements TextbookService {
 
     private final TextbookRepository textbookRepository;
     private final FileStorageService fileStorageService;
-    private final GraphNodeRepository graphNodeRepository;
+    private final ConstructionGraphRepository constructionGraphRepository;
     private final TextbookUploadService uploadService;
     private final FileParserRegistry fileParserRegistry;
     private final ApplicationEventPublisher eventPublisher;
@@ -197,7 +197,7 @@ public class TextbookServiceImpl implements TextbookService {
                     refCount - 1, id, doc.getFilePath());
         }
 
-        graphNodeRepository.deleteByDocumentId(String.valueOf(id));
+        constructionGraphRepository.deleteByDocumentId(String.valueOf(id));
 
         doc.markDeleted();
         textbookRepository.save(doc);

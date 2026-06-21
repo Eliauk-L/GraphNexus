@@ -1,7 +1,7 @@
 package com.graphnexus.application.file.textbook.service;
 
 import com.graphnexus.application.file.textbook.model.TextbookBO;
-import com.graphnexus.application.file.parse.ParseResult;
+import com.graphnexus.application.file.textbook.model.ParseResult;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 

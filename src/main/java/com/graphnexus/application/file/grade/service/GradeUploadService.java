@@ -4,7 +4,7 @@ import com.graphnexus.application.file.grade.model.GradeUploadResultBO;
 import com.graphnexus.application.file.grade.model.GradeParsePayload;
 import com.graphnexus.application.file.grade.model.GradeParsePayload.StudentRecord;
 import com.graphnexus.application.file.grade.event.GradeUploadedEvent;
-import com.graphnexus.application.file.parse.FileParseRequest;
+import com.graphnexus.application.file.parse.model.FileParseRequest;
 import com.graphnexus.application.file.parse.FileParser;
 import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.application.file.upload.UploadService;

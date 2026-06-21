@@ -11,9 +11,8 @@ import java.util.Map;
 /**
  * Neo4j 考试节点 — CSV 成绩导入的考试实体。
  *
- * <p>以 {@code examNo}（考试编号）做 MERGE key，通过 ATTENDED 边被多
- * 个 Student 引用，通过 TESTED 边连接到考查的 KnowledgePoint。
- * 见 DESIGN §2.3。</p>
+ * <p>以 {@code examNo}（考试编号）做 MERGE key，通过 ATTENDED / TESTED 边关联 Student 和 KnowledgePoint。
+ * 学科信息通过 BELONGS_TO_SUBJECT 边关联 SubjectNode（见 ADR-019）。</p>
  *
  * @author Jay
  * @date 2026/06/15
@@ -33,15 +32,11 @@ public class ExamNode extends GraphNode {
     /** 考试日期 */
     private LocalDate examDate;
 
-    /** 学科 */
-    private String subject;
-
-    public ExamNode(String examNo, String name, LocalDate examDate, String subject) {
+    public ExamNode(String examNo, String name, LocalDate examDate) {
         super(NodeType.EXAM.getLabel());
         this.examNo = examNo;
         this.name = name;
         this.examDate = examDate;
-        this.subject = subject;
     }
 
     @Override
@@ -50,7 +45,6 @@ public class ExamNode extends GraphNode {
         props.put("examNo", this.getExamNo());
         props.put("name", this.getName());
         props.put("examDate", this.getExamDate() != null ? this.getExamDate().toString() : null);
-        props.put("subject", this.getSubject());
         return props;
     }
 }

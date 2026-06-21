@@ -1,11 +1,12 @@
 package com.graphnexus.application.file.textbook.parser;
 
-import com.graphnexus.application.file.parse.ParseResult;
+import com.graphnexus.application.file.textbook.model.ParseResult;
+import com.graphnexus.application.file.textbook.parser.pdf.mineru.MinerUTextbookParser;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import com.graphnexus.application.file.textbook.parser.mineru.client.MinerUApiClient;
-import com.graphnexus.application.file.textbook.parser.mineru.client.MinerUClient;
-import com.graphnexus.application.file.textbook.parser.mineru.config.MinerUProperties;
+import com.graphnexus.application.file.textbook.parser.pdf.mineru.client.MinerUApiClient;
+import com.graphnexus.application.file.textbook.parser.pdf.mineru.client.MinerUClient;
+import com.graphnexus.application.file.textbook.parser.pdf.mineru.config.MinerUProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

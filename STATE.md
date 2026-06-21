@@ -6,9 +6,33 @@
 
 ## 当前活动
 
-- **Change ID**: `jpa-query-refactor`
-- **当前阶段**: DEV ✅ 完成（T01-T05 全部 done，下一步 TEST/REVIEW）
+- **Change ID**: `graph-construction-refactor`
+- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → TASK ✅ → DEV ✅ → 下一步 TEST/REVIEW
 - **当前角色**: Dev → 下一步 Reviewer
+- **最后更新**: 2026-06-20
+
+## DEV 执行记录
+
+| Task ID | 名称 | 提交 | 状态 |
+|---------|------|------|:--:|
+| T01 | SQL DDL — DROP csv columns + index | `905542e` | ✅ |
+| T02 | pom.xml — Apache POI 5.2.5 | `905542e` | ✅ |
+| T03 | ErrorCode A0022 exam_no duplicate | `905542e` | ✅ |
+| T04 | GradeFileType CSV + EXCEL split | `ea04746` | ✅ |
+| T05 | CsvParsePayload → GradeParsePayload | `ea04746` | ✅ |
+| T06 | ExamRecordDO csv field removal | `ea04746` | ✅ |
+| T07 | Grade BO/VO csv field cleanup | `ea04746` | ✅ |
+| T08 | CsvGradeParser adapt new enums | `0a08d13` | ✅ |
+| T09 | ExcelGradeParser new | `0a08d13` | ✅ |
+| T10 | GradeUploadedEvent + GradeDeletedEvent | `0a08d13` | ✅ |
+| T11 | ExamRecordRepository refactor | `0a08d13` | ✅ |
+| T12 | GradeUploadService event-driven | `0a08d13` | ✅ |
+| T13 | GradeServiceImpl spec query + event | `0a08d13` | ✅ |
+| T14 | GradeGraphEventListener new | `0a08d13` | ✅ |
+| T15 | GradeUploadedEventListener @Order(2) | `0a08d13` | ✅ |
+| T16 | GradeController conditional query | `0a08d13` | ✅ |
+| T17 | CsvGradeParserTest adapt | `0a08d13` | ✅ |
+| T18 | ExcelGradeParserTest new | `9b9ba7b` | ✅ |
 - **最后更新**: 2026-06-19
 
 ## DEV 执行记录
