@@ -40,48 +40,68 @@ const EDGE_COLORS: Record<string, string> = {
 }
 
 export function transformGraphSubgraphVO(vo: GraphSubgraphVO): NvlGraphData {
-  const relIdCounter = (() => { let i = 0; return () => `r-${i++}` })()
+  const nodeIds = new Set(vo.nodes.map((n) => n.id))
 
   return {
     nodes: vo.nodes.map((n) => ({
       id: n.id,
       captions: [{ value: nodeLabel(n.nodeType, {}) }],
-      color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
-      size: NODE_SIZES[n.nodeType] ?? 28,
+      color: getNodeColor(n.nodeType),
+      size: getNodeSize(n.nodeType),
     } satisfies Node)),
-    relationships: vo.edges.map((e) => ({
-      id: relIdCounter(),
-      from: e.sourceNodeId,
-      to: e.targetNodeId,
-      type: e.edgeType,
-      captions: [{ value: e.edgeType }],
-      color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
-      width: 1.5,
-    } satisfies Relationship)),
+    relationships: vo.edges
+      .filter((e) => nodeIds.has(e.sourceNodeId) && nodeIds.has(e.targetNodeId))
+      .map((e, i) => ({
+        id: `r-${i}`,
+        from: e.sourceNodeId,
+        to: e.targetNodeId,
+        type: e.edgeType,
+        captions: [{ value: shortEdgeLabel(e.edgeType) }],
+        color: getEdgeColor(e.edgeType),
+        width: 1.5,
+      } satisfies Relationship)),
   }
 }
 
 export function transformSubgraphResponse(res: SubgraphResponse): NvlGraphData {
-  const relIdCounter = (() => { let i = 0; return () => `sr-${i++}` })()
+  const nodeIds = new Set(res.nodes.map((n) => n.id))
 
   return {
     nodes: res.nodes.map((n) => ({
       id: n.id,
       captions: [{ value: nodeLabel(n.nodeType, n.properties) }],
-      color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
-      size: NODE_SIZES[n.nodeType] ?? 28,
-      properties: n.properties,
-    } satisfies Node & { properties?: Record<string, unknown> })),
-    relationships: res.edges.map((e) => ({
-      id: relIdCounter(),
-      from: e.sourceNodeId,
-      to: e.targetNodeId,
-      type: e.edgeType,
-      captions: [{ value: e.edgeType }],
-      color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
-      width: 1 + Math.min(e.weight, 3),
-    } satisfies Relationship)),
+      color: getNodeColor(n.nodeType),
+      size: getNodeSize(n.nodeType),
+    } satisfies Node)),
+    relationships: res.edges
+      .filter((e) => nodeIds.has(e.sourceNodeId) && nodeIds.has(e.targetNodeId))
+      .map((e, i) => ({
+        id: `sr-${i}`,
+        from: e.sourceNodeId,
+        to: e.targetNodeId,
+        type: e.edgeType,
+        captions: [{ value: shortEdgeLabel(e.edgeType) }],
+        color: getEdgeColor(e.edgeType),
+        width: 1 + Math.min(e.weight, 3),
+      } satisfies Relationship)),
   }
+}
+
+function getNodeColor(nodeType: string): string {
+  return NODE_COLORS[nodeType] ?? '#8C8C8C'
+}
+
+function getNodeSize(nodeType: string): number {
+  return NODE_SIZES[nodeType] ?? 28
+}
+
+function getEdgeColor(edgeType: string): string {
+  return EDGE_COLORS[edgeType] ?? '#8C8C8C'
+}
+
+/** 缩短边标签：BELONGS_TO_SUBJECT → B_SUBJECT */
+function shortEdgeLabel(type: string): string {
+  return type.length > 16 ? type.replace('BELONGS_TO_', 'B_').replace('PREREQUISITE_', 'PRE_') : type
 }
 
 function nodeLabel(nodeType: string, props: Record<string, unknown>): string {
