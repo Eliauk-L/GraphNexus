@@ -9,8 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@neo4j-nvl/base": "^1.2.0",
     "@lucide/vue": "^1.20.0",
+    "vis-data": "^7.1.0",
+    "vis-network": "^9.1.0",
     "axios": "^1.7.0",
     "highlight.js": "^11.10.0",
     "marked": "^14.0.0",

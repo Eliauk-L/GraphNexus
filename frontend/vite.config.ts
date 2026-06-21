@@ -13,9 +13,6 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  optimizeDeps: {
-    exclude: ['@neo4j-nvl/layout-workers'],
-  },
   server: {
     port: 5173,
     strictPort: true,

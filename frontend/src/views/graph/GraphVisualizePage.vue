@@ -3,7 +3,7 @@ import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGraphStore } from './graphStore'
 import { transformGraphSubgraphVO } from './graphAdapter'
-import type { NvlGraphData } from './graphAdapter'
+import type { VisGraphData } from './graphAdapter'
 import BaseSelect from '@/common/components/BaseSelect.vue'
 import BaseCard from '@/common/components/BaseCard.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
@@ -11,7 +11,7 @@ import GraphCanvas from './components/GraphCanvas.vue'
 const store = useGraphStore()
 const route = useRoute()
 const selectedDocId = ref<number | null>(null)
-const g6Data = ref<NvlGraphData | null>(null)
+const graphData = ref<VisGraphData | null>(null)
 
 const docOptions = computed(() =>
   store.documents.map((d) => ({ label: `${d.name} (ID: ${d.documentId})`, value: d.documentId }))
@@ -21,7 +21,7 @@ async function handleSelect(docId: number) {
   selectedDocId.value = docId
   await store.loadSubgraph(docId)
   if (store.currentGraph) {
-    g6Data.value = transformGraphSubgraphVO(store.currentGraph)
+    graphData.value = transformGraphSubgraphVO(store.currentGraph)
   }
 }
 
@@ -54,7 +54,7 @@ onMounted(async () => {
         </div>
       </template>
 
-      <GraphCanvas v-if="g6Data" :data="g6Data" />
+      <GraphCanvas v-if="graphData" :data="graphData" />
       <div v-else class="graph-empty body" style="color: var(--color-text-tertiary)">
         选择文档以查看知识图谱子图
       </div>
