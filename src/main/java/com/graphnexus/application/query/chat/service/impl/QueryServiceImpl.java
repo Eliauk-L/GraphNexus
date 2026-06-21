@@ -353,7 +353,7 @@ public class QueryServiceImpl implements QueryService {
         if (cachedSubjects == null || cachedSubjects.isEmpty()) {
             synchronized (this) {
                 if (cachedSubjects == null || cachedSubjects.isEmpty()) {
-                    cachedSubjects = examRecordRepository.findDistinctSubjectByIsDeletedAndSubjectIsNotNullOrderBySubject(0);
+                    cachedSubjects = examRecordRepository.findDistinctSubjectBySubjectIsNotNullOrderBySubject();
                     log.info("从 MySQL exam_record 加载学科列表: {}", cachedSubjects);
                 }
             }

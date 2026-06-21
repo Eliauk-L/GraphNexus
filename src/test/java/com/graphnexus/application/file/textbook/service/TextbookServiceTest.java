@@ -221,7 +221,7 @@ class TextbookServiceTest {
     @Test
     @DisplayName("查询不存在文档应抛 A0006")
     void getNonExistentShouldThrow() {
-        when(textbookRepository.findByIdAndIsDeletedAndStatusNot(999L, 0, FileStatus.DELETING))
+        when(textbookRepository.findByIdAndStatusNot(999L, FileStatus.DELETING))
                 .thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -244,7 +244,7 @@ class TextbookServiceTest {
 
         assertDoesNotThrow(() -> fileService.deleteTextBook(1L));
 
-        verify(textbookRepository).save(argThat(doc -> doc.getIsDeleted() == 1));
+        verify(textbookRepository).delete(any());
         verify(fileStorageService).deleteFile(anyString());
         verify(graphNodeRepository).deleteByDocumentId("1");
     }

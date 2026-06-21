@@ -76,7 +76,7 @@ class ConstructionServiceTest {
     @Test
     @DisplayName("文档不存在 → BusinessException A0006")
     void testExtractDocumentNotFound_ShouldThrow() {
-        when(textbookRepository.findByIdAndIsDeletedAndStatusNot(99L, 0, FileStatus.DELETING))
+        when(textbookRepository.findByIdAndStatusNot(99L, FileStatus.DELETING))
                 .thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -87,7 +87,7 @@ class ConstructionServiceTest {
     @Test
     @DisplayName("文档状态为 UPLOADED → BusinessException A0009")
     void testExtractDocumentNotCompleted_ShouldThrow() {
-        when(textbookRepository.findByIdAndIsDeletedAndStatusNot(2L, 0, FileStatus.DELETING))
+        when(textbookRepository.findByIdAndStatusNot(2L, FileStatus.DELETING))
                 .thenReturn(Optional.of(uploadedDoc));
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -99,7 +99,7 @@ class ConstructionServiceTest {
     @Test
     @DisplayName("textContent 为空 → BusinessException A0008")
     void testExtractEmptyText_ShouldThrow() {
-        when(textbookRepository.findByIdAndIsDeletedAndStatusNot(3L, 0, FileStatus.DELETING))
+        when(textbookRepository.findByIdAndStatusNot(3L, FileStatus.DELETING))
                 .thenReturn(Optional.of(emptyDoc));
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -114,7 +114,7 @@ class ConstructionServiceTest {
         blankDoc.setId(4L);
         blankDoc.setStatus(FileStatus.COMPLETED);
         blankDoc.setTextContent("   \n  \t  ");
-        when(textbookRepository.findByIdAndIsDeletedAndStatusNot(4L, 0, FileStatus.DELETING))
+        when(textbookRepository.findByIdAndStatusNot(4L, FileStatus.DELETING))
                 .thenReturn(Optional.of(blankDoc));
 
         BusinessException ex = assertThrows(BusinessException.class,

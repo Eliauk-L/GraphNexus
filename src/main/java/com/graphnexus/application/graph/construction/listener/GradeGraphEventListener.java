@@ -49,7 +49,7 @@ public class GradeGraphEventListener {
         String examNo = event.getExamNo();
         String subject = event.getSubject();
 
-        List<ExamRecordDO> records = examRecordRepository.findByExamNoAndIsDeleted(examNo, 0);
+        List<ExamRecordDO> records = examRecordRepository.findByExamNo(examNo);
         if (records.isEmpty()) {
             log.warn("收到 GradeUploadedEvent 但 MySQL 中无记录: examNo={}", examNo);
             return;

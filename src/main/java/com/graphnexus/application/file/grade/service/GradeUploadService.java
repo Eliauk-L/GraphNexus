@@ -74,7 +74,7 @@ public class GradeUploadService implements UploadService {
         }
 
         // ② exam_no 去重检查
-        if (examRecordRepository.existsByExamNoAndIsDeletedFalse(payload.examNo())) {
+        if (examRecordRepository.existsByExamNo(payload.examNo())) {
             throw new BusinessException(ErrorCode.A0022,
                     "考试编号 " + payload.examNo() + " 已存在，请先删除再重新上传");
         }

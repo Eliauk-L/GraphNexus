@@ -69,8 +69,7 @@ public class TextbookUploadService implements UploadService {
         String filePath = fileStorageService.getFileUrl(objectKey);
 
         // ⑤ 检查是否已有相同内容文件（复用 MinIO 路径，跳过上传）
-        var existing = textbookRepository.findFirstByDocumentNoAndIsDeletedAndStatusNotOrderByCreateTimeAsc(
-                documentNo, 0, FileStatus.DELETING);
+        var existing = textbookRepository.findFirstByDocumentNoAndStatusNotOrderByCreateTimeAsc(documentNo, FileStatus.DELETING);
         if (existing.isPresent()) {
             filePath = existing.get().getFilePath();
             log.info("内容重复文件，复用 MinIO 文件: documentNo={}, filePath={}", documentNo, filePath);

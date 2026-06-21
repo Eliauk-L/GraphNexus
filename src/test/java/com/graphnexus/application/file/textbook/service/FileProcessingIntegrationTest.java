@@ -90,7 +90,7 @@ class FileProcessingIntegrationTest {
         assertThat(result.getDocumentNo()).isNotBlank();
         assertThat(result.getFilePath()).isNotBlank();
 
-        TextbookDO doc = textbookRepository.findByIdAndIsDeletedAndStatusNot(result.getId(), 0, FileStatus.DELETING).orElseThrow();
+        TextbookDO doc = textbookRepository.findByIdAndStatusNot(result.getId(), FileStatus.DELETING).orElseThrow();
         assertThat(doc.getStatus()).isEqualTo(FileStatus.UPLOADED);
 
         uploadedDocId = result.getId();
@@ -145,9 +145,8 @@ class FileProcessingIntegrationTest {
 
         textBookService.deleteTextBook(uploadedDocId);
 
-        TextbookDO doc = textbookRepository.findById(uploadedDocId).orElseThrow();
-        assertThat(doc.getIsDeleted()).isEqualTo(1);
-        assertThat(textbookRepository.findByIdAndIsDeletedAndStatusNot(uploadedDocId, 0, FileStatus.DELETING)).isEmpty();
+        // physical delete: doc is removed from DB
+        assertThat(textbookRepository.findById(uploadedDocId)).isEmpty();
     }
 
     // ======================== 辅助方法 ========================

@@ -93,7 +93,7 @@ public class MastersRecalculationService {
 
     /** 从 MySQL exam_record 按 kpName 分组提取成绩 */
     private Map<String, List<TestedRecord>> groupScoresByKp(String studentNo) {
-        List<ExamRecordDO> records = examRecordRepository.findByStudentNoAndIsDeleted(studentNo, 0);
+        List<ExamRecordDO> records = examRecordRepository.findByStudentNo(studentNo);
 
         Map<String, List<TestedRecord>> byKp = new HashMap<>();
         for (ExamRecordDO rec : records) {

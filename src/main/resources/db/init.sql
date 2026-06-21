@@ -15,14 +15,12 @@ CREATE TABLE IF NOT EXISTS textbook (
     status          VARCHAR(20)     NOT NULL DEFAULT 'UPLOADED' COMMENT '文件状态 UPLOADED/PARSING/PARSED/EXTRACTING/EXTRACTED/FUSING/COMPLETED/FAILED',
     fail_reason     VARCHAR(512)    DEFAULT NULL COMMENT '失败原因',
     uploaded_by     BIGINT UNSIGNED DEFAULT NULL COMMENT '上传人ID FK→user_account.id',
-    is_deleted      TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '逻辑删除 0=否 1=是',
     create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_document_subject (document_no, subject),
     KEY idx_file_type (file_type),
     KEY idx_status (status),
     KEY idx_uploaded_by (uploaded_by)
-    KEY idx_is_deleted (is_deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教材文档元数据表';
 
 -- ALTER TABLE 增量迁移（已存在的 file 表 → textbook）：
@@ -48,13 +46,15 @@ CREATE TABLE IF NOT EXISTS exam_record (
     total_score INT                                   COMMENT '总分',
     class_rank  INT                                   COMMENT '班级排名',
     score_details JSON                                COMMENT '成绩明细 [{questionLabel, kpNames[], rawScore, maxScore}]',
-    is_deleted  TINYINT     NOT NULL DEFAULT 0        COMMENT '逻辑删除 0=正常 1=已删除',
+    csv_file_path VARCHAR(500)                        COMMENT '文件 MinIO 路径',
+    csv_md5     VARCHAR(32)                           COMMENT '文件 MD5 内容指纹',
     create_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_student_exam (student_no,exam_no),
     INDEX idx_exam_no (exam_no),
-    INDEX idx_student_no (student_no)
+    INDEX idx_student_no (student_no),
+    INDEX idx_csv_md5 (csv_md5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考试成绩记录表';
 
 -- down: 删除 exam_record 表

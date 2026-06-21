@@ -105,7 +105,7 @@ class QueryControllerIntegrationTest {
                 .subject(TEST_SUBJECT)
                 .examNo("QA-EXAM-001")
                 .examName("集成测试考试")
-                .isDeleted(0)
+                
                 .build();
         examRecordRepository.save(examRecord);
 

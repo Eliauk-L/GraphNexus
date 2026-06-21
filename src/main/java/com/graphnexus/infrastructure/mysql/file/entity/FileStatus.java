@@ -45,7 +45,7 @@ public enum FileStatus {
     /** 不可恢复错误 */
     FAILED,
 
-    /** 删除进行中 — 中间状态，等待 MinIO + Neo4j 清理完成后转为逻辑删除 */
+    /** 删除进行中 — 中间状态，等待 MinIO + Neo4j 级联清理完成后物理删除 */
     DELETING;
 
     /**

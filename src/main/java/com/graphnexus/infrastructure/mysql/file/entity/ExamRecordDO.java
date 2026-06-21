@@ -74,11 +74,6 @@ public class ExamRecordDO {
     @Column(name = "score_details", columnDefinition = "JSON")
     private String scoreDetails;
 
-    /** 逻辑删除标记：0=正常 1=已删除（中间状态，见全局删除约束 C3） */
-    @Column(name = "is_deleted", nullable = false)
-    @Builder.Default
-    private Integer isDeleted = 0;
-
     /** 创建时间（自动填充） */
     @CreatedDate
     @Column(name = "create_time", nullable = false, updatable = false)
@@ -88,12 +83,4 @@ public class ExamRecordDO {
     @LastModifiedDate
     @Column(name = "update_time", nullable = false)
     private LocalDateTime updateTime;
-
-    /**
-     * 标记为删除中间状态（is_deleted = 1）。
-     * 见 DESIGN D10 + CONTEXT.md 全局删除约束 C3。
-     */
-    public void markDeleted() {
-        this.isDeleted = 1;
-    }
 }

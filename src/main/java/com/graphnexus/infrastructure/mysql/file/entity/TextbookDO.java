@@ -77,20 +77,8 @@ public class TextbookDO {
     @Column(name = "uploaded_by")
     private Long uploadedBy;
 
-    /** 逻辑删除 0=否 1=是 */
-    @Column(name = "is_deleted", nullable = false)
-    @Builder.Default
-    private Integer isDeleted = 0;
-
     /** 创建时间（自动填充） */
     @CreatedDate
     @Column(name = "create_time", nullable = false, updatable = false)
     private LocalDateTime createTime;
-
-    /**
-     * 标记为逻辑删除。
-     */
-    public void markDeleted() {
-        this.isDeleted = 1;
-    }
 }

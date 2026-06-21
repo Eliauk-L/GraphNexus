@@ -153,7 +153,7 @@ public class TextbookServiceImpl implements TextbookService {
     @Override
     @Transactional(readOnly = true)
     public TextbookBO getTextBook(Long id) {
-        TextbookDO doc = textbookRepository.findByIdAndIsDeletedAndStatusNot(id, 0, FileStatus.DELETING)
+        TextbookDO doc = textbookRepository.findByIdAndStatusNot(id, FileStatus.DELETING)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
         return toBO(doc);
@@ -168,30 +168,25 @@ public class TextbookServiceImpl implements TextbookService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
 
-        if (doc.getIsDeleted() == 1) {
-            log.info("文档已删除（幂等跳过）: id={}", id);
-            return;
-        }
-
-        // 检查是否有其他记录引用同一文件（引用计数）
-        String objectKey = fileStorageService.extractObjectKey(doc.getFilePath());
-        long refCount = textbookRepository.countByFilePathAndIsDeletedAndStatusNot(doc.getFilePath(), 0, FileStatus.DELETING);
-        boolean isLastReference = (refCount <= 1); // refCount 包含当前记录
-
-        if (doc.getStatus() != FileStatus.DELETING) {
+        // 幂等检查：已删除直接返回
+        if (doc.getStatus() == FileStatus.DELETING) {
+            log.info("文档已在 DELETING 状态，从中断点继续: id={}", id);
+        } else {
             doc.setStatus(FileStatus.DELETING);
             textbookRepository.saveAndFlush(doc);
             log.info("文档进入 DELETING 状态: id={}", id);
-        } else {
-            log.info("文档已在 DELETING 状态，从中断点继续: id={}", id);
         }
 
-        if (isLastReference) {
+        // 级联删除：MinIO → Neo4j → MySQL 物理删除
+        // ① MinIO 文件删除（引用计数保护）
+        String objectKey = fileStorageService.extractObjectKey(doc.getFilePath());
+        long refCount = textbookRepository.countByFilePathAndStatusNot(doc.getFilePath(), FileStatus.DELETING);
+        if (refCount <= 1) {
             try {
                 fileStorageService.deleteFile(objectKey);
                 log.info("MinIO 文件已删除（最后引用）: id={}, filePath={}", id, doc.getFilePath());
             } catch (Exception e) {
-                log.warn("文件删除失败（可能已被删除，忽略继续）: path={}, error={}",
+                log.warn("MinIO 文件删除失败（可能已被删除，忽略继续）: path={}, error={}",
                         doc.getFilePath(), e.getMessage());
             }
         } else {
@@ -199,12 +194,12 @@ public class TextbookServiceImpl implements TextbookService {
                     refCount - 1, id, doc.getFilePath());
         }
 
+        // ② Neo4j 子图清除
         constructionGraphRepository.deleteByDocumentId(String.valueOf(id));
 
-        doc.markDeleted();
-        textbookRepository.save(doc);
-
-        log.info("文档已删除: id={}, filePath={}", doc.getId(), doc.getFilePath());
+        // ③ MySQL 物理删除（级联成功后才执行）
+        textbookRepository.delete(doc);
+        log.info("文档已物理删除: id={}, filePath={}", id, doc.getFilePath());
     }
 
     // ======================== 工具方法 ========================

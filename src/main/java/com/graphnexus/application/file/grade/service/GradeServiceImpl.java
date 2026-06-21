@@ -49,9 +49,6 @@ public class GradeServiceImpl implements GradeService {
         Specification<ExamRecordDO> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 始终过滤已删除
-            predicates.add(cb.equal(root.get("isDeleted"), 0));
-
             if (examNo != null && !examNo.isBlank()) {
                 predicates.add(cb.equal(root.get("examNo"), examNo.trim()));
             }
@@ -100,7 +97,7 @@ public class GradeServiceImpl implements GradeService {
     @Transactional
     public Object[] deleteByExamNo(String examNo) {
         // C2 幂等
-        List<ExamRecordDO> records = examRecordRepository.findByExamNoAndIsDeleted(examNo, 0);
+        List<ExamRecordDO> records = examRecordRepository.findByExamNo(examNo);
         if (records.isEmpty()) {
             log.info("考试 {} 无未删除记录，幂等返回", examNo);
             return new Object[]{examNo, 0};

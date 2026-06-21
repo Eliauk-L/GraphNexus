@@ -59,7 +59,7 @@ public class ConstructionServiceImpl implements ConstructionService {
     @Override
     @Transactional
     public ExtractionResultBO extract(Long documentId) {
-        TextbookDO doc = textbookRepository.findByIdAndIsDeletedAndStatusNot(documentId, 0, FileStatus.DELETING)
+        TextbookDO doc = textbookRepository.findByIdAndStatusNot(documentId, FileStatus.DELETING)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: " + documentId));
 
         validateDocStatus(doc);
