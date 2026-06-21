@@ -1,5 +1,11 @@
 package com.graphnexus.application.graph.construction.extract;
 
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.graphnexus.application.graph.construction.extract.registry.EntityRelationType;
+import com.graphnexus.application.graph.construction.extract.registry.ExtractionEdgeFactoryRegistry;
+import com.graphnexus.application.graph.construction.extract.registry.ExtractionNodeHandler;
+import com.graphnexus.application.graph.construction.extract.registry.ExtractionNodeHandlerRegistry;
 import com.graphnexus.application.graph.construction.model.ExtractionRawResult;
 import com.graphnexus.common.LlmGateway;
 import com.graphnexus.common.exception.BusinessException;
@@ -12,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 知识图谱抽取编排服务 — 文本 → LLM → JSON Schema 校验 → 领域对象。
@@ -31,6 +38,14 @@ public class ExtractionService {
     private final ExtractionPromptBuilder promptBuilder;
     private final ExtractionValidator validator;
     private final ExtractionJsonParser jsonParser;
+    private final ExtractionEdgeFactoryRegistry edgeFactoryRegistry;
+    private final ExtractionNodeHandlerRegistry nodeHandlerRegistry;
+
+    /**
+     * 用于扩展段 {@code Map → Raw POJO} 的类型转换（D4）。
+     * 复用 ExtractionJsonParser 的宽松 ObjectMapper 风格——构造一个独立宽松实例避免循环依赖。
+     */
+    private final ObjectMapper convertMapper = new ObjectMapper();
 
     /**
      * 从文档文本中抽取知识图谱。
@@ -46,8 +61,8 @@ public class ExtractionService {
                                      Integer pageCount, String documentId) {
         log.info("开始抽取知识图谱：docName={}, subject={}, 文本长度={}", docName, subject, textContent.length());
 
-        // 1. 构建 Prompt（重试时不变）
-        String systemPrompt = promptBuilder.buildSystemPrompt();
+        // 1. 构建 Prompt（重试时不变）— subject 用于 few-shot 分域（D5）
+        String systemPrompt = promptBuilder.buildSystemPrompt(subject);
         String userMessage = promptBuilder.buildUserMessage(docName, subject, pageCount, textContent);
 
         // 2. LLM 调用 + JSON 解析 — 作为可重试单元
@@ -116,6 +131,7 @@ public class ExtractionService {
         List<KnowledgePointNode> knowledgePoints = new ArrayList<>();
         List<KnowledgeCategoryNode> categories = new ArrayList<>();
         List<GraphEdge> edges = new ArrayList<>();
+        List<GraphNode> extensionNodes = new ArrayList<>();
 
         // 创建 Category 节点（先创建，因为 KP 需要引用的 category ID 在 BELONGS_TO 边里）
         List<String> categoryIds = new ArrayList<>();
@@ -162,7 +178,7 @@ public class ExtractionService {
             entityIds.add(entityNode.getId());
         }
 
-        // 创建实体间关系边（DERIVES/CONTAINS/REFERENCES）
+        // 创建实体间关系边 — 通过 ExtractionEdgeFactory 注册表路由，无 switch（D3 / AC-3）
         if (raw.getEntityRelations() != null) {
             for (ExtractionRawResult.RawEntityRelation rer : raw.getEntityRelations()) {
                 if (rer.getSourceEntityIndex() < entityIds.size()
@@ -170,10 +186,9 @@ public class ExtractionService {
                     String srcId = entityIds.get(rer.getSourceEntityIndex());
                     String tgtId = entityIds.get(rer.getTargetEntityIndex());
                     String desc = rer.getDescription();
-                    switch (rer.getType()) {
-                        case "DERIVES" -> edges.add(new DerivesEdge(srcId, tgtId, desc));
-                        case "CONTAINS" -> edges.add(new ContainsEdge(srcId, tgtId, desc));
-                        default -> edges.add(new ReferencesEdge(srcId, tgtId, desc));
+                    EntityRelationType type = EntityRelationType.fromValue(rer.getType());
+                    if (type != null) {
+                        edges.add(edgeFactoryRegistry.create(type, srcId, tgtId, desc));
                     }
                 }
             }
@@ -215,7 +230,49 @@ public class ExtractionService {
             }
         }
 
-        return new ExtractionResult(entities, knowledgePoints, categories, edges);
+        // 创建扩展节点 — 遍历 extensionSections，对每个注册 handler 反序列化→校验→转换（D4 / AC-4）
+        // 现有 Entity/KP/Category 三类保持硬编码不动，本循环仅服务新增顶层节点类型
+        for (ExtractionNodeHandler<?, ?> handler : nodeHandlerRegistry.all()) {
+            Object section = raw.getExtensionSections() == null
+                    ? null : raw.getExtensionSections().get(handler.sectionKey());
+            if (section == null) {
+                continue;
+            }
+            List<?> rawList = convertSectionToList(section, handler);
+            if (rawList.isEmpty()) {
+                continue;
+            }
+            List<GraphNode> converted = invokeHandler(handler, rawList, raw, documentId);
+            extensionNodes.addAll(converted);
+        }
+
+        return new ExtractionResult(entities, knowledgePoints, categories, edges, extensionNodes);
+    }
+
+    /**
+     * 把扩展段（JSON 数组反序列化后的 List&lt;Map&gt; 或单对象）转换为 handler 的 Raw POJO 列表。
+     */
+    @SuppressWarnings("rawtypes")
+    private List<?> convertSectionToList(Object section, ExtractionNodeHandler handler) {
+        List<?> asList;
+        if (section instanceof List<?> list) {
+            asList = list;
+        } else {
+            asList = List.of(section);
+        }
+        JavaType javaType = convertMapper.getTypeFactory()
+                .constructCollectionType(List.class, handler.rawType());
+        return convertMapper.convertValue(asList, javaType);
+    }
+
+    /**
+     * 类型安全地调用 handler 的 validate + convert（绕过泛型类型擦除）。
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private List<GraphNode> invokeHandler(ExtractionNodeHandler handler, List rawList,
+                                          ExtractionRawResult context, String documentId) {
+        handler.validate(rawList, context);
+        return (List<GraphNode>) handler.convert(rawList, documentId);
     }
 
     /**
@@ -225,6 +282,15 @@ public class ExtractionService {
             List<EntityNode> entities,
             List<KnowledgePointNode> knowledgePoints,
             List<KnowledgeCategoryNode> categories,
-            List<GraphEdge> edges) {
+            List<GraphEdge> edges,
+            List<GraphNode> extensionNodes) {
+
+        /** 向后兼容：旧调用方不感知 extensionNodes 时用此构造 */
+        public ExtractionResult(List<EntityNode> entities,
+                                List<KnowledgePointNode> knowledgePoints,
+                                List<KnowledgeCategoryNode> categories,
+                                List<GraphEdge> edges) {
+            this(entities, knowledgePoints, categories, edges, List.of());
+        }
     }
 }

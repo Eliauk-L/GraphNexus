@@ -1,144 +1,195 @@
 package com.graphnexus.application.graph.construction.extract;
 
+import com.graphnexus.application.graph.construction.extract.registry.EntityRelationType;
+import com.graphnexus.application.graph.construction.extract.registry.ExtractionNodeHandler;
+import com.graphnexus.application.graph.construction.extract.registry.ExtractionNodeHandlerRegistry;
+import com.graphnexus.common.exception.BusinessException;
+import com.graphnexus.common.exception.ErrorCode;
+import com.graphnexus.infrastructure.neo4j.node.EntityType;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 /**
- * LLM 抽取 Prompt 构建器 — 生成 System Prompt 和 User Message。
+ * LLM 抽取 Prompt 构建器 — 从 classpath md 加载模板并装配段落（D1/D2/D3/D4/D5）。
  *
- * <p>Prompt 结构见 ADR-003：角色设定 + 5 种实体类型定义 + 6 种关系定义 + Few-shot 示例 + JSON Schema 约束。</p>
+ * <p>沿用 ADR-011 的 {@code classpath:/prompts/*.md} + {@code {{var}}} 范式，自建轻量 loader
+ * （不共用 PromptTemplateService——其包级私有且与 query intent 耦合，跨模块复用收益不抵重构风险，见 D1）。
+ * 类型段由枚举/注册表派生，few-shot 按学科切换 + 默认回退。</p>
+ *
+ * <p>Prompt 结构见 ADR-023：角色设定 + 实体类型段（EntityType 派生）+ 关系类型段（EntityRelationType 派生）
+ * + 扩展节点段（NodeHandler 派生）+ Few-shot（按 subject）+ JSON Schema 约束。</p>
  *
  * @author Jay
- * @date 2026/06/13
+ * @date 2026/06/21
  */
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class ExtractionPromptBuilder {
 
+    private static final String TEMPLATE_BASE_PATH = "classpath:/prompts/";
+    private static final String SYSTEM_TEMPLATE = "extraction-system";
+    private static final String USER_TEMPLATE = "extraction-user";
+    private static final String FEWSHOT_DEFAULT = "extraction-fewshot-default";
+    private static final String FEWSHOT_PREFIX = "extraction-fewshot-";
+
+    /** subject 中文 → few-shot 文件 key 的映射（v1 仅数学，其余回退 default） */
+    private static final Map<String, String> SUBJECT_FEWSHOT_KEYS = Map.of(
+            "数学", "math");
+
+    private final ResourceLoader resourceLoader;
+    private final ExtractionNodeHandlerRegistry nodeHandlerRegistry;
+
+    /** 模板内容缓存（启动期首次加载后常驻，避免每次抽取读盘） */
+    private volatile String systemTemplate;
+    private volatile String userTemplate;
+    private final Map<String, String> fewShotCache = new HashMap<>();
+
     /**
-     * 构建 System Prompt（角色 + 定义 + Few-shot + 格式约束）。
+     * 构建 System Prompt（角色 + 类型段 + 扩展段 + Few-shot + 格式约束）。
+     *
+     * @param subject 文档学科，用于 few-shot 分域（D5）；null/未知回退 default
      */
+    public String buildSystemPrompt(String subject) {
+        String template = loadCachedTemplate(SYSTEM_TEMPLATE, () -> systemTemplate, v -> systemTemplate = v);
+        Map<String, String> sections = new HashMap<>();
+        sections.put("{{entityTypesSection}}", buildEntityTypesSection());
+        sections.put("{{relationTypesSection}}", buildRelationTypesSection());
+        sections.put("{{extensionNodeSections}}", buildExtensionNodeSections());
+        sections.put("{{fewShotSection}}", loadFewShot(subject));
+        String prompt = assemble(template, sections);
+        log.debug("System Prompt 构建完成: subject={}, length={}", subject, prompt.length());
+        return prompt;
+    }
+
+    /** 向后兼容：无 subject 时回退默认 few-shot */
     public String buildSystemPrompt() {
-        return """
-                你是教育领域的知识图谱构建专家。你的任务是从教辅文档文本中抽取知识点、实体及其关系，
-                输出严格符合 JSON Schema 的结构化结果。
-
-                ## 实体类型（entityType）
-                从原文中识别以下 5 种实体：
-                - DEFINITION：概念定义（如"二次函数是指形如 y=ax²+bx+c（a≠0）的函数"）
-                - FORMULA：数学公式/表达式（如"y=ax²+bx+c"、"x=-b/(2a)"）
-                - CONCEPT：概念/性质（如"对称轴"、"开口方向"、"判别式 Δ"）
-                - EXAMPLE：例题/习题（含题目文本）
-                - SOLUTION：解题过程/方法（如"配方法"、"因式分解法"）
-
-                ## 实体间关系类型（entityRelations.type）
-                - DERIVES：推导关系（A 可推导出 B）
-                - CONTAINS：包含关系（A 概念包含 B 子概念）
-                - REFERENCES：引用关系（A 引用/使用了 B）
-
-                ## 知识点（knowledgePoints）
-                从实体中抽象出标准化学科知识点。每个知识点是跨文档的教学大纲级概念。
-                例：从"对称轴：直线 x=-b/(2a)"实体 → 知识点"二次函数对称轴"
-
-                ## 知识分类（categories）
-                按学科知识体系组织为层次树：
-                - name：分类名称（如"二次函数"、"函数"）
-                - parentName：父分类名称（根节点为 null）
-                - level：层级深度（1=根如"初中数学"，逐层递增）
-
-                ## 前置依赖（prerequisites）
-                知识点之间的学习顺序依赖：
-                - strength：依赖强度 0~1（如"对称轴是顶点坐标的强前置知识"→0.95）
-                - description：说明为什么 B 依赖 A
-
-                ## Few-shot 示例
-                输入：二次函数章节文本片段
-                输出：
-                ```json
-                {
-                  "entities": [
-                    {"entityType":"DEFINITION","name":"二次函数定义","originalText":"二次函数是指形如 y=ax²+bx+c（a≠0）的函数","pageNumber":2},
-                    {"entityType":"FORMULA","name":"一般式","originalText":"y=ax²+bx+c","pageNumber":2},
-                    {"entityType":"FORMULA","name":"顶点式","originalText":"y=a(x-h)²+k","pageNumber":3},
-                    {"entityType":"CONCEPT","name":"对称轴","originalText":"对称轴：直线 x=-b/(2a)","pageNumber":4},
-                    {"entityType":"CONCEPT","name":"顶点坐标","originalText":"顶点坐标：(-b/(2a), (4ac-b²)/(4a))","pageNumber":4},
-                    {"entityType":"EXAMPLE","name":"求顶点和对称轴","originalText":"已知二次函数 y=x²-4x+3，求顶点坐标和对称轴","pageNumber":8},
-                    {"entityType":"SOLUTION","name":"配方法","originalText":"配方法：y=(x-2)²-1，顶点(2,-1)，对称轴 x=2","pageNumber":9}
-                  ],
-                  "knowledgePoints": [
-                    {"name":"二次函数定义","description":"形如 y=ax²+bx+c(a≠0) 的函数","subject":"数学","gradeLevel":"初中"},
-                    {"name":"二次函数一般式","description":"y=ax²+bx+c 形式","subject":"数学","gradeLevel":"初中"},
-                    {"name":"二次函数顶点式","description":"y=a(x-h)²+k 形式","subject":"数学","gradeLevel":"初中"},
-                    {"name":"对称轴","description":"二次函数图像的对称轴 x=-b/(2a)","subject":"数学","gradeLevel":"初中"},
-                    {"name":"顶点坐标","description":"二次函数图像的顶点 (-b/(2a),(4ac-b²)/(4a))","subject":"数学","gradeLevel":"初中"},
-                    {"name":"二次函数综合应用","description":"利用二次函数性质求解顶点和对称轴的典型题型","subject":"数学","gradeLevel":"初中"},
-                    {"name":"配方法","description":"通过配方将一般式化为顶点式的代数方法","subject":"数学","gradeLevel":"初中"}
-                  ],
-                  "categories": [
-                    {"name":"初中数学","parentName":null,"level":1},
-                    {"name":"代数","parentName":"初中数学","level":2},
-                    {"name":"函数","parentName":"代数","level":3},
-                    {"name":"二次函数","parentName":"函数","level":4}
-                  ],
-                  "alignments": [
-                    {"entityIndex":0,"knowledgePointIndex":0},
-                    {"entityIndex":1,"knowledgePointIndex":1},
-                    {"entityIndex":2,"knowledgePointIndex":2},
-                    {"entityIndex":3,"knowledgePointIndex":3},
-                    {"entityIndex":4,"knowledgePointIndex":4},
-                    {"entityIndex":5,"knowledgePointIndex":3},
-                    {"entityIndex":5,"knowledgePointIndex":4},
-                    {"entityIndex":5,"knowledgePointIndex":5},
-                    {"entityIndex":6,"knowledgePointIndex":6},
-                    {"entityIndex":6,"knowledgePointIndex":1}
-                  ],
-                  "entityRelations": [
-                    {"sourceEntityIndex":0,"targetEntityIndex":1,"type":"DERIVES","description":"定义推导出一般式表达式"},
-                    {"sourceEntityIndex":1,"targetEntityIndex":6,"type":"DERIVES","description":"一般式可通过配方法化为顶点式"},
-                    {"sourceEntityIndex":3,"targetEntityIndex":4,"type":"CONTAINS","description":"对称轴概念包含顶点坐标的 x 分量推导"},
-                    {"sourceEntityIndex":5,"targetEntityIndex":6,"type":"REFERENCES","description":"例题解答引用了配方法"}
-                  ],
-                  "prerequisites": [
-                    {"sourceKnowledgePointIndex":0,"targetKnowledgePointIndex":1,"strength":0.95,"description":"理解定义才能掌握一般式"},
-                    {"sourceKnowledgePointIndex":1,"targetKnowledgePointIndex":3,"strength":0.9,"description":"一般式是推导对称轴公式的基础"},
-                    {"sourceKnowledgePointIndex":3,"targetKnowledgePointIndex":4,"strength":0.95,"description":"对称轴是顶点坐标的前置知识"},
-                    {"sourceKnowledgePointIndex":6,"targetKnowledgePointIndex":5,"strength":0.85,"description":"配方法是求解综合应用题的常用工具"}
-                  ],
-                  "categoryRelations": [
-                    {"childCategoryIndex":1,"parentCategoryIndex":0},
-                    {"childCategoryIndex":2,"parentCategoryIndex":1},
-                    {"childCategoryIndex":3,"parentCategoryIndex":2}
-                  ]
-                }
-                ```
-
-                ## 输出规则
-                1. 数学公式使用 LaTeX 表示（如 $y=ax^2+bx+c$）
-                2. 忽略页眉页脚、页码等非正文内容
-                3. entityType 必须使用规定枚举值，禁止自创
-                4. entityRelations.type 必须使用规定枚举值（DERIVES/CONTAINS/REFERENCES）
-                5. **每个实体（entity）必须至少对应一个知识点（knowledgePoint）**，通过 alignments 数组建立多对多关系。一个实体可以对齐到多个知识点（如例题同时涉及对称轴和顶点坐标），多个实体也可以对齐到同一知识点
-                6. 每类至少返回 1 条，实在没有返回空数组 []
-                7. **仅输出纯 JSON，禁止使用 markdown 代码块包裹**
-                8. JSON 顶层字段名必须为：entities, knowledgePoints, categories, alignments, entityRelations, prerequisites, categoryRelations
-
-                ## subject 命名规范（重要）
-                - knowledgePoint 中的 `subject` 字段使用**标准学科名称**，如"数学""物理""英语"
-                - 禁止使用含年级/学段的限定名，如"高中数学""初中数学"→ 统一为"数学"
-                - **必须与文档元数据中的学科名保持一致**（见下文 User Message 中的"学科"字段）
-                - 如果文档内容涵盖多个学科，知识点的 subject 仍与文档元数据学科一致
-                """;
+        return buildSystemPrompt(null);
     }
 
     /**
      * 构建 User Message — 拼接文档信息和待抽取文本。
      */
     public String buildUserMessage(String docName, String subject, Integer pageCount, String textContent) {
-        return String.format("""
-                文档名称：《%s》
-                页数：%d
-                学科：%s
+        String template = loadCachedTemplate(USER_TEMPLATE, () -> userTemplate, v -> userTemplate = v);
+        Map<String, String> vars = new HashMap<>();
+        vars.put("{{docName}}", nullToEmpty(docName));
+        vars.put("{{pageCount}}", pageCount == null ? "" : String.valueOf(pageCount));
+        vars.put("{{subject}}", nullToEmpty(subject));
+        vars.put("{{textContent}}", nullToEmpty(textContent));
+        return assemble(template, vars);
+    }
 
-                文本内容：
-                %s
-                """, docName, pageCount, subject, textContent);
+    // ======================== 段落派生 ========================
+
+    /**
+     * 实体类型段 — 由 {@link EntityType} 枚举派生（D2 / AC-2 单一来源）。
+     */
+    String buildEntityTypesSection() {
+        return java.util.Arrays.stream(EntityType.values())
+                .map(t -> "- " + t.getValue() + "：" + t.getDisplayName()
+                        + "（如\"" + t.getExample() + "\"）")
+                .collect(Collectors.joining("\n"));
+    }
+
+    /**
+     * 关系类型段 — 由 {@link EntityRelationType} 枚举派生（D3 / AC-3 单一来源）。
+     */
+    String buildRelationTypesSection() {
+        return java.util.Arrays.stream(EntityRelationType.values())
+                .map(t -> "- " + t.getValue() + "：" + t.getDescription())
+                .collect(Collectors.joining("\n"));
+    }
+
+    /**
+     * 扩展节点段 — 由 {@link ExtractionNodeHandlerRegistry} 派生（D4）。
+     * 生产无注册 handler 时返回空串，与原 prompt 一致。
+     */
+    String buildExtensionNodeSections() {
+        if (nodeHandlerRegistry.all().isEmpty()) {
+            return "";
+        }
+        return "\n" + nodeHandlerRegistry.all().stream()
+                .map(ExtractionNodeHandler::promptSchema)
+                .collect(Collectors.joining("\n"));
+    }
+
+    /**
+     * Few-shot 段 — 按 subject 选对应学科示例，未命中回退 default（D5 / AC-5）。
+     */
+    String loadFewShot(String subject) {
+        String key = subject == null ? null : SUBJECT_FEWSHOT_KEYS.get(subject);
+        if (key != null) {
+            try {
+                return fewShotCache.computeIfAbsent(FEWSHOT_PREFIX + key, this::loadTemplateRaw);
+            } catch (BusinessException e) {
+                log.warn("学科 {} 的 few-shot 模板缺失，回退 default: {}", subject, e.getMessage());
+            }
+        }
+        return fewShotCache.computeIfAbsent(FEWSHOT_DEFAULT, this::loadTemplateRaw);
+    }
+
+    // ======================== 加载与替换 ========================
+
+    /**
+     * 加载模板（缓存）。首次访问时读盘，后续命中缓存。
+     */
+    private synchronized String loadCachedTemplate(String name, java.util.function.Supplier<String> cacheRef,
+                                                   java.util.function.Consumer<String> cacheSetter) {
+        String cached = cacheRef.get();
+        if (cached != null) {
+            return cached;
+        }
+        String content = loadTemplateRaw(name);
+        cacheSetter.accept(content);
+        return content;
+    }
+
+    /**
+     * 从 classpath 加载模板原文。
+     *
+     * @throws BusinessException 模板不存在时 C0001
+     */
+    private String loadTemplateRaw(String name) {
+        String location = TEMPLATE_BASE_PATH + name + ".md";
+        try {
+            var resource = resourceLoader.getResource(location);
+            if (!resource.exists()) {
+                throw new BusinessException(ErrorCode.C0001,
+                        "Prompt 模板不存在: " + name + "（路径: " + location + "）");
+            }
+            return resource.getContentAsString(StandardCharsets.UTF_8);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("加载 Prompt 模板失败: {} ({})", name, e.getMessage());
+            throw new BusinessException(ErrorCode.C0001, "加载 Prompt 模板失败: " + name);
+        }
+    }
+
+    /**
+     * 执行模板变量替换（ADR-011 纯字符串替换，不引入模板引擎）。
+     */
+    private String assemble(String template, Map<String, String> vars) {
+        String result = template;
+        for (var entry : vars.entrySet()) {
+            result = result.replace(entry.getKey(), entry.getValue() == null ? "" : entry.getValue());
+        }
+        if (result.contains("{{") && result.contains("}}")) {
+            log.warn("Prompt 中可能存在未替换的占位符: {}", result.substring(
+                    result.indexOf("{{"), Math.min(result.indexOf("{{") + 30, result.length())));
+        }
+        return result;
+    }
+
+    private static String nullToEmpty(String s) {
+        return s == null ? "" : s;
     }
 }
