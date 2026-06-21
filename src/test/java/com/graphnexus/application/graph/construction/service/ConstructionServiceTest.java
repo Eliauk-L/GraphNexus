@@ -2,7 +2,6 @@ package com.graphnexus.application.graph.construction.service;
 
 import com.graphnexus.application.graph.construction.extract.ExtractionService;
 import com.graphnexus.application.graph.construction.service.impl.ConstructionServiceImpl;
-import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
@@ -40,9 +39,6 @@ class ConstructionServiceTest {
 
     @Mock
     private ConstructionGraphRepository constructionGraphRepository;
-
-    @Mock
-    private FusionService fusionService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;

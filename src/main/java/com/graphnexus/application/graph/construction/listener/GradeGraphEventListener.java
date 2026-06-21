@@ -2,6 +2,7 @@ package com.graphnexus.application.graph.construction.listener;
 
 import com.graphnexus.application.file.grade.event.GradeDeletedEvent;
 import com.graphnexus.application.file.grade.event.GradeUploadedEvent;
+import com.graphnexus.application.graph.construction.event.GraphConstructedEvent;
 import com.graphnexus.infrastructure.mysql.file.entity.ExamRecordDO;
 import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
 import com.graphnexus.infrastructure.neo4j.edge.AttendedEdge;
@@ -14,8 +15,8 @@ import com.graphnexus.infrastructure.neo4j.node.SubjectNode;
 import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,7 +26,7 @@ import java.util.List;
  *
  * <p>监听成绩上传/删除事件，负责图谱节点的创建和清理。
  * 与成绩处理模块完全解耦，仅依赖 MySQL（只读）+ Neo4j（写入）。
- * @Order(1) 确保在图谱融合之前完成构建。</p>
+ * 构建完成后发布 GraphConstructedEvent 触发下游融合。</p>
  *
  * @author Jay
  * @date 2026/06/19
@@ -37,12 +38,12 @@ public class GradeGraphEventListener {
 
     private final ExamRecordRepository examRecordRepository;
     private final ConstructionGraphRepository constructionGraphRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 成绩上传 → 构建 Neo4j 图。
      */
     @EventListener
-    @Order(1)
     public void onGradeUploaded(GradeUploadedEvent event) {
         String examNo = event.getExamNo();
         String subject = event.getSubject();
@@ -78,6 +79,11 @@ public class GradeGraphEventListener {
             constructionGraphRepository.saveEdge(new TestedEdge(examNode.getId(), kpNode.getId()));
             constructionGraphRepository.saveEdge(new BelongsToSubjectEdge(kpNode.getId(), subjectNode.getId()));
         }
+
+        // 发布 GraphConstructedEvent（构建完成后触发融合 · DESIGN D5）
+        eventPublisher.publishEvent(new GraphConstructedEvent(
+                this, GraphConstructedEvent.SOURCE_CSV, GraphConstructedEvent.MODE_FULL,
+                event.getSubject(), event.getKnowledgePoints(), null, event.getExamNo()));
 
         log.info("图谱构建完成: examNo={}, students={}, kps={}",
                 examNo, records.size(), event.getKnowledgePoints().size());

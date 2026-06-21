@@ -1,9 +1,9 @@
 package com.graphnexus.api.graph.controller;
 
 import com.graphnexus.common.ApiResult;
-import com.graphnexus.api.graph.dto.fusion.FusionExecuteVO;
-import com.graphnexus.api.graph.dto.fusion.FusionStatusVO;
-import com.graphnexus.api.graph.dto.fusion.FusionRollbackVO;
+import com.graphnexus.api.analysis.dto.fusion.FusionExecuteVO;
+import com.graphnexus.api.analysis.dto.fusion.FusionStatusVO;
+import com.graphnexus.api.analysis.dto.fusion.FusionRollbackVO;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -46,7 +46,7 @@ class FusionControllerIntegrationTest {
     private static Long lastFusionLogId;
 
     private String baseUrl() {
-        return "http://localhost:" + port + "/api/v1/graph/fusion";
+        return "http://localhost:" + port + "/api/v1/analysis/fusion";
     }
 
     @BeforeEach

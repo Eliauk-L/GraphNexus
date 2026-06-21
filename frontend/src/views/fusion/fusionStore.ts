@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { executeFusion, getFusionStatus, rollbackFusion } from '@/api/graph'
+import { executeFusion, getFusionStatus, rollbackFusion } from '@/api/fusion'
 import type { FusionExecuteVO, FusionStatusVO, FusionRollbackVO } from '@/api/types'
 
 export const useFusionStore = defineStore('fusion', () => {

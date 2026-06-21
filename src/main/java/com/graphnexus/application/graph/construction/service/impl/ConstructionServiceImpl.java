@@ -1,12 +1,11 @@
 package com.graphnexus.application.graph.construction.service.impl;
 
 import com.graphnexus.application.graph.construction.extract.ExtractionService;
+import com.graphnexus.application.graph.construction.event.GraphConstructedEvent;
 import com.graphnexus.application.graph.construction.model.ExtractionResultBO;
 import com.graphnexus.application.graph.construction.model.GraphDataConverter;
 import com.graphnexus.application.graph.construction.model.GraphSubgraphBO;
 import com.graphnexus.application.graph.construction.service.ConstructionService;
-import com.graphnexus.application.graph.fusion.service.FusionService;
-import com.graphnexus.application.graph.metrics.event.GraphChangedEvent;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
@@ -38,7 +37,7 @@ import java.util.stream.Collectors;
  * 因此无需独立的跨文档对齐阶段。单文档内 Entity→KP 对齐由 LLM 抽取产出。</p>
  *
  * <p>Neo4j 写入不在 Spring {@code @Transactional} 范围内。
- * 阶段二融合原子性由 FusionService 内部 Neo4j 事务保证（见 ADR-020）。</p>
+ * 阶段二融合原子性由融合服务内部 Neo4j 事务保证（见 ADR-020）。</p>
  *
  * @author Jay
  * @date 2026/06/20
@@ -51,7 +50,6 @@ public class ConstructionServiceImpl implements ConstructionService {
     private final TextbookRepository textbookRepository;
     private final ExtractionService extractionService;
     private final ConstructionGraphRepository constructionGraphRepository;
-    private final FusionService fusionService;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -80,11 +78,22 @@ public class ConstructionServiceImpl implements ConstructionService {
         // ==================== 阶段一：图谱构建 ====================
         ExtractionResultBO result = phase1_build(doc, extracted, subjectNode, neo4jDocumentId);
 
-        // ==================== 阶段二：图谱融合 ====================
+        // ==================== 阶段二：图谱融合（事件驱动） ====================
         // 跨文档实体对齐由融合隐式完成：KP 合并时 ALIGNED_TO 边自动重定向到规范 KP
-        phase2_fuse(doc, extracted, result);
+        List<String> affectedKpNames = extracted.knowledgePoints().stream()
+                .map(kp -> kp.getName())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
 
-        eventPublisher.publishEvent(new GraphChangedEvent(this));
+        // 发布 GraphConstructedEvent（替代直接调用融合服务 · DESIGN D5/D11）
+        eventPublisher.publishEvent(new GraphConstructedEvent(
+                this, GraphConstructedEvent.SOURCE_DOCUMENT, GraphConstructedEvent.MODE_INCREMENTAL,
+                doc.getSubject(), affectedKpNames, documentId, null));
+        // 重读文档状态（监听器同 tx JPA 一级缓存，同一托管实例 · D3）
+        if (doc.getStatus() == FileStatus.EXTRACTED && doc.getFailReason() != null) {
+            result.setFusionWarning(doc.getFailReason());
+        }
+
         return result;
     }
 
@@ -127,34 +136,6 @@ public class ConstructionServiceImpl implements ConstructionService {
         doc.setStatus(FileStatus.EXTRACTED);
         textbookRepository.save(doc);
         return result;
-    }
-
-    /**
-     * 阶段二：图谱融合 — 跨源 KP 合并 + MASTERS 重算。
-     *
-     * <p>融合合并重复 KP 时，{@code redirectEdges} 自动重定向所有 ALIGNED_TO 边到规范 KP，
-     * 从而隐式完成跨文档实体对齐。融合原子性由 FusionService 内部 Neo4j 事务保证（ADR-020）。
-     * 失败不静默吞掉 — 标记 fusionWarning 且文档状态不进入 COMPLETED。</p>
-     */
-    private void phase2_fuse(TextbookDO doc, ExtractionService.ExtractionResult extracted,
-                             ExtractionResultBO result) {
-        List<String> affectedKpNames = extracted.knowledgePoints().stream()
-                .map(kp -> kp.getName())
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-
-        doc.setStatus(FileStatus.FUSING);
-        textbookRepository.save(doc);
-
-        try {
-            fusionService.fuseIncremental(affectedKpNames, doc.getSubject());
-            doc.setStatus(FileStatus.COMPLETED);
-            textbookRepository.save(doc);
-            log.info("阶段二[图谱融合]完成：docId={}, kps={}", doc.getId(), affectedKpNames.size());
-        } catch (Exception e) {
-            log.error("阶段二[图谱融合]失败，docId={}，可手动全量融合修复", doc.getId(), e);
-            result.setFusionWarning("增量融合失败：" + e.getMessage() + "。可手动执行全量融合修复");
-        }
     }
 
     private void validateDocStatus(TextbookDO doc) {
