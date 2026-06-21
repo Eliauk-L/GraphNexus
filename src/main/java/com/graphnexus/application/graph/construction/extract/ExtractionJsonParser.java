@@ -1,4 +1,4 @@
-package com.graphnexus.application.graph.construction.service;
+package com.graphnexus.application.graph.construction.extract;
 
 import com.graphnexus.application.graph.construction.model.ExtractionRawResult;
 import com.fasterxml.jackson.core.JsonProcessingException;

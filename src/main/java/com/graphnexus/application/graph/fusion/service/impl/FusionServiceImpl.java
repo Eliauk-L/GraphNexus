@@ -15,8 +15,9 @@ import com.graphnexus.infrastructure.neo4j.repository.FusionGraphRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.neo4j.core.Neo4jTemplate;
+import org.springframework.data.neo4j.core.transaction.Neo4jTransactionManager;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -41,7 +42,7 @@ public class FusionServiceImpl implements FusionService {
     private final FusionProperties fusionProperties;
     private final Map<String, KpMatchingStrategy> matchingStrategies;
     private final ObjectMapper objectMapper;
-    private final Neo4jTemplate neo4jTemplate;
+    private final Neo4jTransactionManager neo4jTransactionManager;
 
     private final FusionGroupBuilder groupBuilder;
     private final MastersRecalculationService mastersService;
@@ -79,7 +80,8 @@ public class FusionServiceImpl implements FusionService {
             }
 
             // ② Neo4j 事务内：执行全部 merge + MASTERS 重算（见 ADR-020）
-            int totalMasters = neo4jTemplate.doInTransaction(tx -> {
+            TransactionTemplate txTemplate = new TransactionTemplate(neo4jTransactionManager);
+            int totalMasters = txTemplate.execute(status -> {
                 int mastersCount = 0;
                 for (var entry : groupsBySubject.entrySet()) {
                     groupBuilder.merge(entry.getValue());
@@ -138,7 +140,8 @@ public class FusionServiceImpl implements FusionService {
                     fusionGraphRepository.findStudentsByKpNamesAndSubject(kpNames, subject);
 
             // ② Neo4j 事务内：执行 merge + MASTERS 重算（见 ADR-020）
-            int totalMasters = neo4jTemplate.doInTransaction(tx -> {
+            TransactionTemplate txTemplate = new TransactionTemplate(neo4jTransactionManager);
+            int totalMasters = txTemplate.execute(status -> {
                 groupBuilder.merge(groups);
                 return mastersService.recalculate(affectedStudents, subject);
             });

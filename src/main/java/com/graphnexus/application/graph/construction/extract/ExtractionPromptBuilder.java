@@ -1,4 +1,4 @@
-package com.graphnexus.application.graph.construction.service;
+package com.graphnexus.application.graph.construction.extract;
 
 import org.springframework.stereotype.Component;
 

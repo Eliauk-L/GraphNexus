@@ -84,6 +84,10 @@
 | **跨源 KP 融合** | 全量/增量融合中显式合并 `fusionSource=DOCUMENT`（文档抽取）和 `fusionSource=CSV_IMPORT`（考试成绩）两种来源的同名知识点。策略：先按 `name + subject`（或 Subject 节点引用）精确匹配前置 pass，再走 FuzzyMatch。考试 KP 创建改为 `MERGE ON (name, subject)` 避免产生冗余节点 |
 | **融合原子性** | 全量/增量融合的全部 merge + MASTERS 重算操作具备事务性：全部成功则提交，任一失败则回滚。具体方案（Neo4j 事务包装 vs 先记后做补偿回滚）由 DESIGN 阶段选型。融合失败时图谱状态不变，`fusion_log.status=FAILED` |
 | **Subject 名称规范化** | LLM 抽取提示词中新增的指令：要求 LLM 输出标准化学科名（如"数学"而非"高中数学"或"初中数学"），优先使用文档元数据中提供的学科名（来自 `buildUserMessage` 的 `subject` 参数）。确保不同文档抽取出的 subject 名称一致，配合 Subject 节点引用分组 |
+| **抽取提示词外置** | 抽取模块的 System Prompt 从 `ExtractionPromptBuilder` 的 Java 文本块迁到 `classpath:/prompts/*.md`，复用 ADR-011 的 `ResourceLoader` + `{{var}}` 范式，与智能问答模块 prompt 管理方式统一。User Message 拼接行为不变 |
+| **抽取类型注册机制** | 抽取层（prompt 类型段 + validator 合法集合 + `convertToDomain` 路由）的类型来源统一为枚举/注册表，新增类型无需改 prompt 文案、validator 硬编码或 switch 分支。是持久化层 ADR-002 / AC-5 可扩展契约在抽取层的补齐 |
+| **抽取类型混合策略** | 抽取类型定义采用混合方式：Java 枚举管类型契约（枚举值 / 校验 / 转换路由），md 管提示词文案描述；prompt 的类型段由枚举元数据自动生成，消除"枚举 vs prompt 文案 vs switch"三处漂移 |
+| **few-shot 学科切换** | System Prompt 的 few-shot 示例按文档 `subject` 选择对应学科示例，未配置学科回退默认示例。缓解 ADR-003 的 few-shot 领域过拟合隐患。v1 仅交付数学 + 默认两套 |
 
 ## 已锁技术决策
 
@@ -162,6 +166,7 @@
 | 融合原子性方案 | 融合操作必须具备原子性：全部 merge + MASTERS 重算成功提交，任一失败回滚。具体方案（Neo4j 事务包装 vs 先记后做补偿回滚）由 DESIGN 阶段选型确定。失败时 `fusion_log.status=FAILED`，Neo4j 图谱状态不变 | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
 | 文档状态机 v3 | 在 v2（8 状态）基础上新增 `ALIGNING` / `ALIGNED` 两状态。完整成功路径：`UPLOADED → PARSING → PARSED → EXTRACTING → EXTRACTED → ALIGNING → ALIGNED → FUSING → COMPLETED`。任意 `*ING` 失败回退到前一个 `*ED` | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
 | LLM 提示词 subject 规范化 | `ExtractionPromptBuilder` 的 System Prompt 增加 subject 名称规范化指令：要求 LLM 使用标准化学科名（如"数学"而非"高中数学"），优先使用文档元数据中提供的学科名。`ExtractionService.convertToDomain()` 不再设置 KnowledgePointNode 的 `subject` 属性，改为创建/查找 SubjectNode + BELONGS_TO_SUBJECT 边 | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
+| 抽取提示词外置 + 类型混合策略 | 抽取 System Prompt 外置到 `classpath:/prompts/*.md`（对齐 ADR-011）；抽取类型采用混合策略——Java 枚举管类型契约（值/校验/转换路由），md 管文案，prompt 类型段由枚举自动生成；few-shot 按 subject 切换 + 默认回退。补齐 ADR-002 在抽取层的可扩展契约 | 2026-06-21 | `extraction-prompt-pluggable` REQUIREMENT |
 
 ## 默认行为
 

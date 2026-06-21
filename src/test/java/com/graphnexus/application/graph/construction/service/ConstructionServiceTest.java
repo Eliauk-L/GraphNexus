@@ -1,5 +1,6 @@
 package com.graphnexus.application.graph.construction.service;
 
+import com.graphnexus.application.graph.construction.extract.ExtractionService;
 import com.graphnexus.application.graph.construction.service.impl.ConstructionServiceImpl;
 import com.graphnexus.application.graph.fusion.service.FusionService;
 import com.graphnexus.common.exception.BusinessException;
@@ -36,7 +37,7 @@ class ConstructionServiceTest {
     private TextbookRepository textbookRepository;
 
     @Mock
-    private com.graphnexus.application.graph.construction.service.ExtractionService extractionService;
+    private ExtractionService extractionService;
 
     @Mock
     private ConstructionGraphRepository constructionGraphRepository;

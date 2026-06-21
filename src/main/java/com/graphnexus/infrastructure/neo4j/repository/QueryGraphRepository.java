@@ -135,6 +135,24 @@ public class QueryGraphRepository {
     // ======================== 学科列表查询 ========================
 
     /**
+     * 查询某学科下所有 KnowledgePoint（实体对齐阶段用，跨文档匹配已有 KP）。
+     *
+     * @param subjectName 学科名称（SubjectNode.name）
+     * @return KP 列表，每项含 id / name / documentId
+     */
+    public List<Map<String, Object>> findKnowledgePointsBySubject(String subjectName) {
+        try {
+            return new ArrayList<>(neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
+                    "RETURN kp.id AS id, kp.name AS name, kp.documentId AS documentId"
+            ).bindAll(Map.of("name", subjectName)).fetch().all());
+        } catch (Exception e) {
+            log.warn("查询学科 {} 的 KP 失败: {}", subjectName, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * 查询图谱中所有不重复的学科（从 SubjectNode.name 聚合）。
      */
     public List<String> findDistinctSubjects() {
