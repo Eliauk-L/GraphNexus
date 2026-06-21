@@ -88,6 +88,9 @@
 | **抽取类型注册机制** | 抽取层（prompt 类型段 + validator 合法集合 + `convertToDomain` 路由）的类型来源统一为枚举/注册表，新增类型无需改 prompt 文案、validator 硬编码或 switch 分支。是持久化层 ADR-002 / AC-5 可扩展契约在抽取层的补齐 |
 | **抽取类型混合策略** | 抽取类型定义采用混合方式：Java 枚举管类型契约（枚举值 / 校验 / 转换路由），md 管提示词文案描述；prompt 的类型段由枚举元数据自动生成，消除"枚举 vs prompt 文案 vs switch"三处漂移 |
 | **few-shot 学科切换** | System Prompt 的 few-shot 示例按文档 `subject` 选择对应学科示例，未配置学科回退默认示例。缓解 ADR-003 的 few-shot 领域过拟合隐患。v1 仅交付数学 + 默认两套 |
+| **异常日志分级** | GlobalExceptionHandler 按异常类型分级落日志：兜底未捕获 Exception → ERROR 级完整堆栈；BusinessException / MethodArgumentNotValidException / AccessDeniedException → WARN 级关键摘要（不含完整堆栈），避免预期内异常污染 error 日志 |
+| **完整堆栈日志** | 含异常类名 + 异常 message + cause 链 + 出错行号的 ERROR 级日志条目，通过 MDC traceId 与请求链路关联，落入既有 graphnexus-error.log，供后端凭响应 traceId 检索定位 |
+| **GraphConstructedEvent** | Spring 同步事件，图谱构建阶段全部完成后发布，载荷含 `source`(DOCUMENT/CSV)、`subject`、`kpNames`、`mode`(FULL/INCREMENTAL)、`documentId`/`examNo`。由 `GraphConstructedEventListener`(analysis 模块) 同步 `@EventListener` 消费触发融合，是"构建完成→融合"的唯一显式触发源，取代 `ConstructionServiceImpl` 直接调用 `fuseIncremental` 与 grade 路径 `GradeUploadedEventListener`(`@Order(2)`) 直接 `fuseFull` + `@Order` 隐式排序。载荷自包含，发布方不依赖消费方 |
 
 ## 已锁技术决策
 
@@ -167,6 +170,11 @@
 | 文档状态机 v2（维持） | `graph-construction-refactor` 初版曾扩展 v3（新增 ALIGNING/ALIGNED 两状态用于独立实体对齐阶段），后因跨文档对齐改由融合隐式完成而回退到 v2（8 状态）。成功路径：`UPLOADED→PARSING→PARSED→EXTRACTING→EXTRACTED→FUSING→COMPLETED`。FUSING 失败回退到 EXTRACTED | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
 | LLM 提示词 subject 规范化 | `ExtractionPromptBuilder` 的 System Prompt 增加 subject 名称规范化指令：要求 LLM 使用标准化学科名（如"数学"而非"高中数学"），优先使用文档元数据中提供的学科名。`ExtractionService.convertToDomain()` 不再设置 KnowledgePointNode 的 `subject` 属性，改为创建/查找 SubjectNode + BELONGS_TO_SUBJECT 边 | 2026-06-20 | `graph-construction-refactor` REQUIREMENT |
 | 抽取提示词外置 + 类型混合策略 | 抽取 System Prompt 外置到 `classpath:/prompts/*.md`（对齐 ADR-011）；抽取类型采用混合策略——Java 枚举管类型契约（值/校验/转换路由），md 管文案，prompt 类型段由枚举自动生成；few-shot 按 subject 切换 + 默认回退。补齐 ADR-002 在抽取层的可扩展契约 | 2026-06-21 | `extraction-prompt-pluggable` REQUIREMENT |
+| 系统异常日志策略 | GlobalExceptionHandler 兜底未捕获 Exception 必须 `log.error` 完整堆栈（含 cause 链 + 行号），traceId 关联；BusinessException / 校验 / 权限异常 WARN 级摘要不打完整堆栈。完整堆栈只入后端日志不回前端 | 2026-06-21 | `exception-traceability` REQUIREMENT |
+| 前端 ErrorResponse 不增强 | 系统异常响应体保持泛化：userTip 不变、errorMessage 仍为 `系统内部异常: <异常类SimpleName>`，不向客户端暴露异常 message / 堆栈 / 根因（安全）；细节走日志 | 2026-06-21 | `exception-traceability` REQUIREMENT |
+| 异常日志零新增基础设施 | 复用既有 TraceIdFilter(MDC) + logback-spring.xml + graphnexus-error.log，不新增 appender、不引入日志收集系统、不改 pom.xml | 2026-06-21 | `exception-traceability` REQUIREMENT |
+| fusion 归属 analysis + 事件驱动触发 | fusion 全栈（api-dto + application + infrastructure）从 graph 模块迁入 analysis 模块；构建完成改用同步 `GraphConstructedEvent` 触发融合（文档路径 `mode=INCREMENTAL`，成绩路径 `mode=FULL`），取代 `ConstructionServiceImpl` 直接调用 + grade `@Order(2)` 监听器。依赖方向 `construction(graph) → 事件 → fusion(analysis)`，禁止 analysis 反向注入 graph Service、禁止 construction 再注入 `FusionService`。同步语义保留（`@EventListener` 同线程，单请求 `COMPLETED`），不引异步/MQ/schema 变更，fusion 行为等价 | 2026-06-21 | `fusion-to-analysis-event-driven` CHANGE（Q1/Q2） |
+| REST 融合端点迁移 | `/api/v1/graph/fusion/{execute,status,rollback}` → `/api/v1/analysis/fusion/{execute,status,rollback}`（破坏性），前端融合管理 UI + API 文档同步；旧路径 `/graph/fusion/*` 是否保留别名由 DESIGN 锁定（REQUIREMENT 默认不保留→404） | 2026-06-21 | `fusion-to-analysis-event-driven` CHANGE（Q3） |
 
 ## 默认行为
 
@@ -187,6 +195,7 @@
 - **字段冗余策略**：非频繁修改 + 非唯一索引 + 非 varchar 超长字段允许适当冗余，避免每次查询 JOIN 统计
 - **本地开发环境**：所有基础设施组件（Neo4j 5.x / MySQL 8.0 / MinIO / Redis 7.x / RabbitMQ 3.x）通过 podman 容器化部署，`application-dev.yml` 中配置的连接参数可直接使用。集成测试使用 `@SpringBootTest` + `@ActiveProfiles("dev")` 直连 podman 中的真实组件，不需要 Testcontainers 或 @MockBean 替代
 - 当有新的sql文件产生时，需要将其同步到resources/db/init.sql中
+- **后端异常定位路径**：前端响应返回 traceId → 后端用 traceId 在 `logs/graphnexus-error.log`（或控制台）grep → 读完整堆栈定位出错类与行，无需复现
 
 ## 全局删除约束
 

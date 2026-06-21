@@ -153,7 +153,7 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-5" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅实体对齐" vertex="1">
           <mxGeometry height="32.5" width="160" x="410" y="426" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-6" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图谱度量" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-6" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图谱融合" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="373.5" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-7" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图谱管理" vertex="1">
@@ -162,7 +162,7 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-8" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图谱查询" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="426" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-9" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图谱融合" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-9" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图谱度量" vertex="1">
           <mxGeometry height="32.5" width="160" x="410" y="526" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-10" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅上下文组装" vertex="1">
