@@ -1,13 +1,16 @@
 package com.graphnexus.application.graph.construction.extract;
 
 import com.graphnexus.application.graph.construction.extract.ExtractionValidator;
+import com.graphnexus.application.graph.construction.extract.registry.EntityRelationType;
 import com.graphnexus.application.graph.construction.model.ExtractionRawResult;
 import com.graphnexus.common.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -169,5 +172,19 @@ class ExtractionValidatorTest {
         e.setName(name);
         e.setOriginalText(text);
         return e;
+    }
+
+    @Test
+    @DisplayName("关系合法集由 EntityRelationType 枚举派生（AC-3 单一来源）")
+    void relationValidSetDerivedFromEnum() throws Exception {
+        Field field = ExtractionValidator.class.getDeclaredField("VALID_RELATION_TYPES");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Set<String> validSet = (Set<String>) field.get(null);
+        assertEquals(EntityRelationType.values().length, validSet.size(),
+                "关系合法集大小应等于 EntityRelationType 枚举数");
+        for (EntityRelationType t : EntityRelationType.values()) {
+            assertTrue(validSet.contains(t.getValue()), "关系合法集缺失: " + t);
+        }
     }
 }

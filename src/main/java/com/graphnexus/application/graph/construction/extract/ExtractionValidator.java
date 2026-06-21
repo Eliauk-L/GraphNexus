@@ -1,5 +1,6 @@
 package com.graphnexus.application.graph.construction.extract;
 
+import com.graphnexus.application.graph.construction.extract.registry.EntityRelationType;
 import com.graphnexus.application.graph.construction.model.ExtractionRawResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
@@ -29,7 +30,8 @@ public class ExtractionValidator {
             Arrays.stream(EntityType.values()).map(EntityType::getValue).collect(Collectors.toSet());
 
     private static final Set<String> VALID_RELATION_TYPES =
-            Set.of("DERIVES", "CONTAINS", "REFERENCES");
+            Arrays.stream(EntityRelationType.values()).map(EntityRelationType::getValue)
+                    .collect(Collectors.toUnmodifiableSet());
 
     /**
      * 校验 LLM 返回的原始抽取结果。
