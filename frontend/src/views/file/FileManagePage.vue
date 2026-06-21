@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, h } from 'vue'
+import { onMounted, onBeforeUnmount, ref, h } from 'vue'
 import { NSpace, useMessage } from 'naive-ui'
 import { useFileStore } from './fileStore'
 import FileUpload from './components/FileUpload.vue'
@@ -8,6 +8,7 @@ import BaseInput from '@/common/components/BaseInput.vue'
 import StatusBadge from '@/common/components/StatusBadge.vue'
 import DataTable from '@/common/components/DataTable.vue'
 import type { DataTableColumns } from 'naive-ui'
+import type { TextbookVO } from '@/api/types'
 
 const store = useFileStore()
 const message = useMessage()
@@ -17,27 +18,27 @@ const pageSize = ref(10)
 const searchName = ref('')
 const filterFileType = ref<string | null>(null)
 
-const columns: DataTableColumns<any> = [
+const columns: DataTableColumns<TextbookVO> = [
   { title: '文件名', key: 'name', width: 260, ellipsis: { tooltip: true } },
   { title: '类型', key: 'fileType', width: 60 },
   { title: '学科', key: 'subject', width: 80 },
   {
     title: '大小', key: 'fileSize', width: 90,
-    render(row: any) { return formatSize(row.fileSize) },
+    render(row) { return formatSize(row.fileSize) },
   },
   {
-    title: '状态', key: 'status', width: 100,
-    render(row: any) { return h(StatusBadge, { status: row.status }) },
+    title: '状态', key: 'status', width: 120,
+    render(row) { return h(StatusBadge, { status: row.status }) },
   },
   {
     title: '上传时间', key: 'createTime', width: 160,
-    render(row: any) { return formatTime(row.createTime) },
+    render(row) { return formatTime(row.createTime) },
   },
   {
     title: '操作', key: 'actions', width: 140,
-    render(row: any) {
+    render(row) {
       return h(NSpace, { size: 'small' }, () => [
-        row.status === 'UPLOADED' || row.status === 'PARSED'
+        row.status === 'UPLOADED' || row.status === 'FAILED'
           ? h(BaseButton, { size: 'small', onClick: () => handleParse(row.documentId) }, () => '解析')
           : null,
         h(BaseButton, {
@@ -72,7 +73,7 @@ function load() {
 async function handleParse(id: number) {
   try {
     await store.parse(id)
-    message.success('解析完成')
+    message.success('已触发解析')
   } catch {
     // handled by store
   }
@@ -93,6 +94,14 @@ function handleUploadFinish() {
 
 onMounted(() => {
   load()
+  // 进入页面时如有中间态文件，启动轮询
+  setTimeout(() => {
+    if (store.hasIntermediateFiles) store.startPolling()
+  }, 1000)
+})
+
+onBeforeUnmount(() => {
+  store.stopPolling()
 })
 </script>
 
@@ -100,12 +109,14 @@ onMounted(() => {
   <div>
     <div class="page-header">
       <h1 class="headline">教材管理</h1>
-      <NSpace>
+      <NSpace align="center">
+        <span v-if="store.isPolling" class="polling-hint supporting">
+          实时刷新处理状态…
+        </span>
         <FileUpload @uploaded="handleUploadFinish" />
       </NSpace>
     </div>
 
-    <!-- 搜索栏 -->
     <div class="search-bar">
       <BaseInput
         v-model="searchName"
@@ -142,5 +153,27 @@ onMounted(() => {
   align-items: center;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
+}
+
+.polling-hint {
+  color: var(--color-text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.polling-hint::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-warning);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 </style>
