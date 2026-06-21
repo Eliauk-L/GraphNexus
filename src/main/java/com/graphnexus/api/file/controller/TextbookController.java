@@ -22,8 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * 教材处理 REST API 控制器 — 仅教材文件（PDF/TXT）。
  *
- * <p>上传仅存储文件 + 入库（返回 filePath），解析走 POST /parse/{id}，
- * 抽取走 POST /api/v1/graph/extract/{id}，融合走 POST /api/v1/graph/fusion/execute。
+ * <p>上传仅存储文件 + 入库。解析完成后自动触发图谱构建（两阶段流水线 构建→融合），
+ * 无需前端额外调用图谱端点。手动重新抽取走 {@code POST /api/v1/graph/construction/extract/{id}}。
  * CSV 成绩上传走独立的 {@link com.graphnexus.api.file.controller.GradeController}。</p>
  *
  * @author Jay
@@ -63,10 +63,11 @@ public class TextbookController {
     }
 
     /**
-     * 触发教材解析（前端主动调用）。
+     * 触发教材解析（前端主动调用，解析后自动触发图谱构建）。
      *
-     * <p>从 MinIO 读取文件 → 文本提取 → 入库。解析完成后状态变为 PARSED。
-     * 后续抽取走 {@code POST /api/v1/graph/extract/{id}}，融合走 {@code POST /api/v1/graph/fusion/execute}。</p>
+     * <p>从 MinIO 读取文件 → 文本提取 → 入库。解析成功（PARSED）后自动调用图谱构建
+     * （两阶段流水线 构建→融合），无需前端额外调用图谱端点。手动重新抽取走
+     * {@code POST /api/v1/graph/construction/extract/{id}}。</p>
      */
     @Operation(summary = "解析教材文本", description = "对已上传的教材执行文本解析（MinerU 优先，PDFBox 兜底），提取文本内容并入库")
     @ApiResponses({
