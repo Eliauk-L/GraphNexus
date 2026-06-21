@@ -1,5 +1,6 @@
 package com.graphnexus.application.file.textbook.service;
 
+import com.graphnexus.application.file.textbook.event.TextbookDeletedEvent;
 import com.graphnexus.application.file.textbook.event.TextbookParsedEvent;
 import com.graphnexus.application.file.textbook.model.TextbookBO;
 import com.graphnexus.application.file.parse.model.FileParseRequest;
@@ -12,7 +13,6 @@ import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
-import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +45,6 @@ public class TextbookServiceImpl implements TextbookService {
 
     private final TextbookRepository textbookRepository;
     private final FileStorageService fileStorageService;
-    private final ConstructionGraphRepository constructionGraphRepository;
     private final TextbookUploadService uploadService;
     private final FileParserRegistry fileParserRegistry;
     private final ApplicationEventPublisher eventPublisher;
@@ -93,10 +92,10 @@ public class TextbookServiceImpl implements TextbookService {
             throw new BusinessException(ErrorCode.A0004, "未找到文件解析器: " + filename);
         }
 
-        // 更新状态为 PARSING
+        // 更新状态为 PARSING，重新持有托管实体
         doc.setStatus(FileStatus.PARSING);
         doc.setFailReason(null);
-        textbookRepository.saveAndFlush(doc);
+        doc = textbookRepository.saveAndFlush(doc);
 
         // 遍历解析器链（主→兜底）
         ParseResult parseResult = null;
@@ -120,7 +119,7 @@ public class TextbookServiceImpl implements TextbookService {
             doc.setStatus(FileStatus.UPLOADED);
             doc.setFailReason("all parsers failed: " + truncate(
                     lastError != null ? lastError.getMessage() : "unknown", 300));
-            textbookRepository.save(doc);
+            textbookRepository.saveAndFlush(doc);
             throw new BusinessException(ErrorCode.A0004, "文档解析失败（所有解析器均失败）");
         }
 
@@ -129,7 +128,7 @@ public class TextbookServiceImpl implements TextbookService {
         doc.setTextContent(parseResult.textContent());
         doc.setPageCount(parseResult.pageCount());
         doc.setFailReason(null);
-        textbookRepository.save(doc);
+        textbookRepository.saveAndFlush(doc);
 
         // 发布解析完成事件 → 图谱构建模块监听并自动触发抽取（事件驱动，单向依赖）
         log.info("解析完成: id={}, parser={}, textLength={}",
@@ -168,38 +167,22 @@ public class TextbookServiceImpl implements TextbookService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
                         "文档不存在: id=" + id));
 
-        // 幂等检查：已删除直接返回
+        // 幂等检查：已在 DELETING 状态则跳过
         if (doc.getStatus() == FileStatus.DELETING) {
-            log.info("文档已在 DELETING 状态，从中断点继续: id={}", id);
-        } else {
-            doc.setStatus(FileStatus.DELETING);
-            textbookRepository.saveAndFlush(doc);
-            log.info("文档进入 DELETING 状态: id={}", id);
+            log.info("文档已在 DELETING 状态，跳过重复删除: id={}", id);
+            return;
         }
 
-        // 级联删除：MinIO → Neo4j → MySQL 物理删除
-        // ① MinIO 文件删除（引用计数保护）
-        String objectKey = fileStorageService.extractObjectKey(doc.getFilePath());
-        long refCount = textbookRepository.countByFilePathAndStatusNot(doc.getFilePath(), FileStatus.DELETING);
-        if (refCount <= 1) {
-            try {
-                fileStorageService.deleteFile(objectKey);
-                log.info("MinIO 文件已删除（最后引用）: id={}, filePath={}", id, doc.getFilePath());
-            } catch (Exception e) {
-                log.warn("MinIO 文件删除失败（可能已被删除，忽略继续）: path={}, error={}",
-                        doc.getFilePath(), e.getMessage());
-            }
-        } else {
-            log.info("文件仍被 {} 条其他记录引用，跳过 MinIO 删除: id={}, filePath={}",
-                    refCount - 1, id, doc.getFilePath());
-        }
+        // 进入 DELETING 状态，发布事件驱动级联删除
+        doc.setStatus(FileStatus.DELETING);
+        doc = textbookRepository.saveAndFlush(doc);
+        log.info("文档进入 DELETING 状态: id={}", id);
 
-        // ② Neo4j 子图清除
-        constructionGraphRepository.deleteByDocumentId(String.valueOf(id));
-
-        // ③ MySQL 物理删除（级联成功后才执行）
-        textbookRepository.delete(doc);
-        log.info("文档已物理删除: id={}, filePath={}", id, doc.getFilePath());
+        // 发布删除事件 → 图谱模块监听 → 清理 Neo4j → 发布 TextbookGraphClearedEvent
+        // → TextbookGraphClearedEventListener 监听 → MinIO 删除 + MySQL 物理删除
+        eventPublisher.publishEvent(new TextbookDeletedEvent(
+                this, doc.getId(), doc.getFilePath(), doc.getDocumentNo()));
+        log.info("已发布 TextbookDeletedEvent，级联删除链启动: id={}", id);
     }
 
     // ======================== 工具方法 ========================

@@ -1,5 +1,6 @@
 package com.graphnexus.application.file.textbook.service;
 
+import com.graphnexus.application.file.textbook.event.TextbookDeletedEvent;
 import com.graphnexus.application.file.textbook.model.TextbookBO;
 import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.application.file.textbook.model.ParseResult;
@@ -10,12 +11,12 @@ import com.graphnexus.application.file.textbook.parser.pdf.mineru.config.MinerUP
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
-import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,7 +35,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * TextbookService 单元测试（V3 — 前端驱动，parse 独立调用）。
+ * TextbookService 单元测试（V3 — 前端驱动，parse 独立调用，删除事件驱动级联）。
  *
  * @author Jay
  * @date 2026/06/12
@@ -48,9 +49,6 @@ class TextbookServiceTest {
 
     @Mock
     private FileStorageService fileStorageService;
-
-    @Mock
-    private ConstructionGraphRepository graphNodeRepository;
 
     @Mock
     private MinerUTextbookParser minerUTextbookParser;
@@ -145,7 +143,6 @@ class TextbookServiceTest {
         when(pdfBoxTextbookParser.parse(any(byte[].class)))
                 .thenReturn(new ParseResult("parsed text", 10));
         when(textbookRepository.saveAndFlush(any())).thenReturn(sampleDoc);
-        when(textbookRepository.save(any())).thenReturn(sampleDoc);
 
         ParseResult result = fileService.parse(1L);
 
@@ -154,7 +151,6 @@ class TextbookServiceTest {
         assertEquals(10, result.pageCount());
         verify(fileStorageService).getFile("textbooks/abc123.pdf");
         verify(pdfBoxTextbookParser).parse(any(byte[].class));
-        verify(textbookRepository).save(any());
     }
 
     @Test
@@ -180,7 +176,6 @@ class TextbookServiceTest {
         when(pdfBoxTextbookParser.parse(any(byte[].class)))
                 .thenReturn(new ParseResult("fallback text", 5));
         when(textbookRepository.saveAndFlush(any())).thenReturn(sampleDoc);
-        when(textbookRepository.save(any())).thenReturn(sampleDoc);
 
         ParseResult result = fileService.parse(1L);
 
@@ -229,23 +224,53 @@ class TextbookServiceTest {
         assertEquals("A0006", ex.getErrorCode());
     }
 
-    // ======================== 删除测试 ========================
+    // ======================== 删除测试（事件驱动） ========================
 
     @Test
-    @DisplayName("删除：逻辑删除 + MinIO 清除（AC-5）")
-    void deleteShouldMarkDeletedAndRemoveFile() {
-        when(textbookRepository.findById(1L))
-                .thenReturn(Optional.of(sampleDoc));
-        when(textbookRepository.save(any(TextbookDO.class)))
-                .thenReturn(sampleDoc);
-        doNothing().when(fileStorageService).deleteFile(anyString());
-        doNothing().when(graphNodeRepository).deleteByDocumentId(anyString());
-        when(fileStorageService.extractObjectKey(anyString())).thenReturn("uuid.pdf");
+    @DisplayName("删除：进入 DELETING 状态并发布 TextbookDeletedEvent")
+    void deleteShouldMarkDeletingAndPublishEvent() {
+        when(textbookRepository.findById(1L)).thenReturn(Optional.of(sampleDoc));
+        when(textbookRepository.saveAndFlush(any(TextbookDO.class))).thenReturn(sampleDoc);
+
+        ArgumentCaptor<TextbookDeletedEvent> eventCaptor =
+                ArgumentCaptor.forClass(TextbookDeletedEvent.class);
 
         assertDoesNotThrow(() -> fileService.deleteTextBook(1L));
 
-        verify(textbookRepository).delete(any());
-        verify(fileStorageService).deleteFile(anyString());
-        verify(graphNodeRepository).deleteByDocumentId("1");
+        // 验证 DELETING 状态已设置
+        assertEquals(FileStatus.DELETING, sampleDoc.getStatus());
+
+        // 验证发布了 TextbookDeletedEvent，携带正确的 documentId/filePath/documentNo
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        TextbookDeletedEvent captured = eventCaptor.getValue();
+        assertEquals(1L, captured.getDocumentId());
+        assertEquals("http://localhost:9000/bucket/textbooks/abc123.pdf", captured.getFilePath());
+        assertEquals("abc123", captured.getDocumentNo());
+
+        // 级联操作（MinIO、Neo4j、物理删除）由监听器完成，service 层不再直接调用
+        verify(textbookRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("删除不存在的文档应抛 A0006")
+    void deleteNonExistentShouldThrow() {
+        when(textbookRepository.findById(999L)).thenReturn(Optional.empty());
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> fileService.deleteTextBook(999L));
+        assertEquals("A0006", ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("重复删除 DELETING 状态文档应幂等跳过")
+    void deleteAlreadyDeletingShouldBeIdempotent() {
+        sampleDoc.setStatus(FileStatus.DELETING);
+        when(textbookRepository.findById(1L)).thenReturn(Optional.of(sampleDoc));
+
+        fileService.deleteTextBook(1L);
+
+        // 不应再次 saveAndFlush 或发布事件
+        verify(textbookRepository, never()).saveAndFlush(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }

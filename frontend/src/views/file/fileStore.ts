@@ -36,8 +36,8 @@ export const useFileStore = defineStore('file', () => {
   }
 
   /**
-   * 上传文件：仅完成上传，立即刷新列表展示 UPLOADED 状态，
-   * 随后触发解析（启动后端处理流水线），并开启状态轮询。
+   * 上传文件：完成上传后立即返回，后台触发解析 + 开启状态轮询。
+   * 解析完成后状态从 UPLOADED → PARSED，后续图谱构建由后端事件驱动。
    */
   async function upload(file: File, subject: string) {
     loading.value = true
@@ -54,11 +54,15 @@ export const useFileStore = defineStore('file', () => {
 
     // 立即刷新列表，展示刚上传的文件（UPLOADED 状态）
     await loadFiles()
-    // 触发解析流水线（后端将依次推进 PARSING→...→COMPLETED）
-    parseFile(uploaded.documentId).catch(() => {
-      // 解析触发失败不阻塞，用户可在列表手动重试
-    })
-    // 开启状态轮询
+
+    // 后台触发解析，失败时提示用户手动重试
+    parseFile(uploaded.documentId)
+      .then(() => loadFiles())
+      .catch(() => {
+        error.value = '解析失败，请手动点击解析按钮重试'
+      })
+
+    // 开启状态轮询（追踪后续状态变化）
     startPolling()
     return uploaded
   }

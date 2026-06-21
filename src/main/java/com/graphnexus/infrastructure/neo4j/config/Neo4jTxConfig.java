@@ -10,13 +10,13 @@ import org.springframework.data.neo4j.core.transaction.Neo4jTransactionManager;
 import org.springframework.orm.jpa.JpaTransactionManager;
 
 /**
- * 事务管理器配置。
+ * 事务管理器配置。JPA（MySQL）为默认，Neo4j 为专用。
  *
- * <p>项目同时使用 JPA（MySQL）与 Neo4j，Spring Boot 的
- * {@code Neo4jTransactionManagerAutoConfiguration} 带
- * {@code @ConditionalOnMissingBean(PlatformTransactionManager.class)}，被 JPA 的
- * {@code JpaTransactionManager} 抢占后不再注册 Neo4j 事务管理器。此处显式注册
- * 两个事务管理器，JPA 的设为 {@code @Primary} 作为默认。
+ * <p>Spring Boot 的 {@code Neo4jTransactionManagerAutoConfiguration} 带
+ * {@code @ConditionalOnMissingBean(PlatformTransactionManager.class)}，
+ * JPA 自动配置的 {@code JpaTransactionManager} 会导致 Neo4j TM 不自动注册。
+ * 此处显式注册两个事务管理器：JPA 标记 {@code @Primary} 作为 {@code @Transactional} 默认，
+ * Neo4j 以 {@code Neo4jTransactionManager} 类型注入供 {@code FusionServiceImpl} 使用。
  * 见 ADR-020。</p>
  *
  * @author Jay
@@ -28,7 +28,9 @@ public class Neo4jTxConfig {
     @Primary
     @Bean
     public JpaTransactionManager transactionManager(EntityManagerFactory entityManagerFactory) {
-        return new JpaTransactionManager(entityManagerFactory);
+        JpaTransactionManager tm = new JpaTransactionManager();
+        tm.setEntityManagerFactory(entityManagerFactory);
+        return tm;
     }
 
     @Bean
