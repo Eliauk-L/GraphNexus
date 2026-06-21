@@ -13,7 +13,9 @@ export const useGraphStore = defineStore('graph', () => {
   async function loadDocuments() {
     try {
       const result = await listFiles(1, 100)
-      documents.value = result.list.filter((d) => d.status === 'COMPLETED')
+      // 已抽取/融合中/已完成状态的文档都有图谱数据可查看
+const graphStatuses = ['EXTRACTED', 'EXTRACTING', 'FUSING', 'COMPLETED']
+documents.value = result.list.filter((d) => graphStatuses.includes(d.status))
     } catch {
       // 静默失败
     }
