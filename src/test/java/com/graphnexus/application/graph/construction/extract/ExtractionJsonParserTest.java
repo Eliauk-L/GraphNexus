@@ -247,6 +247,38 @@ class ExtractionJsonParserTest {
         assertNotNull(result.getEntities().get(0).getMetadata());
     }
 
+    // ======================== 扩展段捕获（@JsonAnySetter · D4） ========================
+
+    @Test
+    @DisplayName("未知 JSON key 应被捕获到 extensionSections")
+    void shouldCaptureUnknownKeysToExtensionSections() {
+        String json = """
+                {"entities":[{"entityType":"DEFINITION","name":"x","originalText":"x","pageNumber":1}],
+                 "knowledgePoints":[],"categories":[],"alignments":[],"entityRelations":[],"prerequisites":[],"categoryRelations":[],
+                 "testNodes":[{"name":"t1","originalText":"txt"}]}""";
+
+        ExtractionRawResult result = parser.parse(json);
+
+        assertNotNull(result.getExtensionSections());
+        assertTrue(result.getExtensionSections().containsKey("testNodes"));
+        // 已知 key 不进 extensionSections
+        assertFalse(result.getExtensionSections().containsKey("entities"));
+        // 已知 key 仍进强类型字段
+        assertEquals(1, result.getEntities().size());
+    }
+
+    @Test
+    @DisplayName("无未知 key 时 extensionSections 为空")
+    void extensionSectionsShouldBeEmptyWhenNoUnknownKey() {
+        String json = """
+                {"entities":[],"knowledgePoints":[],"categories":[],"alignments":[],"entityRelations":[],"prerequisites":[],"categoryRelations":[]}""";
+
+        ExtractionRawResult result = parser.parse(json);
+
+        assertNotNull(result.getExtensionSections());
+        assertTrue(result.getExtensionSections().isEmpty());
+    }
+
     // ======================== 边界情况 ========================
 
     @Test

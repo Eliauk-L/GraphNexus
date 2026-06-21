@@ -1,7 +1,9 @@
 package com.graphnexus.application.graph.construction.model;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import lombok.Data;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +39,23 @@ public class ExtractionRawResult {
 
     /** 分类层次关系（childCategoryIndex → parentCategoryIndex） */
     private List<RawCategoryRelation> categoryRelations;
+
+    /**
+     * 扩展段容器 — 收集未映射到上述强类型字段的 JSON key（如新增顶层节点类型的段），
+     * 供 {@link com.graphnexus.application.graph.construction.extract.registry.ExtractionNodeHandler} 反序列化（D4 / ADR-023）。
+     *
+     * <p>与 ExtractionJsonParser 的 {@code FAIL_ON_UNKNOWN_PROPERTIES=false} 兼容：
+     * 加 @JsonAnySetter 后未知 key 从"忽略"变为"捕获"，已知 key 仍进强类型字段。</p>
+     */
+    private Map<String, Object> extensionSections = new LinkedHashMap<>();
+
+    /**
+     * Jackson 任意属性收集器 — 把未映射到强类型字段的 JSON key/value 存入 extensionSections。
+     */
+    @JsonAnySetter
+    public void addExtensionSection(String key, Object value) {
+        this.extensionSections.put(key, value);
+    }
 
     // ---- 内部 POJO ----
 

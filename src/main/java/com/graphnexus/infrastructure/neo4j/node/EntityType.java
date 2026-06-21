@@ -15,19 +15,24 @@ import lombok.Getter;
 public enum EntityType {
 
     /** 概念定义 — 如"二次函数是指形如 y=ax²+bx+c（a≠0）的函数" */
-    DEFINITION("DEFINITION", "概念定义", "教科书中对术语、概念的正式定义语句"),
+    DEFINITION("DEFINITION", "概念定义", "教科书中对术语、概念的正式定义语句",
+            "二次函数是指形如 y=ax²+bx+c（a≠0）的函数"),
 
     /** 数学公式/表达式 — 如"y=ax²+bx+c"、"x=-b/(2a)" */
-    FORMULA("FORMULA", "公式", "数学公式或表达式，使用 LaTeX 表示"),
+    FORMULA("FORMULA", "公式", "数学公式或表达式，使用 LaTeX 表示",
+            "y=ax²+bx+c"),
 
     /** 概念/性质 — 如"对称轴"、"开口方向"、"判别式 Δ" */
-    CONCEPT("CONCEPT", "概念", "学科概念或性质描述，非定义/公式类的知识片段"),
+    CONCEPT("CONCEPT", "概念", "学科概念或性质描述，非定义/公式类的知识片段",
+            "对称轴"),
 
     /** 例题/习题 — 含题目文本 */
-    EXAMPLE("EXAMPLE", "例题", "例题或习题，包含题目文本，通常以'已知…求…'形式出现"),
+    EXAMPLE("EXAMPLE", "例题", "例题或习题，包含题目文本，通常以'已知…求…'形式出现",
+            "已知二次函数 y=x²-4x+3，求顶点坐标和对称轴"),
 
     /** 解题过程/方法 — 如"配方法"、"因式分解法" */
-    SOLUTION("SOLUTION", "解法", "解题方法、技巧或详细解答过程");
+    SOLUTION("SOLUTION", "解法", "解题方法、技巧或详细解答过程",
+            "配方法");
 
     /** 枚举值字符串（与 LLM 输出的 JSON 中一致） */
     private final String value;
@@ -38,10 +43,14 @@ public enum EntityType {
     /** 类型描述 — 说明该实体类型包含什么内容，与 LLM Prompt 中的实体类型定义对应 */
     private final String description;
 
-    EntityType(String value, String displayName, String description) {
+    /** 示例文本 — 与 LLM Prompt 中"（如 ...）"对应，供 prompt 实体类型段派生（AC-2 单一来源） */
+    private final String example;
+
+    EntityType(String value, String displayName, String description, String example) {
         this.value = value;
         this.displayName = displayName;
         this.description = description;
+        this.example = example;
     }
 
     /**
