@@ -13,7 +13,7 @@ export function uploadGradeFile(file: File, subject: string): Promise<GradeUploa
 
 /** 分页查询成绩列表（按考试分组） */
 export function listGrades(pageNum = 1, pageSize = 10): Promise<PageResult<GradeUploadResultVO>> {
-  return client.get('/file/grade', { params: { pageNum, pageSize } })
+  return client.get('/file/grades', { params: { pageNum, pageSize } })
 }
 
 /** 按考试编号查询成绩 */
