@@ -4,9 +4,9 @@ import com.graphnexus.application.file.textbook.event.TextbookParsedEvent;
 import com.graphnexus.application.graph.construction.service.ConstructionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * 教材解析完成 → 图谱构建监听器。
@@ -15,10 +15,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * 与成绩事件驱动模式一致（{@code GradeUploadedEvent} → {@code GradeGraphEventListener}），
  * 教材/成绩模块不直接依赖图谱模块，仅发布事件。</p>
  *
- * <p>使用 {@code @TransactionalEventListener(phase = AFTER_COMMIT)}：
- * 确保发布方（{@code TextbookServiceImpl.parse()}）的事务先提交 PARSED 状态，
- * 再在新事务中执行抽取。若抽取失败不影响已落库的 PARSED，避免
- * {@code extract()} 异常导致 JPA 事务回滚丢失解析结果。</p>
+ * <p>使用 {@code @Async + @EventListener}（替代 AFTER_COMMIT）：
+ * 监听器在独立线程中执行，避免 AFTER_COMMIT 回调阶段旧事务 EntityManager
+ * 仍绑定在线程上导致 {@code extract()} 无法创建新事务（"no transaction is in progress"）。
+ * {@code extract()} 在独立线程中创建全新 JPA 事务，与 {@code parse()} 事务完全隔离。</p>
  *
  * <p>构建失败由本监听器 try-catch 消化，不回滚 PARSED 状态，用户可手动重试抽取。</p>
  *
@@ -32,7 +32,8 @@ public class TextbookParsedEventListener {
 
     private final ConstructionService constructionService;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async("queryAsyncExecutor")
+    @EventListener
     public void onTextbookParsed(TextbookParsedEvent event) {
         Long documentId = event.getDocumentId();
         log.info("收到 TextbookParsedEvent，自动触发图谱构建: documentId={}", documentId);

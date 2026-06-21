@@ -21,6 +21,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
@@ -128,14 +130,22 @@ public class TextbookServiceImpl implements TextbookService {
         doc.setTextContent(parseResult.textContent());
         doc.setPageCount(parseResult.pageCount());
         doc.setFailReason(null);
-        textbookRepository.saveAndFlush(doc);
+        doc = textbookRepository.saveAndFlush(doc);
 
         // 发布解析完成事件 → 图谱构建模块监听并自动触发抽取（事件驱动，单向依赖）
+        // ★ 使用 TransactionSynchronization.afterCommit() 确保事务提交后 PARSED 已落库才发布事件，
+        //    避免 @Async 监听器在新线程中读到 UPLOADED 旧状态。
         log.info("解析完成: id={}, parser={}, textLength={}",
                 documentId, lastParserName,
                 parseResult.textContent() != null ? parseResult.textContent().length() : 0);
 
-        eventPublisher.publishEvent(new TextbookParsedEvent(this, documentId));
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                log.info("事务已提交(PARSED已落库)，发布 TextbookParsedEvent: id={}", documentId);
+                eventPublisher.publishEvent(new TextbookParsedEvent(this, documentId));
+            }
+        });
         return parseResult;
     }
 
@@ -178,11 +188,59 @@ public class TextbookServiceImpl implements TextbookService {
         doc = textbookRepository.saveAndFlush(doc);
         log.info("文档进入 DELETING 状态: id={}", id);
 
-        // 发布删除事件 → 图谱模块监听 → 清理 Neo4j → 发布 TextbookGraphClearedEvent
-        // → TextbookGraphClearedEventListener 监听 → MinIO 删除 + MySQL 物理删除
-        eventPublisher.publishEvent(new TextbookDeletedEvent(
-                this, doc.getId(), doc.getFilePath(), doc.getDocumentNo()));
-        log.info("已发布 TextbookDeletedEvent，级联删除链启动: id={}", id);
+        // ★ 使用 TransactionSynchronization.afterCommit() 确保事务提交后 DELETING 已落库才发布事件，
+        //    与 parse() 保持一致，避免 @Async 监听器在新线程中读不到 DELETING 状态。
+        final Long docId = doc.getId();
+        final String docPath = doc.getFilePath();
+        final String docNo = doc.getDocumentNo();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                log.info("事务已提交(DELETING已落库)，发布 TextbookDeletedEvent: id={}", docId);
+                eventPublisher.publishEvent(new TextbookDeletedEvent(this, docId, docPath, docNo));
+            }
+        });
+    }
+
+    /**
+     * 级联删除终结点：图谱清理完成后，执行 MinIO 文件删除 + MySQL 物理删除。
+     *
+     * <p>由 {@code TextbookGraphClearedEventListener} 调用（事件链最后一步）。
+     * 独立 {@code @Transactional} 方法，通过 {@code TextbookService} 代理调用，
+     * 确保事务正确开启（区别于 {@code @EventListener} 方法上的 @Transactional 可能被绕过）。</p>
+     */
+    @Override
+    @Transactional
+    public void finalizeDeletion(Long documentId, String filePath) {
+        log.info("执行 MinIO + MySQL 物理删除: documentId={}", documentId);
+
+        // ① 查找文档（幂等：已删除则跳过）
+        var docOpt = textbookRepository.findById(documentId);
+        if (docOpt.isEmpty()) {
+            log.info("文档已不存在（幂等跳过）: id={}", documentId);
+            return;
+        }
+        TextbookDO doc = docOpt.get();
+
+        // ② MinIO 文件删除（引用计数保护）
+        String objectKey = fileStorageService.extractObjectKey(filePath);
+        long refCount = textbookRepository.countByFilePathAndStatusNot(filePath, FileStatus.DELETING);
+        if (refCount <= 1) {
+            try {
+                fileStorageService.deleteFile(objectKey);
+                log.info("MinIO 文件已删除（最后引用）: id={}, filePath={}", documentId, filePath);
+            } catch (Exception e) {
+                log.warn("MinIO 文件删除失败（可能已被删除，忽略继续）: path={}, error={}",
+                        filePath, e.getMessage());
+            }
+        } else {
+            log.info("文件仍被 {} 条其他记录引用，跳过 MinIO 删除: id={}, filePath={}",
+                    refCount - 1, documentId, filePath);
+        }
+
+        // ③ MySQL 物理删除（图谱清理已成功，执行最终物理删除）
+        textbookRepository.delete(doc);
+        log.info("文档已物理删除: id={}, filePath={}", documentId, filePath);
     }
 
     // ======================== 工具方法 ========================

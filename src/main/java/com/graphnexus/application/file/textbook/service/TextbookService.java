@@ -27,4 +27,17 @@ public interface TextbookService {
 
     /** 逻辑删除教材 + MinIO 文件清除 + Neo4j 图谱清理。 */
     void deleteTextBook(Long id);
+
+    /**
+     * 级联删除终结点：图谱清理完成后，执行 MinIO 文件删除 + MySQL 物理删除。
+     *
+     * <p>由 {@code TextbookGraphClearedEventListener} 调用（事件链最后一步）。
+     * 从 {@code @EventListener} 中抽取为独立 {@code @Transactional} 方法，
+     * 确保事务通过 TextbookService 代理正确开启，避免 {@code @EventListener}
+     * 适配器绕过 AOP 代理导致 {@code @Transactional} 不生效。</p>
+     *
+     * @param documentId 待物理删除的文档 ID
+     * @param filePath   文件在 MinIO 中的完整访问路径
+     */
+    void finalizeDeletion(Long documentId, String filePath);
 }
