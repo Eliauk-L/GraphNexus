@@ -35,6 +35,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MetricsServiceImpl implements MetricsService {
 
+    /** 指标计算中心节点白名单：仅允许知识点或学生为中心（见 DESIGN D11） */
+    private static final String KP_LABEL = NodeType.KNOWLEDGE_POINT.getLabel();
+    private static final String STUDENT_LABEL = NodeType.STUDENT.getLabel();
+    private static final Set<String> ALLOWED_CENTER_NODES = Set.of(KP_LABEL, STUDENT_LABEL);
+
     private final GdsAdapter gdsAdapter;
     private final MetricsProperties metricsProperties;
 
@@ -53,9 +58,8 @@ public class MetricsServiceImpl implements MetricsService {
 
     @Override
     public List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes) {
-        validateParams(nodeTypes, edgeTypes);
-        Set<String> normalizedNodes = normalizeNodeTypes(nodeTypes);
-        Set<String> normalizedEdges = normalizeEdgeTypes(edgeTypes);
+        Set<String> normalizedNodes = validateAndConstrainNodes(nodeTypes);
+        Set<String> normalizedEdges = constrainEdgeTypes(normalizedNodes, edgeTypes);
 
         MetricsQuery query = new MetricsQuery(normalizedNodes, normalizedEdges, "pagerank");
         return cache.get(query.toCacheKey(), key -> {
@@ -74,9 +78,8 @@ public class MetricsServiceImpl implements MetricsService {
 
     @Override
     public List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes) {
-        validateParams(nodeTypes, edgeTypes);
-        Set<String> normalizedNodes = normalizeNodeTypes(nodeTypes);
-        Set<String> normalizedEdges = normalizeEdgeTypes(edgeTypes);
+        Set<String> normalizedNodes = validateAndConstrainNodes(nodeTypes);
+        Set<String> normalizedEdges = constrainEdgeTypes(normalizedNodes, edgeTypes);
 
         MetricsQuery query = new MetricsQuery(normalizedNodes, normalizedEdges, "degree");
         return cache.get(query.toCacheKey(), key -> {
@@ -104,52 +107,90 @@ public class MetricsServiceImpl implements MetricsService {
     }
 
     /**
-     * 校验节点类型和边类型的合法性。空集合跳过校验（全图默认）。
+     * 校验并约束中心节点类型——指标计算仅允许以知识点或学生为中心。
+     *
+     * <p>规则（见 DESIGN D11）：</p>
+     * <ol>
+     *   <li>nodeTypes 必须非空（指标计算必须指定中心）</li>
+     *   <li>仅允许 KnowledgePoint / Student，传其他类型 → A0002</li>
+     *   <li>Student 单独使用 → A0002（MASTERS 边连接 Student→KP，缺 KP 则无边成空图）</li>
+     * </ol>
      */
-    private void validateParams(Set<String> nodeTypes, Set<String> edgeTypes) {
-        if (nodeTypes != null && !nodeTypes.isEmpty()) {
-            List<String> invalid = nodeTypes.stream()
-                    .filter(t -> NodeType.fromLabel(t) == null)
-                    .collect(Collectors.toList());
-            if (!invalid.isEmpty()) {
-                String validValues = Arrays.stream(NodeType.values())
-                        .map(NodeType::getLabel)
-                        .collect(Collectors.joining(", "));
-                throw new BusinessException(ErrorCode.A0002,
-                        String.format("无效的节点类型: %s，有效值: %s", invalid, validValues));
-            }
+    private Set<String> validateAndConstrainNodes(Set<String> nodeTypes) {
+        if (nodeTypes == null || nodeTypes.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0002,
+                    "指标计算必须指定中心节点类型，允许值: KnowledgePoint, Student");
         }
-        if (edgeTypes != null && !edgeTypes.isEmpty()) {
-            List<String> invalid = edgeTypes.stream()
-                    .filter(t -> EdgeType.fromType(t) == null)
-                    .collect(Collectors.toList());
-            if (!invalid.isEmpty()) {
-                String validValues = Arrays.stream(EdgeType.values())
-                        .map(EdgeType::getRelationshipType)
-                        .collect(Collectors.joining(", "));
-                throw new BusinessException(ErrorCode.A0002,
-                        String.format("无效的边类型: %s，有效值: %s", invalid, validValues));
-            }
+        // 先校验类型合法性（大小写归一化）
+        List<String> invalid = nodeTypes.stream()
+                .filter(t -> NodeType.fromLabel(t) == null)
+                .collect(Collectors.toList());
+        if (!invalid.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0002,
+                    String.format("无效的节点类型: %s", invalid));
         }
-    }
-
-    /**
-     * 将用户输入的节点类型归一化为枚举规范 label（Neo4j label 大小写敏感）。
-     */
-    private Set<String> normalizeNodeTypes(Set<String> nodeTypes) {
-        if (nodeTypes == null || nodeTypes.isEmpty()) return Collections.emptySet();
-        return nodeTypes.stream()
+        // 归一化为枚举 label
+        Set<String> normalized = nodeTypes.stream()
                 .map(t -> NodeType.fromLabel(t).getLabel())
                 .collect(Collectors.toSet());
+        // 白名单校验：仅允许 KP / Student
+        List<String> notAllowed = normalized.stream()
+                .filter(t -> !ALLOWED_CENTER_NODES.contains(t))
+                .collect(Collectors.toList());
+        if (!notAllowed.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0002,
+                    String.format("指标计算仅支持以知识点或学生为中心，不支持: %s", notAllowed));
+        }
+        // Student 单独拒绝（MASTERS 边需 KP 才能形成）
+        if (normalized.size() == 1 && normalized.contains(STUDENT_LABEL)) {
+            throw new BusinessException(ErrorCode.A0002,
+                    "以学生为中心需同时包含 KnowledgePoint（MASTERS 边连接 Student→KP，缺 KP 则成空图）");
+        }
+        return normalized;
     }
 
     /**
-     * 将用户输入的边类型归一化为枚举规范 relationshipType。
+     * 按中心节点类型收敛边类型——仅保留与中心语义匹配的边。
+     *
+     * <p>收敛规则：</p>
+     * <ul>
+     *   <li>含 KnowledgePoint → 允许 PREREQUISITE_OF（KP↔KP 知识结构）</li>
+     *   <li>含 Student → 允许 MASTERS（Student→KP 掌握度）</li>
+     *   <li>调用方传入的 edgeTypes 与允许集合取交集；交集为空 → A0002</li>
+     *   <li>调用方未传 edgeTypes → 使用全部允许边</li>
+     * </ul>
      */
-    private Set<String> normalizeEdgeTypes(Set<String> edgeTypes) {
-        if (edgeTypes == null || edgeTypes.isEmpty()) return Collections.emptySet();
-        return edgeTypes.stream()
+    private Set<String> constrainEdgeTypes(Set<String> normalizedNodes, Set<String> edgeTypes) {
+        Set<String> allowed = new HashSet<>();
+        if (normalizedNodes.contains(KP_LABEL)) {
+            allowed.add(EdgeType.PREREQUISITE_OF.getRelationshipType());
+        }
+        if (normalizedNodes.contains(STUDENT_LABEL)) {
+            allowed.add(EdgeType.MASTERS.getRelationshipType());
+        }
+        if (edgeTypes == null || edgeTypes.isEmpty()) {
+            return allowed;
+        }
+        // 校验边类型合法性 + 归一化
+        List<String> invalid = edgeTypes.stream()
+                .filter(t -> EdgeType.fromType(t) == null)
+                .collect(Collectors.toList());
+        if (!invalid.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0002,
+                    String.format("无效的边类型: %s", invalid));
+        }
+        Set<String> normalized = edgeTypes.stream()
                 .map(t -> EdgeType.fromType(t).getRelationshipType())
                 .collect(Collectors.toSet());
+        // 取交集
+        Set<String> result = normalized.stream()
+                .filter(allowed::contains)
+                .collect(Collectors.toSet());
+        if (result.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0002,
+                    String.format("边类型 %s 与中心节点 %s 允许的边 %s 不匹配",
+                            normalized, normalizedNodes, allowed));
+        }
+        return result;
     }
 }

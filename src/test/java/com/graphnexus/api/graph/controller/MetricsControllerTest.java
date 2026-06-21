@@ -41,6 +41,7 @@ class MetricsControllerTest {
                 new MetricResultBO("kp-001", "KnowledgePoint", "pagerank", 0.85)));
 
         mockMvc.perform(get("/api/v1/graph/metrics/pagerank")
+                        .param("nodeTypes", "KnowledgePoint")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -58,6 +59,7 @@ class MetricsControllerTest {
                 new MetricResultBO("kp-001", "KnowledgePoint", "outDegree", 3.0)));
 
         mockMvc.perform(get("/api/v1/graph/metrics/degree")
+                        .param("nodeTypes", "KnowledgePoint")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(2));
@@ -68,7 +70,8 @@ class MetricsControllerTest {
     void testGetPageRank_EmptyGraphReturns200EmptyArray() throws Exception {
         when(metricsService.queryPageRank(anySet(), anySet())).thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/api/v1/graph/metrics/pagerank"))
+        mockMvc.perform(get("/api/v1/graph/metrics/pagerank")
+                        .param("nodeTypes", "KnowledgePoint"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data").isArray())
@@ -76,13 +79,13 @@ class MetricsControllerTest {
     }
 
     @Test
-    @DisplayName("带 nodeTypes 和 edgeTypes 参数 → 200（AC-3 过滤投影）")
+    @DisplayName("带 nodeTypes 和 edgeTypes 参数 → 200（AC-3 过滤投影，仅 KP/Student 为中心）")
     void testGetPageRank_WithFilters() throws Exception {
         when(metricsService.queryPageRank(anySet(), anySet())).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/api/v1/graph/metrics/pagerank")
-                        .param("nodeTypes", "KnowledgePoint,Entity")
-                        .param("edgeTypes", "PREREQUISITE_OF"))
+                        .param("nodeTypes", "KnowledgePoint,Student")
+                        .param("edgeTypes", "PREREQUISITE_OF,MASTERS"))
                 .andExpect(status().isOk());
     }
 }
