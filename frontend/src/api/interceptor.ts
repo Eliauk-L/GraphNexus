@@ -26,6 +26,8 @@ function clearTokens() {
 }
 
 export function setupInterceptors() {
+  console.log('[Interceptor] setupInterceptors() called, registering...')
+
   // Request: 注入 Authorization header（直接读 localStorage，避免 Pinia 时序问题）
   axios.interceptors.request.use((config) => {
     const token = getToken()

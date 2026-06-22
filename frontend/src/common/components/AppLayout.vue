@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute, RouterView, RouterLink, useRouter } from 'vue-router'
 import {
   BookOpen, GitGraph, GraduationCap, MessageCircle,
-  Settings, GitMerge, BarChart3, Users, LogOut,
+  Settings, GitMerge, BarChart3, User, LogOut,
 } from '@lucide/vue'
 import { NPopover } from 'naive-ui'
 import { useAuthStore } from '@/stores/authStore'
@@ -22,7 +22,7 @@ const navItems = [
 const settingsItems = [
   { path: '/settings/fusion', label: '融合管理', icon: GitMerge, roles: ['ADMIN', 'OPS_STAFF'] },
   { path: '/settings/metrics', label: '图指标', icon: BarChart3, roles: ['ADMIN', 'OPS_STAFF', 'OPS_MANAGER'] },
-  { path: '/settings/users', label: '用户管理', icon: Users, roles: ['ADMIN'] },
+  { path: '/settings/users', label: '用户管理', icon: User, roles: ['ADMIN'] },
 ]
 
 // 按角色过滤

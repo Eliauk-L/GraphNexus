@@ -14,11 +14,17 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 
+console.log('[Main] Pinia + Router installed, setting up interceptors...')
+
 // 注册 axios 拦截器（401 自动刷新 · 直接读 localStorage 不依赖 Pinia）
 setupInterceptors()
 
+console.log('[Main] Interceptors registered, setting up auth guard...')
+
 // 注册路由守卫（认证 + 权限）
 registerAuthGuard(router)
+
+console.log('[Main] Auth guard registered, mounting app...')
 
 app.config.errorHandler = (err, instance, info) => {
   console.error('[Vue Error]', err)
