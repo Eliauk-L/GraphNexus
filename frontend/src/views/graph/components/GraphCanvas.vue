@@ -261,7 +261,7 @@ defineExpose({ getGraph: () => graph })
 </script>
 
 <template>
-  <div class="graph-canvas-wrapper">
+  <div class="graph-canvas-wrapper" :class="{ 'fullscreen-wrapper': props.fullscreen }">
     <!-- 空态 -->
     <div v-if="!props.data && !props.loading" class="graph-empty">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" stroke-width="1.5" stroke-linecap="round">
@@ -279,7 +279,7 @@ defineExpose({ getGraph: () => graph })
     </div>
 
     <!-- G6 画布 -->
-    <div v-show="props.data && !props.error" ref="container" class="graph-canvas" :class="{ 'graph-canvas-fs': props.fullscreen }" />
+    <div v-show="props.data && !props.error" ref="container" class="graph-canvas" />
   </div>
 </template>
 
@@ -287,20 +287,20 @@ defineExpose({ getGraph: () => graph })
 .graph-canvas-wrapper {
   position: relative;
   width: 100%;
-  min-height: 500px;
+  height: 500px;
+}
+
+.fullscreen-wrapper {
+  height: 100%;
 }
 
 .graph-canvas {
-  width: 100%;
-  height: 500px;
+  position: absolute;
+  inset: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--rounded-md);
   overflow: hidden;
   background: var(--color-surface);
-}
-
-.graph-canvas-fs {
-  height: 100%;
 }
 
 .graph-empty,

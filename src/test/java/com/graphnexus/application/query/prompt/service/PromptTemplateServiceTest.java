@@ -25,7 +25,7 @@ class PromptTemplateServiceTest {
         }
 
         @Override
-        String loadTemplate(String name) {
+        public String loadTemplate(String name) {
             // 返回简单测试模板
             return "## 分析报告\n\n学生: {{studentName}}\n{{mastersWarning}}\n";
         }

@@ -235,7 +235,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="graph-body">
-      <div class="graph-canvas-area">
+      <div class="graph-canvas-area" :class="{ 'canvas-area-fs': isFullscreen }">
         <GraphCanvas
           ref="canvasRef"
           :data="graphData"
@@ -281,6 +281,10 @@ onBeforeUnmount(() => {
 }
 
 .graph-canvas-area {
+  flex-shrink: 0;
+}
+
+.canvas-area-fs {
   flex: 1;
   min-height: 0;
 }
@@ -330,6 +334,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  width: 100vw;
 }
 
 .graph-page:fullscreen .graph-body {
@@ -337,10 +342,5 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-}
-
-.graph-page:fullscreen .graph-canvas {
-  width: 100%;
-  height: 100% !important;
 }
 </style>
