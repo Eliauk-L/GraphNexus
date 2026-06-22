@@ -11,24 +11,48 @@ defineProps<{
 
 defineEmits<{
   close: []
-  'expand-neighbors': []
 }>()
 
-/** G6 内部渲染字段，不在详情面板展示 */
+/** 不在详情面板展示的字段 */
 const HIDDEN_KEYS = new Set([
-  'label', 'color', 'size',          // G6 visual
-  'x', 'y', 'z',                      // G6 position
-  'states', 'style',                  // G6 state
-  'nodeType',                         // shown separately
+  // G6 internal
+  'label', 'color', 'size',
+  'x', 'y', 'z',
+  'states', 'style',
+  // 已单独展示
+  'nodeType', 'name',
+  // 内部标识/时间戳，无需展示
+  'id', 'documentId', 'createdAt', 'updatedAt',
+  // 代码/配置类
+  'entityType', 'nodeType',
+  // 文档页码（无业务意义）
+  'pageNumber',
+])
+
+/** 仅展示有业务含义的属性 */
+const SHOW_KEYS = new Set([
+  'description',
+  'originalText',
+  'subject',
+  'gradeLevel',
+  'weight',
+  'className',
+  'studentNo',
+  'examNo',
+  'examName',
+  'totalScore',
+  'classRank',
 ])
 
 function shouldShowProperty(key: string, value: unknown): boolean {
   if (HIDDEN_KEYS.has(key)) return false
+  // 如果在白名单中，直接展示
+  if (SHOW_KEYS.has(key)) return true
   if (value === undefined || value === null) return false
   if (value === '') return false
-  // 过滤复杂对象
   if (typeof value === 'object') return false
-  return true
+  // 非白名单字段默认隐藏（防止未预期的内部字段泄露）
+  return false
 }
 
 function formatValue(value: unknown): string {

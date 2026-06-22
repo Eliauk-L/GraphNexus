@@ -240,16 +240,22 @@ onBeforeUnmount(() => {
 .graph-page {
   display: flex;
   flex-direction: column;
+  height: calc(100vh - 48px);
+  overflow: hidden;
 }
 
 .graph-body {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .graph-canvas-area {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .graph-topbar {

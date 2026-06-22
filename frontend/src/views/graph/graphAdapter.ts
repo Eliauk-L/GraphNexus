@@ -60,7 +60,7 @@ export function toGraphData(
 // ── 文档子图转换（GraphSubgraphVO · 轻量）──
 
 /** 文档子图展示的节点类型 */
-const DOCUMENT_SUBGRAPH_NODE_TYPES = new Set(['Entity', 'KnowledgePoint'])
+const DOCUMENT_SUBGRAPH_NODE_TYPES = new Set(['Document', 'Entity', 'KnowledgePoint'])
 
 function transformDocumentSubgraph(vo: GraphSubgraphVO): G6GraphData {
   // 优先展示 Entity + KnowledgePoint，若过滤后为空则展示全部

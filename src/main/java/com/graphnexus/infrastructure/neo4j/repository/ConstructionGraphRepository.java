@@ -132,7 +132,7 @@ public class ConstructionGraphRepository {
     public List<GraphNode> findByDocumentId(String documentId) {
         try {
             Collection<Map<String, Object>> rows = neo4jClient.query(
-                    "MATCH (d {id: $docId}) " +
+                    "MATCH (d {documentId: $docId}) " +
                     "OPTIONAL MATCH (d)-[:EXTRACTS]->(e:Entity) " +
                     "OPTIONAL MATCH (e)-[:ALIGNED_TO]->(kp:KnowledgePoint) " +
                     "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
@@ -167,7 +167,7 @@ public class ConstructionGraphRepository {
     public List<GraphEdge> findEdgesByDocumentId(String documentId) {
         try {
             Collection<Map<String, Object>> result = neo4jClient.query(
-                    "MATCH (d {id: $docId}) " +
+                    "MATCH (d {documentId: $docId}) " +
                     "OPTIONAL MATCH (d)-[r1:EXTRACTS]->(e:Entity) " +
                     "OPTIONAL MATCH (e)-[r2:ALIGNED_TO]->(kp:KnowledgePoint) " +
                     "OPTIONAL MATCH (kp)-[r3:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +

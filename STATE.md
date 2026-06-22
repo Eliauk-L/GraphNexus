@@ -6,14 +6,23 @@
 
 ## 当前活动
 
-- **Change ID**: `diagnosis-history-export`
-- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → TASK ✅ → DEV ✅ → 下一步 TEST/REVIEW
-- **当前角色**: Dev → 下一步 Tester/Reviewer
+- **Change ID**: `knowledge-graph-viz-enhance`
+- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN → 等待用户确认
+- **当前角色**: Architect
 - **最后更新**: 2026-06-22
-- **DEV 执行记录**: 9 任务 · 4 波次 · 16 单测全通过 · vue-tsc 0 错误
-- **路径建议**: 完整（`REQUIREMENT → DESIGN → TASK → DEV → TEST → REVIEW → INTEGRATION`）
-- **用户决策**: Q1 列表字段→A 精简型 | Q2 导出→单条+批量 | Q3 UI 位置→A 折叠面板
-- **工件**: `@.specs/diagnosis-history-export/CHANGE.md`
+- **用户决策**: Q1 学科入口→A 现有页面加学科选择器 | Q2 度量展示→C 视觉映射+排行面板 | Q3 度量范围→A 仅当前学科 | PageRank 可选展示
+- **工件**: `@.specs/knowledge-graph-viz-enhance/CHANGE.md` + `REQUIREMENT.md` + `DESIGN.md` + `@.specs/adr/032-subject-graph-api.md` + `@.specs/adr/033-metrics-subject-filter.md`
+- **关键设计决策 (D1–D9)**:
+  - D1 学科全景图 API 端点: `GET /api/v1/graph/construction/subject/{subjectName}`
+  - D2 学科列表 API: `GET /api/v1/graph/subjects`
+  - D3 指标学科过滤: **结果层后置过滤**（全图 GDS 计算 → 按 subject KP 列表筛选），不改 GdsAdapter
+  - D4 节点大小映射: **线性映射** totalDegree → [20, 60]px，95 百分位截断防离群值
+  - D5 节点颜色映射: **5 档暖色梯度**（PageRank 百分位分段），开关 OFF 时恢复默认 NODE_COLORS
+  - D6 视图模式切换: Pinia store `viewMode : 'document' | 'subject'`，互斥
+  - D7 PageRank 开关: **localStorage 持久化**，默认 OFF，降级内存状态
+  - D8 学科图 Cypher: **单查询** OPTIONAL MATCH + DISTINCT，LIMIT 1000
+  - D9 MetricsPanel 位置: **右侧滑出**，与 NodeDetailPanel 互斥
+- **ADR**: ADR-032（学科全景图 API 设计）+ ADR-033（指标学科过滤策略：结果层后置过滤）
 
 ---
 

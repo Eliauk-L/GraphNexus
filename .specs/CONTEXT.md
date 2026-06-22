@@ -97,6 +97,10 @@
 | **异常日志分级** | GlobalExceptionHandler 按异常类型分级落日志：兜底未捕获 Exception → ERROR 级完整堆栈；BusinessException / MethodArgumentNotValidException / AccessDeniedException → WARN 级关键摘要（不含完整堆栈），避免预期内异常污染 error 日志 |
 | **完整堆栈日志** | 含异常类名 + 异常 message + cause 链 + 出错行号的 ERROR 级日志条目，通过 MDC traceId 与请求链路关联，落入既有 graphnexus-error.log，供后端凭响应 traceId 检索定位 |
 | **GraphConstructedEvent** | Spring 同步事件，图谱构建阶段全部完成后发布，载荷含 `source`(DOCUMENT/CSV)、`subject`、`kpNames`、`mode`(FULL/INCREMENTAL)、`documentId`/`examNo`。由 `GraphConstructedEventListener`(analysis 模块) 同步 `@EventListener` 消费触发融合，是"构建完成→融合"的唯一显式触发源，取代 `ConstructionServiceImpl` 直接调用 `fuseIncremental` 与 grade 路径 `GradeUploadedEventListener`(`@Order(2)`) 直接 `fuseFull` + `@Order` 隐式排序。载荷自包含，发布方不依赖消费方 |
+| **学科全景图** | 某个学科下所有 KnowledgePoint 节点及其 PREREQUISITE_OF 依赖边 + 关联 KnowledgeCategory 的聚合图。与文档子图（单文档内 Entity→KP→Category）不同，学科全景图是跨文档的 KP 级视图，展示整个学科的知识结构骨架。通过 Subject 节点的 BELONGS_TO_SUBJECT 边筛选范围 |
+| **度量映射** | 将度中心性/PageRank 数值映射为节点视觉属性的前端策略。v1：节点大小与总度数（inDegree + outDegree）正相关（始终生效）。节点颜色按 PageRank 百分位映射（冷色→暖色），由 PageRank 显示开关控制（默认 OFF，关闭时使用统一默认主题色）。图例中标注映射规则，排行面板提供同等的文字数值确保可访问性 |
+| **度量排行面板** | 可折叠侧边面板（MetricsPanel.vue），按度量值降序列出知识点 Top N（默认 20），支持点击表头切换排序字段（入度/出度/PageRank），点击行联动图谱高亮聚焦对应节点。PageRank 列由开关控制显隐。度量失败时显示降级提示"度量数据暂不可用" |
+| **PageRank 显示开关** | 图谱工具栏中的 Toggle/Switch 控件，默认关闭。控制 PageRank 的三处 UI 表现：节点颜色映射（ON=暖色梯度 / OFF=默认色）、排行面板 PageRank 列显隐、节点详情 PageRank 行显隐。关闭时前端不请求 PageRank API 以节省 GDS 计算资源。开启/关闭不影响度中心性的大小映射和数据显示 |
 | **AntV G6 v5** | 阿里 AntV 团队开发的专业图可视化引擎，v5 版本。支持 WebGL + Canvas 双渲染引擎，内置节点搜索、类型筛选、tooltip、邻域展开、鱼眼放大、小地图等交互插件。通过 DOM container 挂载，不依赖特定前端框架。本项目用于替换 Cytoscape.js |
 | **WebGL 渲染** | 基于 GPU 的图形渲染方式，相比 Canvas 2D 能流畅渲染万级节点的图。G6 v5 默认使用 WebGL 渲染器，不可用时自动降级到 Canvas。需浏览器支持 WebGL 1.0（Chrome/Firefox/Edge 120+ 均满足） |
 | **邻域展开** | 图交互模式：点击节点后，以该节点为中心高亮其 1 跳邻居节点和连接边，其余节点/边降低透明度。用于快速探索某知识点的直接关联 |
@@ -200,6 +204,11 @@
 | JPA 动态条件查询方案 | 多可选筛选参数的 Repository 查询使用 `JpaSpecificationExecutor` + Service 层 `Specification` 动态 where 链构建，替代 `@Query` JPQL 拼接或方法名派生。项目首次引入，`QueryTaskRepository` 为首个实现 | 2026-06-22 | `diagnosis-history-export` DESIGN ADR-030 |
 | 诊断报告导出格式 v2 | 单条：HTML 格式（`.html`），Content-Type `text/html; charset=UTF-8`，文件名 `diagnosis-{taskId前8位}.html`，`StreamingResponseBody` 流式下载 | 2026-06-22 | `diagnosis-history-export` DESIGN |
 | 文件下载响应模式 | 项目首次文件下载 API：Controller 返回 `ResponseEntity<StreamingResponseBody>`，设置 `Content-Type` + `Content-Disposition: attachment`，异步写 `ServletOutputStream` | 2026-06-22 | `diagnosis-history-export` DESIGN D4 |
+| 学科全景图 API | `GET /api/v1/graph/construction/subject/{subjectName}` 返回指定学科下所有 KP + PREREQUISITE_OF 边 + KnowledgeCategory + CHILD_OF 边的聚合图。新增端点，不影响现有 `GET /api/v1/graph/construction/document/{documentId}` 文档子图端点 | 2026-06-22 | `knowledge-graph-viz-enhance` REQUIREMENT |
+| 学科列表 API | `GET /api/v1/graph/subjects` 返回 Neo4j 中所有 Subject 节点名称数组，按名称排序，用于前端学科选择器下拉数据源 | 2026-06-22 | `knowledge-graph-viz-enhance` REQUIREMENT |
+| 指标 API 学科过滤 | `GET /api/v1/graph/metrics/{pagerank,degree}` 新增可选 `subject` 查询参数，按 BELONGS_TO_SUBJECT 边过滤结果仅含指定学科的节点。不传时行为不变（返回全图结果）。缓存 key 加入 subject Hash 以区分不同学科的缓存条目 | 2026-06-22 | `knowledge-graph-viz-enhance` REQUIREMENT |
+| 度量视觉映射方案 | 前端：节点半径 = f（总度数），始终生效。节点颜色 = g（PageRank 百分位），由 PageRank 开关控制（默认 OFF，开启后从冷色到暖色映射；关闭时使用统一默认主题色）。图例 + 排行面板提供文字数值确保仅凭颜色/大小不丢失信息 | 2026-06-22 | `knowledge-graph-viz-enhance` REQUIREMENT |
+| 图谱视图模式互斥 | 学科全景图与文档子图两种模式互斥：选中学科 → 清空文档选择器和文档图；选中文档 → 清空学科选择器和学科图。同一时刻图谱只展示一种视图 | 2026-06-22 | `knowledge-graph-viz-enhance` REQUIREMENT |
 
 ## 默认行为
 
