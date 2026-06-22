@@ -239,29 +239,31 @@ function handlePageChange(page: number) {
       style="width: 900px; max-width: 90vw; max-height: 80vh;"
       size="huge"
     >
-      <NSpin :show="previewLoading" size="medium">
-        <!-- 失败记录：显示错误原因 -->
-        <div v-if="previewError" class="preview-error">
-          <div class="preview-error-label body-lead">诊断失败</div>
-          <div class="preview-error-msg supporting">{{ previewError }}</div>
-        </div>
-        <!-- 成功记录：渲染报告 -->
-        <div v-else-if="previewAnswer" class="preview-content">
-          <HtmlSvgViewer
-            v-if="previewFormat === 'html-svg'"
-            :content="previewAnswer"
-          />
-          <MarkdownReport
-            v-else
-            :content="previewAnswer"
-            :output-format="previewFormat"
-          />
-          <div v-if="previewTokenUsage" class="preview-token">
-            <TokenUsageBar :token-usage="previewTokenUsage" />
+      <div class="preview-body">
+        <NSpin :show="previewLoading" size="medium">
+          <!-- 失败记录：显示错误原因 -->
+          <div v-if="previewError" class="preview-error">
+            <div class="preview-error-label body-lead">诊断失败</div>
+            <div class="preview-error-msg supporting">{{ previewError }}</div>
           </div>
-        </div>
-        <NEmpty v-else description="暂无报告内容" />
-      </NSpin>
+          <!-- 成功记录：渲染报告 -->
+          <div v-else-if="previewAnswer" class="preview-content">
+            <HtmlSvgViewer
+              v-if="previewFormat === 'html-svg'"
+              :content="previewAnswer"
+            />
+            <MarkdownReport
+              v-else
+              :content="previewAnswer"
+              :output-format="previewFormat"
+            />
+            <div v-if="previewTokenUsage" class="preview-token">
+              <TokenUsageBar :token-usage="previewTokenUsage" />
+            </div>
+          </div>
+          <NEmpty v-else description="暂无报告内容" />
+        </NSpin>
+      </div>
     </NModal>
   </div>
 </template>
@@ -280,14 +282,20 @@ function handlePageChange(page: number) {
   margin-bottom: var(--spacing-md);
 }
 
+.preview-body {
+  background: #fff;
+}
+
 .preview-content {
   width: 100%;
   min-height: 200px;
+  background: #fff;
 }
 
 .preview-error {
   width: 100%;
   padding: var(--spacing-lg);
+  background: #fff;
 }
 
 .preview-error-label {
