@@ -237,7 +237,6 @@ function handlePageChange(page: number) {
       preset="card"
       :title="previewTitle"
       style="max-width: 900px; max-height: 80vh;"
-      :segmented="{ content: 'soft', footer: 'soft' }"
       size="huge"
     >
       <NSpin :show="previewLoading" size="medium">
@@ -283,10 +282,12 @@ function handlePageChange(page: number) {
 
 .preview-content {
   min-height: 200px;
+  background: #fff;
 }
 
 .preview-error {
   padding: var(--spacing-lg);
+  background: #fff;
 }
 
 .preview-error-label {
