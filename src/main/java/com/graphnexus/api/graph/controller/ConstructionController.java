@@ -62,4 +62,18 @@ public class ConstructionController {
         GraphSubgraphBO bo = constructionService.getSubgraph(documentId);
         return ApiResult.success(GraphSubgraphVO.from(bo));
     }
+
+    /**
+     * 查询全量融合图谱（所有节点和边）。
+     */
+    @Operation(summary = "查询全量融合图谱", description = "返回 Neo4j 中所有节点和关系边，用于全量知识图谱可视化。适用于跨文档、跨学科的全景浏览")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "全量图谱（节点列表 + 边列表）"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+    })
+    @GetMapping("/full")
+    public ApiResult<GraphSubgraphVO> getFullGraph() {
+        GraphSubgraphBO bo = constructionService.getFullGraph();
+        return ApiResult.success(GraphSubgraphVO.from(bo));
+    }
 }

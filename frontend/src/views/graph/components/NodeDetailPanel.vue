@@ -1,0 +1,193 @@
+<script setup lang="ts">
+/**
+ * NodeDetailPanel — 节点详情侧边滑出面板。
+ * 见 UI-DESIGN §4.3。
+ */
+
+defineProps<{
+  node: { id: string; data: Record<string, unknown> } | null
+  visible: boolean
+}>()
+
+defineEmits<{
+  close: []
+  'expand-neighbors': []
+}>()
+
+/** G6 内部渲染字段，不在详情面板展示 */
+const HIDDEN_KEYS = new Set([
+  'label', 'color', 'size',          // G6 visual
+  'x', 'y', 'z',                      // G6 position
+  'states', 'style',                  // G6 state
+  'nodeType',                         // shown separately
+])
+
+function shouldShowProperty(key: string, value: unknown): boolean {
+  if (HIDDEN_KEYS.has(key)) return false
+  if (value === undefined || value === null) return false
+  if (value === '') return false
+  // 过滤复杂对象
+  if (typeof value === 'object') return false
+  return true
+}
+
+function formatValue(value: unknown): string {
+  if (typeof value === 'number') {
+    // 截断浮点数
+    return Number.isInteger(value) ? String(value) : (value as number).toFixed(4)
+  }
+  return String(value)
+}
+</script>
+
+<template>
+  <Transition name="slide">
+    <div v-if="visible && node" class="detail-panel">
+      <div class="detail-header">
+        <h3 class="detail-title title">{{ (node.data.name as string) ?? (node.data.label as string) ?? node.id }}</h3>
+        <button class="detail-close" @click="$emit('close')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="detail-divider" />
+
+      <div class="detail-fields">
+        <div class="detail-field">
+          <span class="detail-field-label supporting">ID</span>
+          <span class="detail-field-value body mono">{{ node.id }}</span>
+        </div>
+        <div class="detail-field">
+          <span class="detail-field-label supporting">类型</span>
+          <span class="detail-field-value body">{{ node.data.nodeType }}</span>
+        </div>
+        <template v-for="(value, key) in node.data" :key="key">
+          <div
+            v-if="shouldShowProperty(key, value)"
+            class="detail-field"
+          >
+            <span class="detail-field-label supporting">{{ key }}</span>
+            <span class="detail-field-value body">{{ formatValue(value) }}</span>
+          </div>
+        </template>
+      </div>
+
+      <div class="detail-actions">
+        <button class="btn-expand" @click="$emit('expand-neighbors')">
+          展开邻域
+        </button>
+      </div>
+    </div>
+  </Transition>
+</template>
+
+<style scoped>
+.detail-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 320px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card-lifted);
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+  z-index: 40;
+}
+
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.detail-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  word-break: break-all;
+}
+
+.detail-close {
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+}
+.detail-close:hover {
+  color: var(--color-text-primary);
+}
+
+.detail-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--spacing-md) 0;
+}
+
+.detail-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-field-label {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-field-value {
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  word-break: break-all;
+}
+
+.detail-empty {
+  text-align: center;
+}
+
+.detail-actions {
+  margin-top: var(--spacing-lg);
+}
+
+.btn-expand {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-brand);
+  color: var(--color-text-on-brand);
+  border: none;
+  border-radius: var(--rounded-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 150ms ease, background 300ms ease;
+}
+.btn-expand:hover {
+  background: var(--color-brand-deep);
+  transform: translateY(-1px);
+}
+
+/* slide transition */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(100%);
+}
+</style>

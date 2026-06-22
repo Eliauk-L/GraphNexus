@@ -1,13 +1,25 @@
 import type { GraphSubgraphVO, SubgraphResponse } from '@/api/types'
+import {
+  NODE_COLORS,
+  NODE_SIZES,
+  EDGE_COLORS,
+  EDGE_LINE_STYLES,
+  DEFAULT_NODE_COLOR,
+  DEFAULT_NODE_SIZE,
+  DEFAULT_EDGE_COLOR,
+  DEFAULT_EDGE_WIDTH,
+} from './constants'
 
-export interface CyElements {
-  nodes: CyNode[]
-  edges: CyEdge[]
+// ── G6 v5 GraphData 类型 ──
+
+export interface G6GraphData {
+  nodes: G6GraphNode[]
+  edges: G6GraphEdge[]
 }
 
-interface CyNode {
+export interface G6GraphNode {
+  id: string
   data: {
-    id: string
     label: string
     nodeType: string
     color: string
@@ -16,98 +28,100 @@ interface CyNode {
   }
 }
 
-interface CyEdge {
+export interface G6GraphEdge {
+  id: string
+  source: string
+  target: string
   data: {
-    id: string
-    source: string
-    target: string
     type: string
     color: string
     width: number
     lineStyle: 'solid' | 'dashed'
+    [key: string]: unknown
   }
 }
 
-const NODE_COLORS: Record<string, string> = {
-  KnowledgePoint: '#4A90D9',
-  Student: '#52C41A',
-  Entity: '#8C8C8C',
-  Exam: '#FAAD14',
-  KnowledgeCategory: '#722ED1',
-  Document: '#BFBFBF',
+// ── 统一转换入口 ──
+
+/**
+ * 将后端图谱数据转换为 G6 v5 GraphData 格式。
+ * 判别方式：SubgraphResponse 有 taskId/pruningMeta 字段，GraphSubgraphVO 没有。
+ */
+export function toGraphData(
+  input: GraphSubgraphVO | SubgraphResponse,
+): G6GraphData {
+  if ('taskId' in input) {
+    return transformPruningSubgraph(input as SubgraphResponse)
+  }
+  return transformDocumentSubgraph(input as GraphSubgraphVO)
 }
 
-const NODE_SIZES: Record<string, number> = {
-  KnowledgePoint: 40,
-  Student: 35,
-  Exam: 32,
-  KnowledgeCategory: 38,
-  Document: 32,
-  Entity: 28,
-}
+// ── 文档子图转换（GraphSubgraphVO · 轻量）──
 
-const EDGE_COLORS: Record<string, string> = {
-  PREREQUISITE_OF: '#4A90D9',
-  ALIGNED_TO: '#52C41A',
-  MASTERS: '#FAAD14',
-  TESTED: '#FF7A45',
-  CHILD_OF: '#722ED1',
-}
+/** 文档子图展示的节点类型 */
+const DOCUMENT_SUBGRAPH_NODE_TYPES = new Set(['Document', 'Entity', 'KnowledgePoint'])
 
-export function transformGraphSubgraphVO(vo: GraphSubgraphVO): CyElements {
-  const nodeIds = new Set(vo.nodes.map((n) => n.id))
+function transformDocumentSubgraph(vo: GraphSubgraphVO): G6GraphData {
+  // 只展示 Document / Entity / KnowledgePoint，过滤其余
+  const filteredNodes = vo.nodes.filter((n) => DOCUMENT_SUBGRAPH_NODE_TYPES.has(n.nodeType))
+  const nodeIds = new Set(filteredNodes.map((n) => n.id))
 
   return {
-    nodes: vo.nodes.map((n) => ({
+    nodes: filteredNodes.map((n) => ({
+      id: n.id,
       data: {
-        id: n.id,
-        label: n.id.substring(0, 8),
+        // 先铺 Neo4j 属性，再覆盖 G6 渲染字段
+        ...n.properties,
+        label: n.name ?? n.nodeType,
         nodeType: n.nodeType,
-        color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
-        size: NODE_SIZES[n.nodeType] ?? 28,
+        color: NODE_COLORS[n.nodeType] ?? DEFAULT_NODE_COLOR,
+        size: NODE_SIZES[n.nodeType] ?? DEFAULT_NODE_SIZE,
       },
     })),
     edges: vo.edges
       .filter((e) => nodeIds.has(e.sourceNodeId) && nodeIds.has(e.targetNodeId))
       .map((e, i) => ({
+        id: `e-${i}`,
+        source: e.sourceNodeId,
+        target: e.targetNodeId,
         data: {
-          id: `e-${i}`,
-          source: e.sourceNodeId,
-          target: e.targetNodeId,
           type: e.edgeType,
-          color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
-          width: 1.5,
-          lineStyle: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType) ? 'dashed' as const : 'solid' as const,
+          color: EDGE_COLORS[e.edgeType] ?? DEFAULT_EDGE_COLOR,
+          width: DEFAULT_EDGE_WIDTH,
+          lineStyle: EDGE_LINE_STYLES[e.edgeType] ?? 'solid' as const,
         },
       })),
   }
 }
 
-export function transformSubgraphResponse(res: SubgraphResponse): CyElements {
+// ── 剪枝子图转换（SubgraphResponse · 含 properties + weight + PruningMeta）──
+
+function transformPruningSubgraph(res: SubgraphResponse): G6GraphData {
   const nodeIds = new Set(res.nodes.map((n) => n.id))
 
   return {
     nodes: res.nodes.map((n) => ({
+      id: n.id,
       data: {
-        id: n.id,
         label: (n.properties.name as string) ?? (n.properties.label as string) ?? n.id.substring(0, 8),
         nodeType: n.nodeType,
-        color: NODE_COLORS[n.nodeType] ?? '#8C8C8C',
-        size: NODE_SIZES[n.nodeType] ?? 28,
+        color: NODE_COLORS[n.nodeType] ?? DEFAULT_NODE_COLOR,
+        size: NODE_SIZES[n.nodeType] ?? DEFAULT_NODE_SIZE,
         ...n.properties,
       },
     })),
     edges: res.edges
       .filter((e) => nodeIds.has(e.sourceNodeId) && nodeIds.has(e.targetNodeId))
       .map((e, i) => ({
+        id: `e-${i}`,
+        source: e.sourceNodeId,
+        target: e.targetNodeId,
         data: {
-          id: `e-${i}`,
-          source: e.sourceNodeId,
-          target: e.targetNodeId,
           type: e.edgeType,
-          color: EDGE_COLORS[e.edgeType] ?? '#8C8C8C',
-          width: 1 + Math.min(e.weight, 3),
-          lineStyle: ['BELONGS_TO', 'CHILD_OF', 'REFERENCES'].includes(e.edgeType) ? 'dashed' as const : 'solid' as const,
+          color: EDGE_COLORS[e.edgeType] ?? DEFAULT_EDGE_COLOR,
+          width: DEFAULT_EDGE_WIDTH + Math.min(e.weight, 3),
+          lineStyle: EDGE_LINE_STYLES[e.edgeType] ?? 'solid' as const,
+          weight: e.weight,
         },
       })),
   }

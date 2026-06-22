@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +42,15 @@ public class GraphSubgraphVO {
         @Schema(description = "节点类型标签", example = "KnowledgePoint")
         private String nodeType;
 
+        @Schema(description = "节点名称", example = "二次函数顶点坐标")
+        private String name;
+
+        @Schema(description = "节点描述", example = "二次函数 y=ax²+bx+c 的顶点坐标为 (-b/2a, (4ac-b²)/4a)")
+        private String description;
+
+        @Schema(description = "节点完整属性（Neo4j properties 透传）")
+        private Map<String, Object> properties;
+
         @Schema(description = "关联文档 ID", example = "1")
         private String documentId;
 
@@ -51,6 +61,10 @@ public class GraphSubgraphVO {
             GraphNodeVO vo = new GraphNodeVO();
             vo.setId(data.id());
             vo.setNodeType(data.nodeType());
+            vo.setName(data.properties() != null ? (String) data.properties().get("name") : null);
+            vo.setDescription(data.properties() != null ? (String) data.properties().get("description") : null);
+            // 透传全部属性，前端可在详情面板展示
+            vo.setProperties(data.properties());
             vo.setDocumentId(data.documentId());
             vo.setCreatedAt(data.createdAt() != null ? data.createdAt().toString() : null);
             return vo;

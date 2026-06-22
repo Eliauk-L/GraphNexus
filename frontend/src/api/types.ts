@@ -109,6 +109,9 @@ export interface ExtractionResultVO {
 export interface GraphNodeVO {
   id: string
   nodeType: string
+  name?: string
+  description?: string
+  properties?: Record<string, unknown>
   documentId: string
   createdAt: string
 }
@@ -124,6 +127,9 @@ export interface GraphSubgraphVO {
   nodes: GraphNodeVO[]
   edges: GraphEdgeVO[]
 }
+
+/** 全量融合图谱 — 复用 GraphSubgraphVO 结构（nodes[] + edges[]），无额外字段 */
+export type FullGraphVO = GraphSubgraphVO
 
 // ── 融合管理 ──
 

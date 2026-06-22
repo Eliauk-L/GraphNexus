@@ -42,7 +42,13 @@
 | **WeightCalculationStrategy** | MASTERS 权重计算策略接口（契约：输入 `List<TestedRecord>` → 输出 `weight` + 摘要），v1 首发实现为 `TimeDecayStrategy`（月衰减因子 0.9，缺考不计入）。接口预留 EWMA、贝叶斯推断等扩展点 |
 | **fusion_log** | MySQL 表，记录每次融合操作的完整审计日志：触发方式、融合 KP 组数、MASTERS 边数、融合明细 JSON（源 KP → 目标 KP 映射 + 边重定向清单）、MASTERS 变更快照 JSON（oldWeight → newWeight）。支持按 `fusionLogId` 回滚 |
 | **智能问答** | 用户用自然语言提问，系统从宽图谱中剪枝出最小够用子图，输入 LLM 生成 Markdown 格式的分析结论与建议 |
-| **意图识别** | 根据用户自然语言问题判定查询意图类型（v1：规则匹配 + 关键词，仅支持 STUDENT_DIAGNOSIS），路由到对应剪枝策略 |
+| **意图识别** | 根据用户自然语言问题判定查询意图类型。v1 规则匹配+关键词（仅 STUDENT_DIAGNOSIS）；v2（llm-intent-recognition）升级为 LLM-first 分类 + 关键词 fallback，仍仅支持 STUDENT_DIAGNOSIS |
+| **LLM 意图分类** | 调用 LLM 从用户自然语言问题中识别 `QueryIntent` 枚举值，输出约束为 JSON `{"intent":"STUDENT_DIAGNOSIS"}`。prompt 模板外置到 `classpath:/prompts/intent-classification-system.md`，由 `IntentRecognitionService` 编排 LLM 调用 → JSON 解析 → fallback 链路 |
+| **HTML+SVG 输出格式** | LLM 分析结论以纯 HTML+SVG 片段形式输出（含 `<h2>`/`<table>` 等 HTML 结构标签 + `<svg>` 数据图表/知识图谱/数学公式），替代原有 Markdown 输出。通过 `query.output-format=html-svg|markdown` yml 配置切换，重启生效。Markdown 路径完整保留作为回滚选项 |
+| **DOMPurify 净化** | 前端渲染 HTML+SVG 前的安全净化步骤。白名单模式：允许 HTML 结构标签（div/h2/table/ul/li/p/strong...）+ SVG 图形标签（svg/circle/rect/line/path/text/g...）+ MathML 标签；移除 script/foreignObject/事件属性/xlink:href。通过 `dompurify` npm 包实现 |
+| **IntentRecognitionStrategy** | 可插拔意图识别策略接口（`recognize(question) → QueryIntent or null`），含 `priority()` 默认方法。内置实现：`LlmIntentRecognitionStrategy`（priority=10，LLM 分类）+ `KeywordIntentRecognitionStrategy`（priority=20，关键词兜底）。v2 新增策略（如 embedding 匹配）只需实现接口 + `@Component`，编排器零改动 |
+| **IntentRecognitionService** | L2 策略链编排器，注入 `List<IntentRecognitionStrategy>` 按 priority 升序链式执行。任一策略返回 non-null → 成功；全部返回 null → 抛 `BusinessException(A0019)`。与 `PruningStrategyRegistry` 形成项目统一的"可插拔策略"模式 |
+| **PruningStrategyRegistry** | 剪枝策略注册表（Map<String, SubgraphPruningStrategy>），按意图名称路由到对应策略实现。`QueryServiceImpl` 通过 Registry 获取策略，不再直接注入具体策略类。新增意图只需实现接口 + 注册，不改核心调用代码 |
 | **STUDENT_DIAGNOSIS** | 学生薄弱点诊断意图：从 Student 出发，沿 MASTERS(weight < 0.6) → KnowledgePoint → PREREQUISITE_OF(≤2 跳) 剪枝，LLM 生成含薄弱点列表 + 根因分析 + 学习建议的 Markdown 报告 |
 | **SubgraphPruningStrategy** | 图剪枝策略接口（契约：输入 `PruningRequest`（意图 + 实体 + 参数）→ 输出 `PrunedSubgraph`（节点 + 边 + 元数据）），v1 首发 `StudentDiagnosisStrategy`。新增意图只需实现接口 + 注册，不改核心链路 |
 | **PrunedSubgraph** | 剪枝后的子图 BO，含节点列表（`List<GraphNode>`）+ 边列表（`List<GraphEdge>`）+ `PruningMeta`（策略名/跳数/阈值等元信息），用于序列化为 LLM Prompt 或通过 API 返回前端渲染 |
@@ -91,6 +97,11 @@
 | **异常日志分级** | GlobalExceptionHandler 按异常类型分级落日志：兜底未捕获 Exception → ERROR 级完整堆栈；BusinessException / MethodArgumentNotValidException / AccessDeniedException → WARN 级关键摘要（不含完整堆栈），避免预期内异常污染 error 日志 |
 | **完整堆栈日志** | 含异常类名 + 异常 message + cause 链 + 出错行号的 ERROR 级日志条目，通过 MDC traceId 与请求链路关联，落入既有 graphnexus-error.log，供后端凭响应 traceId 检索定位 |
 | **GraphConstructedEvent** | Spring 同步事件，图谱构建阶段全部完成后发布，载荷含 `source`(DOCUMENT/CSV)、`subject`、`kpNames`、`mode`(FULL/INCREMENTAL)、`documentId`/`examNo`。由 `GraphConstructedEventListener`(analysis 模块) 同步 `@EventListener` 消费触发融合，是"构建完成→融合"的唯一显式触发源，取代 `ConstructionServiceImpl` 直接调用 `fuseIncremental` 与 grade 路径 `GradeUploadedEventListener`(`@Order(2)`) 直接 `fuseFull` + `@Order` 隐式排序。载荷自包含，发布方不依赖消费方 |
+| **AntV G6 v5** | 阿里 AntV 团队开发的专业图可视化引擎，v5 版本。支持 WebGL + Canvas 双渲染引擎，内置节点搜索、类型筛选、tooltip、邻域展开、鱼眼放大、小地图等交互插件。通过 DOM container 挂载，不依赖特定前端框架。本项目用于替换 Cytoscape.js |
+| **WebGL 渲染** | 基于 GPU 的图形渲染方式，相比 Canvas 2D 能流畅渲染万级节点的图。G6 v5 默认使用 WebGL 渲染器，不可用时自动降级到 Canvas。需浏览器支持 WebGL 1.0（Chrome/Firefox/Edge 120+ 均满足） |
+| **邻域展开** | 图交互模式：点击节点后，以该节点为中心高亮其 1 跳邻居节点和连接边，其余节点/边降低透明度。用于快速探索某知识点的直接关联 |
+| **路径高亮** | 图交互模式：用户选择两个节点后，高亮它们之间的最短路径（节点和边加粗），其余元素降低透明度。用于理解知识点间的关联链路 |
+| **剪枝子图** | 智能问答流程中由 `SubgraphPruningStrategy` 从宽图谱中裁切出的子图，通过 `GET /api/v1/analysis/subgraph/{taskId}` 返回。与文档子图不同，节点含完整 `properties` Map（如 name/label/description 等），边含 `weight` 属性，附带 `PruningMeta`（策略名/阈值/截断信息）。前端同时渲染图结构和元信息面板 |
 
 ## 已锁技术决策
 
@@ -133,8 +144,8 @@
 | 融合回滚机制 | `fusion_log` 记录每次融合的完整快照（融合明细 JSON + MASTERS 变更 JSON），回滚按日志逆向恢复 Neo4j 图状态。回滚粒度 = 单次融合操作，幂等。不支持跨多次融合的部分回滚 | 2026-06-15 | `wide-graph-fusion` REQUIREMENT |
 | KP 字段冲突解决 | 融合时若多个源 KP 的 `description`/`gradeLevel` 字段不同：文档抽取 KP 的非空字段覆盖 CSV 侧空字段，CSV 侧非空字段保留在 `fusionSource` 标记中供审计。冲突字段以文档侧为准 | 2026-06-15 | `wide-graph-fusion` CHANGE（Q3→A） |
 | 融合触发策略 | 双触发模式：① 手动全量融合 `POST /api/v1/graph/fusion/execute`；② 自动增量融合 — 新文档抽取或新 CSV 上传完成后自动触发，仅融合涉及的 KP + 重算受影响学生的 MASTERS 边 | 2026-06-15 | `wide-graph-fusion` CHANGE（Q1→C） |
-| 意图识别策略 | v1 规则匹配（关键词 + 实体提取），仅支持 `STUDENT_DIAGNOSIS` 一种意图。意图识别失败（关键词无法匹配）时返回 HTTP 400 提示"无法识别查询意图，请更明确地描述"。后续 change 可扩展为 LLM 分类或 embedding 匹配 | 2026-06-17 | `intelligent-qa` CHANGE（Q1→A） |
-| LLM 输出格式 | LLM 分析结论以中文 Markdown 格式返回，禁止前导语。模板文件化管理（classpath `prompts/`），通过配置切换。格式不合规自动重试 ≤2 次 | 2026-06-17 | `intelligent-qa` CHANGE（Q4→A） |
+| 意图识别策略 | v1 规则匹配（关键词 + 实体提取），仅支持 `STUDENT_DIAGNOSIS` 一种意图→ v2（llm-intent-recognition）升级为 LLM-first + 关键词 fallback | 2026-06-17 → 2026-06-22 | `intelligent-qa` CHANGE（Q1→A）→ `llm-intent-recognition` |
+| LLM 输出格式 | v1 中文 Markdown，禁止前导语→ v2（llm-intent-recognition）升级为 HTML+SVG（默认），Markdown 通过 `query.output-format=markdown` 可配置回滚。模板文件化管理（classpath `prompts/`），通过配置切换。格式不合规自动重试 ≤2 次 | 2026-06-17 → 2026-06-22 | `intelligent-qa` CHANGE（Q4→A）→ `llm-intent-recognition` |
 | 智能问答异步持久化 | QA 任务记录持久化到 MySQL `query_task` 表（日志类表，不设逻辑删除），含完整生命周期状态 + 子图 JSON + token 用量，支持历史查询 | 2026-06-17 | `intelligent-qa` CHANGE（Q2→A） |
 | 子图数据独立端点 | LLM 分析结论和子图结构数据通过独立 API 端点返回（`GET /api/v1/analysis/subgraph/{taskId}`），不混在同一响应体中。前端可选择性渲染图可视化 | 2026-06-17 | `intelligent-qa` CHANGE（Q3→B） |
 | 图指标计算引擎 | 使用 Neo4j GDS 5.x 原生算法（PageRank + 度中心性），通过 Cypher `gds.*.stream` 调用，transient 命名图模式（计算后释放）。结果仅 API 返回不持久化，Caffeine 缓存，图谱变更后事件驱动自动重算 | 2026-06-17 | `graph-metrics` REQUIREMENT |
@@ -144,7 +155,8 @@
 | 前端框架 | Vue 3 + TypeScript + Vite | 2026-06-17 | `frontend-ui` CHANGE（用户选定） |
 | UI 调性 | 极简（Minimal）— 参考 Linear/Vercel/Stripe | 2026-06-17 | `frontend-ui` CHANGE 步骤 0.6 |
 | 前端组件库 | 待 DESIGN 阶段决策（候选：Element Plus / Naive UI / Ant Design Vue） | — | `frontend-ui` CHANGE |
-| 图可视化库 | 待 DESIGN 阶段决策（候选：ECharts / Cytoscape.js / D3.js） | — | `frontend-ui` CHANGE |
+| 图可视化库 | AntV G6 v5（WebGL 渲染） | 2026-06-21 | `graph-viz-refactor` REQUIREMENT（覆盖 frontend-ui 待决策行） |
+| 图可视化库（前次） | ~~待 DESIGN 阶段决策（候选：ECharts / Cytoscape.js / D3.js）~~→ 已被 graph-viz-refactor 锁定 | 2026-06-17→2026-06-21 | `frontend-ui` CHANGE → `graph-viz-refactor` |
 | V1 目标分辨率 | 桌面端 ≥1280px 宽度，不做移动端 | 2026-06-17 | `frontend-ui` REQUIREMENT |
 | V1 鉴权 | 跳过（后端 Spring Security 临时放开或内网部署） | 2026-06-17 | `frontend-ui` CHANGE |
 | 文件处理 Pipeline 抽象 | 定义 `FileProcessingPipeline` 接口，封装"上传→解析→入库→图谱"全链路。新增文件类型只需实现接口 + 注册，Controller/Service 核心代码零改动。策略模式 + Spring 依赖注入实现 | 2026-06-18 | `extensible-file` REQUIREMENT |
@@ -175,6 +187,11 @@
 | 异常日志零新增基础设施 | 复用既有 TraceIdFilter(MDC) + logback-spring.xml + graphnexus-error.log，不新增 appender、不引入日志收集系统、不改 pom.xml | 2026-06-21 | `exception-traceability` REQUIREMENT |
 | fusion 归属 analysis + 事件驱动触发 | fusion 全栈（api-dto + application + infrastructure）从 graph 模块迁入 analysis 模块；构建完成改用同步 `GraphConstructedEvent` 触发融合（文档路径 `mode=INCREMENTAL`，成绩路径 `mode=FULL`），取代 `ConstructionServiceImpl` 直接调用 + grade `@Order(2)` 监听器。依赖方向 `construction(graph) → 事件 → fusion(analysis)`，禁止 analysis 反向注入 graph Service、禁止 construction 再注入 `FusionService`。同步语义保留（`@EventListener` 同线程，单请求 `COMPLETED`），不引异步/MQ/schema 变更，fusion 行为等价 | 2026-06-21 | `fusion-to-analysis-event-driven` CHANGE（Q1/Q2） |
 | REST 融合端点迁移 | `/api/v1/graph/fusion/{execute,status,rollback}` → `/api/v1/analysis/fusion/{execute,status,rollback}`（破坏性），前端融合管理 UI + API 文档同步；旧路径 `/graph/fusion/*` 是否保留别名由 DESIGN 锁定（REQUIREMENT 默认不保留→404） | 2026-06-21 | `fusion-to-analysis-event-driven` CHANGE（Q3） |
+| LLM 意图识别策略 | LLM-first + 关键词 fallback 双链路。LLM 调用 `IntentRecognitionService` 分类为 `QueryIntent` 枚举值（prompt 外置 `intent-classification-system.md`）；失败/解析异常 → 降级到现有关键词 Map 匹配；全部失败 → `BusinessException(A0019)`。仅支持 `STUDENT_DIAGNOSIS`，预留枚举值在 prompt 中作为 negative example | 2026-06-22 | `llm-intent-recognition` CHANGE（Q1/Q4） |
+| LLM 输出格式 | HTML+SVG（默认），通过 `query.output-format` yml 配置在 `html-svg` / `markdown` 间切换，重启生效。HTML+SVG 模式：LLM 输出含 `<svg>` 的 HTML 片段，经 HTML 标签开头校验 + ≤2 次重试；Markdown 模式：沿用现有 prompt 模板 + `## ` 开头校验 + marked 渲染。API 响应新增 `outputFormat` 字段告知前端选择渲染器 | 2026-06-22 | `llm-intent-recognition` CHANGE（Q2） |
+| SVG 内容范围 | LLM 生成自包含 SVG（含 `xmlns` + `viewBox`，不依赖外部 JS/CSS），涵盖三种：① 数据图表（柱状图/雷达图，用于掌握度分布）；② 知识图谱子图（circle+line+text 拓扑图，用于依赖链可视化）；③ 数学公式（MathML 或纯 SVG 路径）。前端仅做渲染不做计算。v1 每图表最多 10 个数据点、最大画布 800×600 | 2026-06-22 | `llm-intent-recognition` CHANGE（Q3） |
+| 策略路由注册机制 | `PruningStrategyRegistry`（Map<String, SubgraphPruningStrategy>）按意图名路由策略。`QueryServiceImpl` 注入 Registry 替代直接注入 `StudentDiagnosisStrategy`。新增意图只需实现接口 + `@Component` 注册，不改 `QueryServiceImpl` | 2026-06-22 | `llm-intent-recognition` REQUIREMENT（US-4） |
+| 前端 HTML/SVG 安全渲染 | 新增 `HtmlSvgViewer.vue` 组件，用 DOMPurify 白名单净化后 `v-html` 渲染。白名单：HTML 结构标签 + SVG 图形标签 + MathML 标签；阻断 script/foreignObject/事件属性/xlink:href。后端 `outputFormat` 字段驱动 `IntelligentQAPage.vue` 选择 `HtmlSvgViewer` 或 `MarkdownViewer` | 2026-06-22 | `llm-intent-recognition` CHANGE |
 
 ## 默认行为
 
@@ -275,6 +292,9 @@
 | `api/graph/controller/MetricsController.java` | 图指标查询 API（L1） | `GET /api/v1/graph/metrics/pagerank` + `GET /api/v1/graph/metrics/degree` |
 | `application/graph/metrics/model/` | 指标计算结果 BO/VO | `MetricResult`（nodeId/nodeType/metricName/metricValue）通用结构 |
 | `application/graph/metrics/event/GraphChangedEvent.java` | 图谱变更通知事件 | 所有图谱写操作完成后发布，消费者（MetricsCacheInvalidator）监听并清空缓存 |
+| `application/query/chat/intent/` | 可插拔意图识别策略链（L2） | `IntentRecognitionStrategy` 接口 + `IntentRecognitionService` 编排器 + `LlmIntentRecognitionStrategy`（LLM 分类）+ `KeywordIntentRecognitionStrategy`（关键词兜底）。按 priority 链式执行，统一的可插拔策略模式 |
+| `application/query/chat/registry/` | 剪枝策略注册表（L2） | `PruningStrategyRegistry`：按意图名路由策略，解耦 `QueryServiceImpl` 与具体策略 |
+| `frontend/src/common/components/HtmlSvgViewer.vue` | HTML/SVG 安全渲染组件 | DOMPurify 净化 + v-html 渲染，按 `outputFormat` 选择渲染器 |
 
 ## 禁动清单
 

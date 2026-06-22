@@ -160,6 +160,19 @@ public class ConstructionServiceImpl implements ConstructionService {
         String neo4jDocumentId = String.valueOf(documentId);
         List<GraphNode> nodes = constructionGraphRepository.findByDocumentId(neo4jDocumentId);
         List<GraphEdge> edges = constructionGraphRepository.findEdgesByDocumentId(neo4jDocumentId);
+        return buildSubgraphResult(nodes, edges);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GraphSubgraphBO getFullGraph() {
+        List<GraphNode> nodes = constructionGraphRepository.findAllNodes();
+        List<GraphEdge> edges = constructionGraphRepository.findAllEdges();
+        log.info("全量图谱查询完成：nodes={}, edges={}", nodes.size(), edges.size());
+        return buildSubgraphResult(nodes, edges);
+    }
+
+    private GraphSubgraphBO buildSubgraphResult(List<GraphNode> nodes, List<GraphEdge> edges) {
         return GraphSubgraphBO.builder()
                 .nodes(nodes.stream().map(GraphDataConverter::toNodeData).collect(Collectors.toList()))
                 .edges(edges.stream().map(GraphDataConverter::toEdgeData).collect(Collectors.toList()))

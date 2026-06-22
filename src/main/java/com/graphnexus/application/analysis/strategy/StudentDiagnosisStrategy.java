@@ -21,21 +21,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 学生诊断剪枝策略 — STUDENT_DIAGNOSIS 意图的 v1 实现。
+ * 学生薄弱点诊断剪枝策略 — v1 首发实现。
  *
- * <p>四步剪枝逻辑（见 ADR-010）：</p>
- * <ol>
- *   <li>确认学生存在并获取属性</li>
- *   <li>查找弱掌握知识点（MASTERS 优先，降级走 TESTED 路径）</li>
- *   <li>展开前置依赖链（PREREQUISITE_OF ≤ 2 跳）</li>
- *   <li>补全前置 KP 的掌握度</li>
- * </ol>
+ * <p>Bean name = "STUDENT_DIAGNOSIS"（与 {@code QueryIntent} 枚举名一致），
+ * 由 {@code PruningStrategyRegistry} 通过 Map 自动注入发现。
+ * 分 4 步 Cypher 查询，结果在 Java 层合并去重。</p>
+ *
+ * <p>设计决策见 ADR-010（分步 Cypher）+ ADR-027（Registry 注册）。</p>
  *
  * @author Jay
  * @date 2026/06/17
  */
 @Slf4j
-@Component
+@Component("STUDENT_DIAGNOSIS")
 @RequiredArgsConstructor
 public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
 

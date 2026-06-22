@@ -19,7 +19,7 @@ public final class GraphDataConverter {
                 node.getNodeType(),
                 node.getDocumentId(),
                 node.getCreatedAt(),
-                node.toProperties()
+                node.getProperties() != null ? node.getProperties() : node.toProperties()
         );
     }
 

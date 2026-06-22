@@ -133,7 +133,7 @@ public class QueryServiceImpl implements QueryService {
                     estimatedTokens, null, elapsedMs);
 
             return new QueryResultBO(taskId, "COMPLETED", question, intent.name(),
-                    answer, new TokenUsage(subgraph.meta().totalNodes(), subgraph.meta().totalEdges(),
+                    answer, null, new TokenUsage(subgraph.meta().totalNodes(), subgraph.meta().totalEdges(),
                     estimatedTokens, null, null), null, LocalDateTime.now(), LocalDateTime.now());
 
         } catch (BusinessException e) {
@@ -171,7 +171,7 @@ public class QueryServiceImpl implements QueryService {
         TokenUsage tokenUsage = parseTokenUsage(task.getTokenUsageJson());
         return new QueryResultBO(
                 task.getTaskId(), task.getStatus().name(), task.getQuestion(),
-                task.getIntent(), task.getAnswer(), tokenUsage,
+                task.getIntent(), task.getAnswer(), null, tokenUsage,
                 task.getErrorMessage(), task.getCreateTime(), task.getUpdateTime()
         );
     }
@@ -237,7 +237,7 @@ public class QueryServiceImpl implements QueryService {
             long elapsedMs = System.currentTimeMillis() - startTime;
             updateCompletedTask(taskId, answer, subgraph, charsPerToken, elapsedMs);
             return new QueryResultBO(taskId, "COMPLETED", question, intent.name(),
-                    answer, null, null, LocalDateTime.now(), LocalDateTime.now());
+                    answer, null, null, null, LocalDateTime.now(), LocalDateTime.now());
         } catch (Exception e) {
             throw e;
         }

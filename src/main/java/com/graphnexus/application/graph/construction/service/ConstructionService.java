@@ -29,4 +29,11 @@ public interface ConstructionService {
      * @return 子图（节点 + 边）
      */
     GraphSubgraphBO getSubgraph(Long documentId);
+
+    /**
+     * 查询全量融合图谱（所有节点 + 所有边）。
+     *
+     * @return 全量图谱（节点 + 边）
+     */
+    GraphSubgraphBO getFullGraph();
 }
