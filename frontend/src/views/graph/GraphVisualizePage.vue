@@ -2,21 +2,25 @@
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGraphStore } from './graphStore'
-import { toGraphData } from './graphAdapter'
+import { toGraphData, applyMetrics } from './graphAdapter'
 import type { G6GraphData } from './graphAdapter'
 import { useGraphInteraction } from './composables/useGraphInteraction'
+import { useMetrics } from './composables/useMetrics'
 import BaseSelect from '@/common/components/BaseSelect.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
 import GraphToolbar from './components/GraphToolbar.vue'
 import GraphLegend from './components/GraphLegend.vue'
 import NodeDetailPanel from './components/NodeDetailPanel.vue'
+import MetricsPanel from './components/MetricsPanel.vue'
 
 const store = useGraphStore()
+const metrics = useMetrics()
 const route = useRoute()
 const selectedNode = ref<{ id: string; data: Record<string, unknown> } | null>(null)
 const selectedDocId = ref<number | null>(null)
 const ctrlClickedNodeId = ref<string | null>(null)
 const searchResults = ref<{ id: string; label: string; nodeType: string }[]>([])
+const showMetricsPanel = ref(false)
 
 const graphData = ref<G6GraphData | null>(null)
 const canvasRef = ref<any>(null)
@@ -27,22 +31,53 @@ const isFullscreen = ref(false)
 function refreshGraphData() {
   if (store.currentGraph) {
     graphData.value = toGraphData(store.currentGraph)
+    applyMetricsToGraph()
     console.debug('[GraphViz] graphData:', graphData.value.nodes.length, 'nodes,', graphData.value.edges.length, 'edges')
   } else {
     graphData.value = null
   }
 }
 
+function applyMetricsToGraph() {
+  if (store.viewMode !== 'subject' || !graphData.value) return
+  if (metrics.degreeData.value.length === 0) return
+  const updated = applyMetrics(
+    graphData.value,
+    metrics.degreeData.value,
+    metrics.pagerankEnabled.value ? metrics.pagerankData.value : undefined,
+  )
+  graphData.value = updated
+}
+
 watch(() => store.currentGraph, () => {
   refreshGraphData()
+})
+
+watch([() => metrics.degreeData.value, () => metrics.pagerankData.value, () => metrics.pagerankEnabled.value], () => {
+  if (store.viewMode === 'subject' && graphData.value) {
+    const updated = applyMetrics(
+      toGraphData(store.currentGraph!),
+      metrics.degreeData.value,
+      metrics.pagerankEnabled.value ? metrics.pagerankData.value : undefined,
+    )
+    graphData.value = updated
+    const g = canvasRef.value?.getGraph?.()
+    if (g) {
+      try {
+        g.updateNodeData(updated.nodes.map((n) => ({
+          id: n.id,
+          data: { size: n.data.size, color: n.data.color },
+        })))
+        g.draw()
+      } catch { /* G6 update degrade */ }
+    }
+  }
 })
 
 const interaction = useGraphInteraction(
   () => canvasRef.value?.getGraph?.() ?? null,
   () => graphData.value,
 )
-
-// ── 全屏切换 ──
 
 async function toggleFullscreen() {
   if (!graphContainer.value) return
@@ -61,16 +96,12 @@ function onFullscreenChange() {
   isFullscreen.value = !!document.fullscreenElement
   setTimeout(() => {
     const g = canvasRef.value?.getGraph?.()
-    if (g) {
-      try { g.render() } catch { /* ignore */ }
-    }
+    if (g) { try { g.render() } catch { /* ignore */ } }
   }, 300)
 }
 
-// ── 文档选择 → 子图 ──
-
 const docOptions = computed(() =>
-  store.documents.map((d) => ({ label: `${d.name} (ID: ${d.documentId})`, value: d.documentId }))
+  store.documents.map((d) => ({ label: `${d.name} (ID: ${d.documentId})`, value: d.documentId })),
 )
 
 async function handleDocSelect(docId: number) {
@@ -80,7 +111,22 @@ async function handleDocSelect(docId: number) {
   await store.loadDocumentSubgraph(docId)
 }
 
-// ── 搜索 ──
+async function handleSubjectSelect(subject: string) {
+  selectedNode.value = null
+  ctrlClickedNodeId.value = null
+  selectedDocId.value = null
+  await store.loadSubjectGraph(subject)
+  metrics.loadDegreeMetrics(subject)
+  if (metrics.pagerankEnabled.value) {
+    metrics.loadPageRankMetrics(subject)
+  }
+}
+
+watch(() => metrics.pagerankEnabled.value, (enabled) => {
+  if (enabled && store.viewMode === 'subject' && store.currentSubject) {
+    metrics.loadPageRankMetrics(store.currentSubject)
+  }
+})
 
 function handleSearch(query: string) {
   searchResults.value = interaction.search(query)
@@ -90,7 +136,6 @@ function handleSelectNode(nodeId: string) {
   interaction.highlightNode(nodeId)
   interaction.focusNode(nodeId)
   searchResults.value = []
-
   const data = graphData.value
   if (data) {
     const node = data.nodes.find((n) => n.id === nodeId)
@@ -100,12 +145,9 @@ function handleSelectNode(nodeId: string) {
   }
 }
 
-// ── 节点点击 ──
-
 function handleNodeClick(nodeId: string, nodeData: Record<string, unknown>) {
   ctrlClickedNodeId.value = null
   selectedNode.value = { id: nodeId, data: nodeData }
-
   if (interaction.state.value.pathSourceId) {
     interaction.clearHighlight()
   }
@@ -120,15 +162,26 @@ function handleNodeCtrlClick(nodeId: string) {
   }
 }
 
-// ── 邻域展开 ──
-
-function handleExpandNeighbors() {
-  if (selectedNode.value) {
-    interaction.expandNeighbors(selectedNode.value.id)
+function handleToggleMetricsPanel() {
+  showMetricsPanel.value = !showMetricsPanel.value
+  if (showMetricsPanel.value) {
+    selectedNode.value = null
+    interaction.clearHighlight()
   }
 }
 
-// ── 图例筛选 ──
+const selectedNodeMetrics = computed(() => {
+  if (!selectedNode.value) return null
+  const deg = metrics.getNodeDegree(selectedNode.value.id)
+  if (deg.totalDegree === 0 && deg.inDegree === 0 && deg.outDegree === 0) return null
+  const pr = metrics.getNodePageRank(selectedNode.value.id)
+  return {
+    inDegree: deg.inDegree,
+    outDegree: deg.outDegree,
+    totalDegree: deg.totalDegree,
+    pagerank: pr ?? undefined,
+  }
+})
 
 function handleNodeFilter(types: string[]) {
   const edgeTypes = interaction.allEdgeTypes.value
@@ -140,11 +193,15 @@ function handleEdgeFilter(types: string[]) {
   interaction.filterByTypes(nodeTypes, types)
 }
 
+const NODE_TYPE_COLORS: Record<string, string> = {
+  KnowledgePoint: '#3B82F6', Entity: '#F97316', Document: '#10B981',
+  Student: '#EC4899', Exam: '#8B5CF6', KnowledgeCategory: '#EAB308',
+}
+function nodeColor(type: string) { return NODE_TYPE_COLORS[type] ?? '#9CA3AF' }
+
 function handleCanvasReady(g: any) {
   graphInstance.value = g
 }
-
-// ── Escape ──
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
@@ -157,7 +214,7 @@ function handleKeydown(e: KeyboardEvent) {
 onMounted(async () => {
   document.addEventListener('keydown', handleKeydown)
   document.addEventListener('fullscreenchange', onFullscreenChange)
-  await store.loadDocuments()
+  await Promise.all([store.loadDocuments(), store.loadSubjects()])
   const docId = route.params.id
   if (docId) {
     selectedDocId.value = Number(docId)
@@ -175,8 +232,14 @@ onBeforeUnmount(() => {
     <div class="graph-topbar">
       <GraphToolbar
         :search-results="searchResults"
+        :subjects="store.subjects"
+        :current-subject="store.currentSubject"
+        :pagerank-enabled="metrics.pagerankEnabled.value"
         @search="handleSearch"
         @select-node="handleSelectNode"
+        @select-subject="handleSubjectSelect"
+        @toggle-pagerank="metrics.togglePageRank()"
+        @toggle-metrics-panel="handleToggleMetricsPanel"
       />
       <button class="btn-fullscreen" :title="isFullscreen ? '退出全屏' : '全屏'" @click="toggleFullscreen">
         <svg v-if="!isFullscreen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -194,7 +257,7 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div v-if="!isFullscreen" style="margin-bottom: var(--spacing-sm); flex-shrink: 0;">
+    <div v-if="!isFullscreen && store.viewMode === 'document'" style="margin-bottom: var(--spacing-sm); flex-shrink: 0;">
       <BaseSelect
         :model-value="selectedDocId"
         :options="docOptions"
@@ -222,16 +285,36 @@ onBeforeUnmount(() => {
         v-if="graphData"
         :node-types="interaction.allNodeTypes.value"
         :edge-types="interaction.allEdgeTypes.value"
+        :pagerank-enabled="metrics.pagerankEnabled.value && store.viewMode === 'subject'"
         @update:node-filter="handleNodeFilter"
         @update:edge-filter="handleEdgeFilter"
       />
+
+      <div v-if="interaction.stats.value" class="graph-stats">
+        <span class="stats-item">节点 {{ interaction.stats.value.totalNodes }}</span>
+        <span class="stats-sep">·</span>
+        <span class="stats-item">边 {{ interaction.stats.value.totalEdges }}</span>
+        <template v-for="(count, type) in interaction.stats.value.nodeCounts" :key="'n-'+type">
+          <span class="stats-sep">·</span>
+          <span class="stats-item" :style="{ color: nodeColor(type) }">● {{ type }} {{ count }}</span>
+        </template>
+      </div>
     </div>
 
     <NodeDetailPanel
       :node="selectedNode"
       :visible="selectedNode !== null"
+      :metrics="selectedNodeMetrics"
       @close="selectedNode = null; interaction.clearHighlight()"
-      @expand-neighbors="handleExpandNeighbors"
+    />
+
+    <MetricsPanel
+      :visible="showMetricsPanel"
+      :degree-data="metrics.degreeData.value"
+      :pagerank-data="metrics.pagerankData.value"
+      :pagerank-enabled="metrics.pagerankEnabled.value"
+      @close="showMetricsPanel = false"
+      @select-node="handleSelectNode"
     />
   </div>
 </template>
@@ -287,6 +370,25 @@ onBeforeUnmount(() => {
 .btn-fullscreen:hover {
   color: var(--color-brand);
   border-color: var(--color-brand);
+}
+
+.graph-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding-top: var(--spacing-sm);
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.stats-item {
+  white-space: nowrap;
+}
+
+.stats-sep {
+  margin: 0 4px;
+  color: var(--color-text-tertiary);
 }
 </style>
 
