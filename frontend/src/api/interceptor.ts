@@ -1,4 +1,5 @@
 import axios from 'axios'
+import client from '@/api/client'
 import router from '@/router'
 
 const TOKEN_KEY = 'accessToken'
@@ -25,11 +26,12 @@ function clearTokens() {
   localStorage.removeItem(REFRESH_KEY)
 }
 
-export function setupInterceptors() {
-  console.log('[Interceptor] setupInterceptors() called, registering...')
-
-  // Request: 注入 Authorization header（直接读 localStorage，避免 Pinia 时序问题）
-  axios.interceptors.request.use((config) => {
+/**
+ * 给 axios 实例注册 Auth 拦截器。
+ */
+function registerAuthInterceptors(instance: typeof axios | typeof client) {
+  // Request: 注入 Authorization header
+  instance.interceptors.request.use((config) => {
     const token = getToken()
     console.log('[Interceptor] request:', config.url, { hasToken: !!token })
     if (token) {
@@ -39,9 +41,9 @@ export function setupInterceptors() {
   })
 
   // Response: 401 自动刷新
-  axios.interceptors.response.use(
+  instance.interceptors.response.use(
     (response) => response,
-    async (error) => {
+    async (error: any) => {
       const originalRequest = error.config
 
       if (
@@ -56,7 +58,6 @@ export function setupInterceptors() {
           return Promise.reject(error)
         }
 
-        // 刷新锁：同一时刻只有一个 refresh 请求
         if (!isRefreshing) {
           isRefreshing = true
           refreshPromise = axios.post('/api/v1/auth/refresh', { refreshToken })
@@ -75,7 +76,7 @@ export function setupInterceptors() {
           await refreshPromise
           originalRequest._retry = true
           originalRequest.headers.Authorization = `Bearer ${getToken()}`
-          return axios(originalRequest)
+          return instance(originalRequest)
         } catch {
           clearTokens()
           router.push({ path: '/login', query: { expired: 'true' } })
@@ -86,4 +87,11 @@ export function setupInterceptors() {
       return Promise.reject(error)
     },
   )
+}
+
+export function setupInterceptors() {
+  console.log('[Interceptor] setupInterceptors() called, registering on client + axios...')
+  // 项目既有 API 请求走 client（axios.create），全局 axios 仅用于登录/刷新
+  registerAuthInterceptors(client)
+  registerAuthInterceptors(axios)
 }
