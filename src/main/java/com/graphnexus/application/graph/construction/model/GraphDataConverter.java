@@ -18,6 +18,7 @@ public final class GraphDataConverter {
     public static GraphNodeData toNodeData(GraphNode node) {
         Map<String, Object> properties = node.getProperties() != null
                 ? node.getProperties() : node.toProperties();
+        System.out.println(properties.toString());
         String label = extractLabel(node, properties);
         return new GraphNodeData(
                 node.getId(),

@@ -69,7 +69,7 @@ public class QueryGraphRepository {
         try {
             return new ArrayList<>(neo4jClient.query(
                     "MATCH (s:Student {id: $sid})-[m:MASTERS]->(kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(sub:Subject {name: $name}) " +
-                    "RETURN kp.id AS kpId, kp.name AS kpName, kp.description AS kpDescription, " +
+                    "RETURN kp.id AS kpId, COALESCE(kp.name, '未命名知识点') AS kpName, kp.description AS kpDescription, " +
                     "kp.gradeLevel AS kpGradeLevel, m.weight AS weight, m.description AS description"
             ).bindAll(Map.of("sid", studentNodeId, "name", subjectName)).fetch().all());
         } catch (Exception e) {
@@ -85,7 +85,7 @@ public class QueryGraphRepository {
         try {
             return new ArrayList<>(neo4jClient.query(
                     "MATCH (s:Student {studentNo: $studentNo})-[:ATTENDED]->(:Exam)-[:TESTED]->(kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(sub:Subject {name: $name}) " +
-                    "RETURN DISTINCT kp.id AS kpId, kp.name AS kpName"
+                    "RETURN DISTINCT kp.id AS kpId, COALESCE(kp.name, '未命名知识点') AS kpName"
             ).bindAll(Map.of("studentNo", studentNo, "name", subjectName)).fetch().all());
         } catch (Exception e) {
             log.warn("查询 TESTED 路径失败: studentNo={}, subject={}, {}", studentNo, subjectName, e.getMessage());
@@ -102,7 +102,7 @@ public class QueryGraphRepository {
             return new ArrayList<>(neo4jClient.query(
                     "MATCH (s:Student {id: $sid})-[m:MASTERS]->(kp:KnowledgePoint) " +
                     "WHERE kp.id IN $kpIds " +
-                    "RETURN kp.id AS kpId, kp.name AS kpName, m.weight AS weight"
+                    "RETURN kp.id AS kpId, COALESCE(kp.name, '未命名知识点') AS kpName, m.weight AS weight"
             ).bindAll(Map.of("sid", studentNodeId, "kpIds", kpIds)).fetch().all());
         } catch (Exception e) {
             log.warn("查询指定 KP 的 MASTERS 边失败: sid={}, {}", studentNodeId, e.getMessage());
@@ -122,7 +122,7 @@ public class QueryGraphRepository {
             String cypher = String.format(
                     "MATCH path = (kp:KnowledgePoint)-[:PREREQUISITE_OF*1..%d]->(pre:KnowledgePoint) " +
                     "WHERE kp.id IN $ids " +
-                    "RETURN DISTINCT kp.id AS fromKpId, pre.id AS toKpId, pre.name AS toKpName, " +
+                    "RETURN DISTINCT kp.id AS fromKpId, pre.id AS toKpId, COALESCE(pre.name, '未命名知识点') AS toKpName, " +
                     "length(path) AS hops " +
                     "LIMIT 200", hops);
             return new ArrayList<>(neo4jClient.query(cypher).bindAll(Map.of("ids", kpIds)).fetch().all());
