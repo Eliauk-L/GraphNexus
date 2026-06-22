@@ -8,7 +8,9 @@ defineProps<{
   <div class="base-card">
     <div v-if="title || $slots.header" class="base-card__header">
       <h3 v-if="title" class="title">{{ title }}</h3>
-      <slot v-else name="header" />
+      <div v-if="$slots.header" class="base-card__header-actions">
+        <slot name="header" />
+      </div>
     </div>
     <div class="base-card__body">
       <slot />
@@ -28,7 +30,15 @@ defineProps<{
 }
 
 .base-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: var(--spacing-md);
+}
+
+.base-card__header-actions {
+  display: flex;
+  gap: var(--spacing-sm);
 }
 
 .base-card__footer {
