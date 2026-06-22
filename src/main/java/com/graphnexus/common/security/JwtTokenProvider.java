@@ -7,9 +7,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 
 /**
  * JWT Token 工具类 —— 生成/解析/验证 Access Token。
@@ -29,7 +27,7 @@ public class JwtTokenProvider {
     }
 
     /**
-     * 生成 Access Token（HS256）。
+     * 生成 Access Token（HS256）。roles 存为逗号分隔字符串，避免 JSON 数组反序列化问题。
      */
     public String generateAccessToken(Long userId, String username, List<String> roles) {
         Date now = new Date();
@@ -38,7 +36,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(username)
                 .claim("userId", userId)
-                .claim("roles", roles)
+                .claim("roles", String.join(",", roles))
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(secretKey)
@@ -58,8 +56,6 @@ public class JwtTokenProvider {
 
     /**
      * 验证 Token 签名 + 有效期。
-     *
-     * @return true 表示有效
      */
     public boolean validateToken(String token) {
         try {
@@ -70,33 +66,23 @@ public class JwtTokenProvider {
         }
     }
 
-    /**
-     * 从 Claims 提取 userId。
-     */
     public Long getUserId(Claims claims) {
         return claims.get("userId", Long.class);
     }
 
-    /**
-     * 从 Claims 提取 username。
-     */
     public String getUsername(Claims claims) {
         return claims.getSubject();
     }
 
     /**
-     * 从 Claims 提取 roles。防御 JJWT Jackson 反序列化的类型擦除问题。
+     * 从 Claims 提取 roles。roles 以逗号分隔字符串存储，直接按逗号 split。
      */
     public List<String> getRoles(Claims claims) {
-        Object rolesObj = claims.get("roles");
-        if (rolesObj instanceof List<?> list) {
-            List<String> result = new ArrayList<>();
-            for (Object item : list) {
-                result.add(item.toString());
-            }
-            return result;
+        String rolesStr = claims.get("roles", String.class);
+        if (rolesStr == null || rolesStr.isBlank()) {
+            return List.of();
         }
-        return List.of();
+        return Arrays.asList(rolesStr.split(","));
     }
 
     public long getAccessTokenTtlMillis() {
