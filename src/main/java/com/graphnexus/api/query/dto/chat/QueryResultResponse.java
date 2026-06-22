@@ -20,8 +20,11 @@ public record QueryResultResponse(
         @Schema(description = "识别的查询意图", example = "STUDENT_DIAGNOSIS")
         String intent,
 
-        @Schema(description = "LLM 分析结论（COMPLETED 时有值，Markdown 格式）")
+        @Schema(description = "LLM 分析结论（COMPLETED 时有值，格式由 outputFormat 字段指示）")
         String answer,
+
+        @Schema(description = "输出格式: html-svg | markdown", example = "markdown")
+        String outputFormat,
 
         @Schema(description = "Token 用量统计")
         QueryAskResponse.TokenUsageVO tokenUsage,
@@ -37,7 +40,7 @@ public record QueryResultResponse(
 ) {
     public static QueryResultResponse from(QueryResultBO bo) {
         return new QueryResultResponse(bo.taskId(), bo.status(), bo.question(), bo.intent(),
-                bo.answer(),
+                bo.answer(), bo.outputFormat(),
                 bo.tokenUsage() != null ? new QueryAskResponse.TokenUsageVO(bo.tokenUsage().prunedNodes(), bo.tokenUsage().prunedEdges(), bo.tokenUsage().estimatedTokens()) : null,
                 bo.errorMessage(), bo.createdAt(), bo.updatedAt());
     }

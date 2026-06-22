@@ -17,8 +17,11 @@ public record QueryAskResponse(
         @Schema(description = "识别的查询意图", example = "STUDENT_DIAGNOSIS")
         String intent,
 
-        @Schema(description = "LLM 分析结论（Markdown 格式）", example = "## 张三数学薄弱点分析\n\n### 薄弱知识点\n- **二次函数顶点坐标**（掌握度 0.42）...")
+        @Schema(description = "LLM 分析结论（格式由 outputFormat 字段指示）", example = "## 张三数学薄弱点分析\n\n### 薄弱知识点\n- **二次函数顶点坐标**（掌握度 0.42）...")
         String answer,
+
+        @Schema(description = "输出格式: html-svg | markdown", example = "markdown")
+        String outputFormat,
 
         @Schema(description = "任务状态", example = "COMPLETED")
         String status,
@@ -35,7 +38,7 @@ public record QueryAskResponse(
 
     public static QueryAskResponse from(QueryResultBO bo) {
         return new QueryAskResponse(bo.taskId(), bo.question(), bo.intent(),
-                bo.answer(), bo.status(),
+                bo.answer(), bo.outputFormat(), bo.status(),
                 bo.tokenUsage() != null
                         ? new TokenUsageVO(bo.tokenUsage().prunedNodes(), bo.tokenUsage().prunedEdges(), bo.tokenUsage().estimatedTokens())
                         : null);

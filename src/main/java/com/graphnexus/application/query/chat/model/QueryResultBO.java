@@ -17,8 +17,10 @@ public record QueryResultBO(
         String question,
         /** 识别到的意图 */
         String intent,
-        /** LLM 生成的 Markdown 答案（COMPLETED 时有值） */
+        /** LLM 生成的答案（COMPLETED 时有值） */
         String answer,
+        /** 输出格式: html-svg | markdown */
+        String outputFormat,
         /** Token 用量信息 */
         TokenUsage tokenUsage,
         /** 错误信息（FAILED 时有值） */
