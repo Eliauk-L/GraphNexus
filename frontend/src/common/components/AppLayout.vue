@@ -40,8 +40,15 @@ const currentTitle = computed(() => {
 })
 
 function handleLogout() {
+  // 先保存 refreshToken，logout() 会清除本地状态
+  const rt = authStore.refreshToken
   authStore.logout()
+  // 立即跳转登录页
   router.push('/login')
+  // 跳转后再通知服务端（避免导航取消请求）
+  if (rt) {
+    import('@/api/auth').then(m => m.authApi.logout(rt).catch(() => {}))
+  }
 }
 </script>
 

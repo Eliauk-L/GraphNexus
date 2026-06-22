@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi, type LoginParams, type LoginResult, type RoleVO } from '@/api/auth'
+import { authApi, type LoginParams, type LoginResult } from '@/api/auth'
 import { useRouter } from 'vue-router'
 
 const USER_KEY = 'userInfo'
@@ -9,7 +9,6 @@ export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
   const refreshToken = ref<string | null>(localStorage.getItem('refreshToken'))
   const userInfo = ref<LoginResult['userInfo'] | null>(loadUserInfo())
-  const roles = ref<RoleVO[]>([])
 
   const isAuthenticated = computed(() => !!accessToken.value)
   const userName = computed(() => userInfo.value?.realName ?? userInfo.value?.username ?? '')
@@ -47,17 +46,13 @@ export const useAuthStore = defineStore('auth', () => {
     return d
   }
 
-  async function logout() {
-    const rt = refreshToken.value
+  function logout() {
     accessToken.value = null
     refreshToken.value = null
     userInfo.value = null
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
     localStorage.removeItem(USER_KEY)
-    if (rt) {
-      authApi.logout(rt).catch(() => {})
-    }
   }
 
   function restoreSession() {
@@ -88,5 +83,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { accessToken, refreshToken, userInfo, roles, isAuthenticated, userName, userInitial, hasRole, login, refresh, logout, restoreSession }
+  return { accessToken, refreshToken, userInfo, isAuthenticated, userName, userInitial, hasRole, login, refresh, logout, restoreSession }
 })

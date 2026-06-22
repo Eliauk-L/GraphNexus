@@ -46,11 +46,13 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public TokenPair generateTokenPair(UserPrincipal principal) {
+        // 先清除该用户所有旧 Refresh Token，避免多设备登录积累
+        revokeAllUserRefreshTokens(principal.getUserId());
+
         String accessToken = jwtTokenProvider.generateAccessToken(
                 principal.getUserId(), principal.getUsername(), principal.getRoles());
         String refreshToken = UUID.randomUUID().toString();
 
-        // 存 Refresh Token → Redis
         try {
             redisTemplate.opsForValue().set(
                     REFRESH_KEY_PREFIX + refreshToken,
@@ -62,6 +64,25 @@ public class TokenServiceImpl implements TokenService {
 
         return new TokenPair(accessToken, refreshToken,
                 jwtTokenProvider.getAccessTokenTtlMillis() / 1000);
+    }
+
+    /**
+     * 清除指定用户的所有 Refresh Token。
+     */
+    private void revokeAllUserRefreshTokens(Long userId) {
+        try {
+            var keys = redisTemplate.keys(REFRESH_KEY_PREFIX + "*");
+            if (keys != null) {
+                for (String key : keys) {
+                    String val = redisTemplate.opsForValue().get(key);
+                    if (String.valueOf(userId).equals(val)) {
+                        redisTemplate.delete(key);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Redis 清理旧 Refresh Token 失败: {}", e.getMessage());
+        }
     }
 
     @Override
