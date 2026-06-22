@@ -9,7 +9,7 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div class="markdown-report">
+  <div v-if="content" class="markdown-report">
     <HtmlSvgViewer v-if="props.outputFormat === 'html-svg'" :content="content" />
     <MarkdownViewer v-else :content="content" />
   </div>

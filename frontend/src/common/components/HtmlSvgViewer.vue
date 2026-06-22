@@ -46,7 +46,7 @@ const purifyConfig: DOMPurify.Config = {
 }
 
 const sanitizedHtml = computed(() => {
-  if (!props.content) return ''
+  if (!props.content || props.content.length < 20) return ''
   return DOMPurify.sanitize(props.content, purifyConfig) as string
 })
 </script>

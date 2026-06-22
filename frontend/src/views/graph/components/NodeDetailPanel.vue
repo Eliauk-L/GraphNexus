@@ -130,6 +130,7 @@ function formatValue(value: unknown): string {
           展开邻域
         </button>
       </div>
+    </div>
   </Transition>
 </template>
 

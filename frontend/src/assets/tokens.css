@@ -32,6 +32,11 @@
   --color-warning: oklch(0.65 0.15 85);
   --color-error: oklch(0.50 0.20 25);
 
+  /* ── 掌握度色阶（诊断子图用 · diagnosis-subgraph-viz）── */
+  --mastery-orange: oklch(0.62 0.16 65);
+  --mastery-yellow: oklch(0.72 0.12 100);
+  --mastery-gray: oklch(0.65 0.005 95);
+
   /* ── 间距（非线性 scale）── */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
