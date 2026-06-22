@@ -314,7 +314,8 @@ public class ConstructionGraphRepository {
                 node.setProperties(new HashMap<>(n.asMap()));
                 nodes.add(node);
             }
-            return nodes;
+            // 按 ID 去重（Cypher collect(DISTINCT) 跨列表拼接时同一节点可能出现在 kp 和 nextKp 中）
+            return dedupeById(nodes);
         } catch (Exception e) {
             log.warn("按 subjectName={} 查询学科全景图节点失败: {}", subjectName, e.getMessage());
             return Collections.emptyList();
@@ -442,6 +443,17 @@ public class ConstructionGraphRepository {
     }
 
     // ======================== 内部类 ========================
+
+    /**
+     * 按节点 ID 去重，保留首次出现。
+     */
+    private static List<GraphNode> dedupeById(List<GraphNode> nodes) {
+        java.util.LinkedHashMap<String, GraphNode> map = new java.util.LinkedHashMap<>();
+        for (GraphNode n : nodes) {
+            map.putIfAbsent(n.getId(), n);
+        }
+        return new ArrayList<>(map.values());
+    }
 
     private static class SimpleGraphEdge extends GraphEdge {
         SimpleGraphEdge() { super(""); }
