@@ -111,7 +111,14 @@ async function handleDocSelect(docId: number) {
   await store.loadDocumentSubgraph(docId)
 }
 
-async function handleSubjectSelect(subject: string) {
+async function handleSubjectSelect(subject: string | null) {
+  // 清空学科选择 → 退回文档模式
+  if (!subject) {
+    store.clearGraph()
+    metrics.degreeData.value = []
+    metrics.pagerankData.value = []
+    return
+  }
   selectedNode.value = null
   ctrlClickedNodeId.value = null
   selectedDocId.value = null
