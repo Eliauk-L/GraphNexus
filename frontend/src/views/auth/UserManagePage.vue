@@ -6,7 +6,6 @@ import {
 } from 'naive-ui'
 import BaseCard from '@/common/components/BaseCard.vue'
 import BaseButton from '@/common/components/BaseButton.vue'
-import StatusBadge from '@/common/components/StatusBadge.vue'
 import { authApi, type UserVO, type RoleVO } from '@/api/auth'
 
 const message = useMessage()
@@ -135,7 +134,14 @@ const columns = [
   },
   {
     title: '状态', key: 'status', width: 80,
-    render(row: UserVO) { return h(StatusBadge, { status: row.status === 'ENABLED' ? 'COMPLETED' : 'FAILED' }) },
+    render(row: UserVO) {
+      const enabled = row.status === 'ENABLED'
+      return h(NTag, {
+        size: 'small',
+        type: enabled ? 'success' : 'error',
+        style: { border: 'none', borderRadius: 'var(--rounded-sm)' },
+      }, () => enabled ? '启用' : '禁用')
+    },
   },
   { title: '创建时间', key: 'createTime', width: 160 },
   {
