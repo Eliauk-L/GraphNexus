@@ -12,9 +12,9 @@ export function askAsync(req: QueryAskRequest): Promise<QueryAsyncResponse> {
   return client.post('/query/ask-async', req)
 }
 
-/** 智能对话（仅需自然语言问题），超时 60s 适配大模型重试 */
+/** 智能对话（仅需自然语言问题），不设超时，等待大模型完整返回 */
 export function chat(req: QueryChatRequest): Promise<QueryAskResponse> {
-  return client.post('/query/chat', req, { timeout: 60000 })
+  return client.post('/query/chat', req, { timeout: 0 })
 }
 
 /** 查询异步结果 */
