@@ -50,6 +50,7 @@ function registerAuthInterceptors(instance: typeof axios | typeof client) {
         !originalRequest._retry &&
         !originalRequest.url?.includes('/api/v1/auth/refresh')
       ) {
+        console.log('[Interceptor] 401 detected, attempting refresh...', { url: originalRequest.url })
         const refreshToken = getRefreshToken()
         if (!refreshToken) {
           clearTokens()
@@ -75,8 +76,10 @@ function registerAuthInterceptors(instance: typeof axios | typeof client) {
           await refreshPromise
           originalRequest._retry = true
           originalRequest.headers.Authorization = `Bearer ${getToken()}`
+          console.log('[Interceptor] Token refreshed, retrying original request')
           return instance(originalRequest)
-        } catch {
+        } catch (e) {
+          console.log('[Interceptor] Refresh failed, redirecting to login')
           clearTokens()
           router.push({ path: '/login', query: { expired: 'true' } })
           return Promise.reject(error)
