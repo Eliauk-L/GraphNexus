@@ -4,6 +4,7 @@ import { authApi, type LoginParams, type LoginResult } from '@/api/auth'
 import { useRouter } from 'vue-router'
 
 const USER_KEY = 'userInfo'
+const EXPIRES_KEY = 'tokenExpiresAt'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
@@ -26,6 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
     userInfo.value = d.userInfo
     localStorage.setItem('accessToken', d.accessToken)
     localStorage.setItem('refreshToken', d.refreshToken)
+    localStorage.setItem(EXPIRES_KEY, String(Date.now() + d.expiresIn * 1000))
     saveUserInfo(d.userInfo)
     return d
   }
@@ -38,6 +40,7 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken.value = d.refreshToken
     localStorage.setItem('accessToken', d.accessToken)
     localStorage.setItem('refreshToken', d.refreshToken)
+    localStorage.setItem(EXPIRES_KEY, String(Date.now() + d.expiresIn * 1000))
     if (d.userInfo) {
       userInfo.value = d.userInfo
       saveUserInfo(d.userInfo)
@@ -51,6 +54,7 @@ export const useAuthStore = defineStore('auth', () => {
     userInfo.value = null
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
+    localStorage.removeItem(EXPIRES_KEY)
     localStorage.removeItem(USER_KEY)
   }
 
