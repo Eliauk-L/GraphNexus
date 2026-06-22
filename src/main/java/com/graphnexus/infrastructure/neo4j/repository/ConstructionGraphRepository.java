@@ -33,8 +33,14 @@ public class ConstructionGraphRepository {
 
     /**
      * 保存任意 GraphNode 子类 — 通过 Cypher MERGE 创建。
+     * 若 id 为 null，先自动生成 UUID 确保 MERGE 能精确匹配节点。
      */
     public <T extends GraphNode> T save(T node) {
+        // 保证 id 非 null：SDN @GeneratedValue 仅在 SDN save 时触发，
+        // 直接使用 neo4jClient.query 时需手动生成，否则 MERGE {id: null} 行为不可预测
+        if (node.getId() == null) {
+            node.setId(UUID.randomUUID().toString());
+        }
         String label = node.getNodeType();
         String cypher = String.format("MERGE (n:%s {id: $id}) SET n = $props", label);
         Map<String, Object> props = toNodeProps(node);
