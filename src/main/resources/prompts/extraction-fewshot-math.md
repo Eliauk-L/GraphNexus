@@ -45,9 +45,11 @@
     {"sourceEntityIndex":5,"targetEntityIndex":6,"type":"REFERENCES","description":"例题解答引用了配方法"}
   ],
   "prerequisites": [
-    {"sourceKnowledgePointIndex":0,"targetKnowledgePointIndex":1,"strength":0.95,"description":"理解定义才能掌握一般式"},
-    {"sourceKnowledgePointIndex":1,"targetKnowledgePointIndex":3,"strength":0.9,"description":"一般式是推导对称轴公式的基础"},
-    {"sourceKnowledgePointIndex":3,"targetKnowledgePointIndex":4,"strength":0.95,"description":"对称轴是顶点坐标的前置知识"},
+    {"sourceKnowledgePointIndex":0,"targetKnowledgePointIndex":1,"strength":0.95,"description":"理解二次函数定义才能掌握一般式表达（定义→公式的推导链）"},
+    {"sourceKnowledgePointIndex":0,"targetKnowledgePointIndex":2,"strength":0.85,"description":"定义是顶点式的概念基础（一般式与顶点式是二次函数的两种等价形式）"},
+    {"sourceKnowledgePointIndex":1,"targetKnowledgePointIndex":3,"strength":0.9,"description":"一般式是推导对称轴公式 x=-b/(2a) 的基础"},
+    {"sourceKnowledgePointIndex":3,"targetKnowledgePointIndex":4,"strength":0.95,"description":"对称轴是顶点坐标的前置知识（顶点 x 坐标 = 对称轴位置）"},
+    {"sourceKnowledgePointIndex":1,"targetKnowledgePointIndex":6,"strength":0.8,"description":"一般式是配方法的操作对象（配方法将一般式化为顶点式）"},
     {"sourceKnowledgePointIndex":6,"targetKnowledgePointIndex":5,"strength":0.85,"description":"配方法是求解综合应用题的常用工具"}
   ],
   "categoryRelations": [

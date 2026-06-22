@@ -74,7 +74,18 @@ public class ExtractionService {
         // 4. 转换为领域对象
         ExtractionResult result = convertToDomain(rawResult, documentId);
 
-        log.info("抽取完成：entities={}, knowledgePoints={}, categories={}, edges={}",
+        // 前置依赖覆盖度检测：覆盖率 < 30% 记录 warn 日志
+        int kpCount = result.knowledgePoints().size();
+        long prereqCount = result.edges().stream()
+                .filter(e -> "PREREQUISITE_OF".equals(e.getEdgeType()))
+                .count();
+        if (kpCount > 3 && prereqCount < kpCount * 0.3) {
+            log.warn("前置依赖提取不足：{} 个知识点仅 {} 条前置依赖（覆盖率 {:.0f}%），"
+                    + "建议检查 prompt 或 LLM 输出质量",
+                    kpCount, prereqCount, (double) prereqCount / kpCount * 100);
+        }
+
+        log.info("抽取完成：entities={}, knowledgePoints={}, categories={}, edges={}, prerequisites={}",
                 result.entities().size(),
                 result.knowledgePoints().size(),
                 result.categories().size(),
