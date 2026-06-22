@@ -280,10 +280,99 @@ public class ConstructionGraphRepository {
         }
     }
 
+    // ======================== 学科全景图查询 ========================
+
+    /**
+     * 按学科查询知识图谱子图 — 返回该学科下所有 KnowledgePoint 及其依赖关系。
+     *
+     * <p>Cypher 策略（ADR-032 D3）：从 Subject 节点出发，沿 BELONGS_TO_SUBJECT 反向
+     * 收集 KP，再 OPTIONAL MATCH PREREQUISITE_OF + CHILD_OF 扩展，DISTINCT 去重。</p>
+     */
+    public List<GraphNode> findBySubject(String subjectName) {
+        try {
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
+                    "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
+                    "OPTIONAL MATCH (kp)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
+                    "OPTIONAL MATCH (cat)-[:CHILD_OF]->(parentCat:KnowledgeCategory) " +
+                    "WITH collect(kp) + collect(nextKp) + collect(cat) + collect(parentCat) AS allNodes " +
+                    "UNWIND allNodes AS n " +
+                    "WITH DISTINCT n WHERE n IS NOT NULL " +
+                    "RETURN n ORDER BY labels(n)[0] " +
+                    "LIMIT 1000"
+            ).bindAll(Map.of("name", subjectName)).fetch().all();
+            List<GraphNode> nodes = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                org.neo4j.driver.types.Node n = (org.neo4j.driver.types.Node) row.get("n");
+                SimpleGraphNode node = new SimpleGraphNode();
+                node.setId(n.get("id").asString());
+                node.setNodeType(n.labels().iterator().next());
+                try { node.setDocumentId(n.get("documentId").asString()); }
+                catch (Exception e) { node.setDocumentId(null); }
+                try { node.setCreatedAt(java.time.LocalDateTime.parse(n.get("createdAt").asString())); }
+                catch (Exception e) { node.setCreatedAt(null); }
+                node.setProperties(new HashMap<>(n.asMap()));
+                nodes.add(node);
+            }
+            return nodes;
+        } catch (Exception e) {
+            log.warn("按 subjectName={} 查询学科全景图节点失败: {}", subjectName, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 查询学科全景图的边 — BELONGS_TO_SUBJECT + PREREQUISITE_OF + CHILD_OF。
+     */
+    public List<GraphEdge> findEdgesBySubject(String subjectName) {
+        try {
+            Collection<Map<String, Object>> result = neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
+                    "OPTIONAL MATCH (kp)-[r1:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
+                    "OPTIONAL MATCH (kp)-[r2:CHILD_OF]->(cat:KnowledgeCategory) " +
+                    "OPTIONAL MATCH (cat)-[r3:CHILD_OF]->(parentCat:KnowledgeCategory) " +
+                    "WITH collect(r1) + collect(r2) + collect(r3) AS allRels " +
+                    "UNWIND allRels AS r " +
+                    "WITH DISTINCT r WHERE r IS NOT NULL " +
+                    "RETURN startNode(r).id AS sourceNodeId, endNode(r).id AS targetNodeId, type(r) AS edgeType"
+            ).bindAll(Map.of("name", subjectName)).fetch().all();
+            return result.stream().map(row -> {
+                SimpleGraphEdge edge = new SimpleGraphEdge();
+                edge.setSourceNodeId((String) row.get("sourceNodeId"));
+                edge.setTargetNodeId((String) row.get("targetNodeId"));
+                edge.setEdgeType((String) row.get("edgeType"));
+                return edge;
+            }).collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("按 subjectName={} 查询学科全景图边失败: {}", subjectName, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 轻量查询 — 仅返回指定学科下所有 KnowledgePoint 的 id 集合。
+     *
+     * <p>用于 MetricsService 指标结果后置过滤（ADR-033），避免额外全图扫描。</p>
+     */
+    public Set<String> findKpIdsBySubject(String subjectName) {
+        try {
+            return neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
+                    "RETURN kp.id AS id"
+            ).bindAll(Map.of("name", subjectName)).fetch().all().stream()
+                    .map(row -> (String) row.get("id"))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.warn("按 subjectName={} 查询 KP ID 集合失败: {}", subjectName, e.getMessage());
+            return Collections.emptySet();
+        }
+    }
+
     // ======================== Subject 辅助 ========================
 
     /**
-     * 按名称查找已有 SubjectNode，若无则创建（幂等）。
+     * 查找已有 SubjectNode，若无则创建（幂等）。
      */
     public SubjectNode findOrCreateSubject(String name) {
         try {
