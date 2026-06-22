@@ -7,11 +7,15 @@ const { message } = createDiscreteApi(['message'])
 
 const client = axios.create({
   baseURL: '/api/v1',
-  timeout: 30000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 })
+
+// 网络错误防抖：避免短时间内多条请求同时失败时重复弹 toast
+let lastNetworkErrorTime = 0
+const NETWORK_ERROR_DEBOUNCE = 5000
 
 // request 拦截器：注入 traceId（V1 预留）
 client.interceptors.request.use((config) => {
@@ -65,12 +69,19 @@ client.interceptors.response.use(
       // 业务错误：优先用 userTip，回退到错误码映射
       const friendlyTip = errData?.userTip || FRIENDLY_TIPS[errorCode] || '操作失败，请稍后重试'
       showErrorToast(friendlyTip, errorCode)
+    } else if (!error.response) {
+      // 网络错误（后端未启动 / 网络不通），5s 内只提示一次
+      const now = Date.now()
+      if (now - lastNetworkErrorTime > NETWORK_ERROR_DEBOUNCE) {
+        lastNetworkErrorTime = now
+        message.error('后端服务未启动或网络异常，请检查服务状态', {
+          duration: 8000,
+          closable: true,
+        })
+      }
     } else if (error.code === 'ECONNABORTED') {
       // 请求超时
-      showErrorToast('请求超时，请检查网络后重试', 'TIMEOUT')
-    } else if (!error.response) {
-      // 网络错误（后端不可达）
-      showErrorToast('无法连接到服务器，请确认服务是否启动', 'NETWORK')
+      message.warning('请求超时，请检查后端服务是否正常运行', { duration: 5000 })
     } else {
       // 其他 HTTP 错误
       const status = error.response.status
