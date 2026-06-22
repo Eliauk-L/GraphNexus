@@ -9,8 +9,10 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Prompt 模板服务 — 从 classpath 加载 Markdown 模板文件，执行变量替换，组装最终 Prompt。
@@ -70,7 +72,7 @@ public class PromptTemplateService {
      * @return 模板文件全文
      * @throws BusinessException 模板文件不存在时抛 C0001
      */
-    String loadTemplate(String name) {
+    public String loadTemplate(String name) {
         String location = TEMPLATE_BASE_PATH + name + ".md";
         try {
             var resource = resourceLoader.getResource(location);
@@ -121,5 +123,55 @@ public class PromptTemplateService {
         Map<String, String> vars = new HashMap<>(base);
         vars.put("mastersAvailable", "false");
         return vars;
+    }
+
+    /**
+     * 按输出格式组装 Prompt 对。
+     *
+     * @param intent    查询意图
+     * @param variables 模板变量 Map
+     * @param format    输出格式 ("markdown" | "html-svg")
+     * @return Prompt 对（system + user）
+     */
+    public PromptPair buildPrompt(QueryIntent intent, Map<String, String> variables, String format) {
+        String prefix = intent.name().toLowerCase().replace('_', '-');
+        String systemTemplate = loadTemplateWithFormat(prefix + "-system", format);
+        String userTemplate = loadTemplateWithFormat(prefix + "-user", format);
+        String userMessage = assemble(userTemplate, variables);
+
+        if ("false".equals(variables.get("mastersAvailable"))) {
+            userMessage += MASTERS_DEGRADATION_WARNING;
+        }
+
+        log.debug("Prompt 组装完成: intent={}, format={}, systemPrompt={}chars, userMessage={}chars",
+                intent, format, systemTemplate.length(), userMessage.length());
+        return new PromptPair(systemTemplate, userMessage);
+    }
+
+    /**
+     * 按格式加载模板文件。
+     * format="markdown" → 加载 {baseName}.md
+     * format="html-svg" → 先尝试 {baseName}-html.md，失败则 fallback 到 {baseName}.md
+     */
+    private String loadTemplateWithFormat(String baseName, String format) {
+        if (!"markdown".equals(format)) {
+            String formattedName = baseName + "-" + format;
+            try {
+                return loadTemplate(formattedName);
+            } catch (BusinessException e) {
+                log.debug("格式模板不存在，fallback 到默认模板: {}", formattedName);
+            }
+        }
+        return loadTemplate(baseName);
+    }
+
+    /**
+     * 构建意图列表文本 — 遍历 {@link QueryIntent} 枚举动态生成，
+     * 用于注入意图分类 prompt 的 {{intentList}} 占位符。
+     */
+    public String buildIntentList() {
+        return Arrays.stream(QueryIntent.values())
+                .map(i -> "- " + i.name() + " — " + i.getDescription())
+                .collect(Collectors.joining("\n"));
     }
 }
