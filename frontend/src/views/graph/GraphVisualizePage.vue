@@ -104,7 +104,14 @@ const docOptions = computed(() =>
   store.documents.map((d) => ({ label: `${d.name} (ID: ${d.documentId})`, value: d.documentId })),
 )
 
-async function handleDocSelect(docId: number) {
+async function handleDocSelect(docId: number | null) {
+  // 清空文档选择 → 回到初始状态
+  if (docId == null) {
+    store.clearGraph()
+    metrics.degreeData.value = []
+    metrics.pagerankData.value = []
+    return
+  }
   selectedDocId.value = docId
   selectedNode.value = null
   ctrlClickedNodeId.value = null
