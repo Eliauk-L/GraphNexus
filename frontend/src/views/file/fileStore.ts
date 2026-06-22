@@ -146,7 +146,7 @@ export const useFileStore = defineStore('file', () => {
       } catch {
         // 静默失败，下次轮询继续
       }
-    }, 2000)
+    }, 20000)
   }
 
   /** 停止状态轮询 */
