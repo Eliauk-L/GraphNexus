@@ -2,12 +2,13 @@
 import { ref, watch, h, computed } from 'vue'
 import {
   NCollapse, NCollapseItem, NInput, NSelect, NDatePicker,
-  NButton, NTag, NSpin, NEmpty, NSpace, NPopconfirm
+  NButton, NTag, NSpin, NEmpty, NSpace, NPopconfirm, NModal
 } from 'naive-ui'
-import { Search, FileDown, Trash2 } from '@lucide/vue'
+import { Search, FileDown, Trash2, Eye, X } from '@lucide/vue'
 import { useQueryStore } from '../queryStore'
 import DataTable from '@/common/components/DataTable.vue'
 import MarkdownReport from './MarkdownReport.vue'
+import HtmlSvgViewer from '@/common/components/HtmlSvgViewer.vue'
 import TokenUsageBar from './TokenUsageBar.vue'
 import type { HistoryRecordVO, QueryResultResponse } from '@/api/types'
 import { getResult } from '@/api/query'
@@ -18,11 +19,13 @@ const store = useQueryStore()
 // ── 折叠状态 ──
 const expandedNames = ref<string[]>([])
 
-// ── 展开详情 ──
-const expandedTaskId = ref<string | null>(null)
-const expandedAnswer = ref('')
-const expandedFormat = ref('markdown')
-const expandedLoading = ref(false)
+// ── 预览弹窗 ──
+const showPreview = ref(false)
+const previewTitle = ref('')
+const previewAnswer = ref('')
+const previewFormat = ref('markdown')
+const previewLoading = ref(false)
+const previewTokenUsage = ref<any>(null)
 
 // ── 学科选项 ──
 const subjectOptions = computed(() => {
@@ -87,10 +90,15 @@ const columns: DataTableColumns<HistoryRecordVO> = [
     },
   },
   {
-    title: '操作', key: 'actions', width: 120,
+    title: '操作', key: 'actions', width: 150,
     render(row) {
       return h(NSpace, { size: 'small' }, {
         default: () => [
+          h(NButton, {
+            size: 'tiny',
+            secondary: true,
+            onClick: () => openPreview(row.taskId, row.question),
+          }, { icon: () => h(Eye, { size: 14 }) }),
           h(NButton, {
             size: 'tiny',
             secondary: true,
@@ -112,24 +120,29 @@ const columns: DataTableColumns<HistoryRecordVO> = [
   },
 ]
 
-// ── 展开行 ──
-async function toggleExpand(taskId: string) {
-  if (expandedTaskId.value === taskId) {
-    expandedTaskId.value = null
-    expandedAnswer.value = ''
-    return
-  }
-  expandedTaskId.value = taskId
-  expandedLoading.value = true
+// ── 预览弹窗 ──
+async function openPreview(taskId: string, question: string) {
+  showPreview.value = true
+  previewTitle.value = question
+  previewFormat.value = 'markdown'
+  previewAnswer.value = ''
+  previewTokenUsage.value = null
+  previewLoading.value = true
   try {
     const result = await getResult(taskId) as QueryResultResponse
-    expandedAnswer.value = result.answer || ''
-    expandedFormat.value = result.outputFormat || 'markdown'
+    previewAnswer.value = result.answer || ''
+    previewFormat.value = result.outputFormat || 'markdown'
+    previewTokenUsage.value = result.tokenUsage
   } catch {
-    expandedAnswer.value = '加载详情失败'
+    previewAnswer.value = '加载详情失败'
   } finally {
-    expandedLoading.value = false
+    previewLoading.value = false
   }
+}
+
+function closePreview() {
+  showPreview.value = false
+  previewAnswer.value = ''
 }
 
 // ── 面板展开时加载数据 ──
@@ -206,25 +219,42 @@ function handlePageChange(page: number) {
           empty-text="暂无历史诊断记录"
           @update:page="handlePageChange"
         />
-
-        <!-- 展开详情 -->
-        <div v-if="expandedTaskId" class="expanded-detail">
-          <div class="expanded-divider" />
-          <NSpin :show="expandedLoading" size="small">
-            <MarkdownReport
-              v-if="expandedFormat === 'markdown'"
-              :content="expandedAnswer"
-              :output-format="expandedFormat"
-            />
-            <MarkdownReport
-              v-else
-              :content="expandedAnswer"
-              :output-format="expandedFormat"
-            />
-          </NSpin>
-        </div>
       </NCollapseItem>
     </NCollapse>
+
+    <!-- 预览弹窗 -->
+    <NModal
+      v-model:show="showPreview"
+      preset="card"
+      :title="previewTitle"
+      style="max-width: 900px; max-height: 80vh;"
+      :segmented="{ content: 'soft', footer: 'soft' }"
+      size="huge"
+    >
+      <template #header-extra>
+        <NButton size="tiny" quaternary @click="closePreview">
+          <template #icon><X :size="16" /></template>
+        </NButton>
+      </template>
+
+      <NSpin :show="previewLoading" size="medium">
+        <div v-if="previewAnswer" class="preview-content">
+          <HtmlSvgViewer
+            v-if="previewFormat === 'html-svg'"
+            :content="previewAnswer"
+          />
+          <MarkdownReport
+            v-else
+            :content="previewAnswer"
+            :output-format="previewFormat"
+          />
+          <div v-if="previewTokenUsage" class="preview-token">
+            <TokenUsageBar :token-usage="previewTokenUsage" />
+          </div>
+        </div>
+        <NEmpty v-else-if="!previewLoading" description="暂无报告内容" />
+      </NSpin>
+    </NModal>
   </div>
 </template>
 
@@ -242,12 +272,13 @@ function handlePageChange(page: number) {
   margin-bottom: var(--spacing-md);
 }
 
-.expanded-detail {
-  margin-top: var(--spacing-md);
+.preview-content {
+  min-height: 200px;
 }
 
-.expanded-divider {
+.preview-token {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-border);
-  margin-bottom: var(--spacing-md);
 }
 </style>
