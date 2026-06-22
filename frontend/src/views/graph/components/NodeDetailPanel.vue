@@ -7,10 +7,12 @@
 defineProps<{
   node: { id: string; data: Record<string, unknown> } | null
   visible: boolean
+  metrics?: { inDegree: number; outDegree: number; totalDegree: number; pagerank?: number } | null
 }>()
 
 defineEmits<{
   close: []
+  'expand-neighbors': []
 }>()
 
 /** 不在详情面板展示的字段 */
@@ -99,12 +101,35 @@ function formatValue(value: unknown): string {
         </template>
       </div>
 
+      <!-- 度量指标区 -->
+      <template v-if="metrics">
+        <div class="detail-divider" />
+        <div class="detail-fields">
+          <span class="detail-field-label supporting">度量指标</span>
+          <div class="detail-field">
+            <span class="detail-field-label supporting">入度</span>
+            <span class="detail-field-value body mono">{{ metrics.inDegree }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-field-label supporting">出度</span>
+            <span class="detail-field-value body mono">{{ metrics.outDegree }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-field-label supporting">总度</span>
+            <span class="detail-field-value body mono">{{ metrics.totalDegree }}</span>
+          </div>
+          <div v-if="metrics.pagerank != null" class="detail-field">
+            <span class="detail-field-label supporting">PageRank</span>
+            <span class="detail-field-value body mono">{{ metrics.pagerank.toFixed(4) }}</span>
+          </div>
+        </div>
+      </template>
+
       <div class="detail-actions">
         <button class="btn-expand" @click="$emit('expand-neighbors')">
           展开邻域
         </button>
       </div>
-    </div>
   </Transition>
 </template>
 
@@ -178,6 +203,10 @@ function formatValue(value: unknown): string {
   color: var(--color-text-primary);
   font-size: 1rem;
   word-break: break-all;
+}
+
+.mono {
+  font-family: var(--font-mono);
 }
 
 .detail-empty {

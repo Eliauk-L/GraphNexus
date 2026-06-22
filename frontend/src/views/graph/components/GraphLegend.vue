@@ -15,6 +15,7 @@ import {
 const props = defineProps<{
   nodeTypes: string[]
   edgeTypes: string[]
+  pagerankEnabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -107,6 +108,21 @@ function edgeDash(type: string) {
         <span class="legend-name">{{ type }}</span>
       </label>
     </div>
+
+    <!-- 度量映射说明 -->
+    <div v-if="pagerankEnabled !== undefined" class="legend-group">
+      <span class="legend-label">度量映射</span>
+      <span class="legend-name">节点大小 = 总度数</span>
+      <template v-if="pagerankEnabled">
+        <span class="legend-name">颜色 = PageRank</span>
+        <span
+          class="pagerank-gradient"
+          title="PageRank 低→高"
+        />
+        <span class="legend-name" style="font-size:0.65rem">低</span>
+        <span class="legend-name" style="font-size:0.65rem">高</span>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -171,5 +187,21 @@ function edgeDash(type: string) {
 
 .legend-name {
   white-space: nowrap;
+}
+
+.pagerank-gradient {
+  display: inline-block;
+  width: 120px;
+  height: 12px;
+  border-radius: var(--rounded-sm);
+  background: linear-gradient(
+    to right,
+    oklch(0.55 0.18 250),
+    oklch(0.65 0.10 180),
+    oklch(0.60 0.15 120),
+    oklch(0.55 0.18 70),
+    oklch(0.50 0.22 50)
+  );
+  vertical-align: middle;
 }
 </style>
