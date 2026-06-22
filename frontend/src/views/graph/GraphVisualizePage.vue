@@ -12,6 +12,7 @@ import GraphCanvas from './components/GraphCanvas.vue'
 import GraphToolbar from './components/GraphToolbar.vue'
 import GraphLegend from './components/GraphLegend.vue'
 import NodeDetailPanel from './components/NodeDetailPanel.vue'
+import type { FileStatus } from '@/api/types'
 
 const store = useGraphStore()
 const route = useRoute()
@@ -19,6 +20,7 @@ const selectedNode = ref<{ id: string; data: Record<string, unknown> } | null>(n
 const selectedDocId = ref<number | null>(null)
 const ctrlClickedNodeId = ref<string | null>(null)
 const searchResults = ref<{ id: string; label: string; nodeType: string }[]>([])
+const hideAlert = ref(false)
 
 const graphData = ref<G6GraphData | null>(null)
 const canvasRef = ref<any>(null)
@@ -81,14 +83,30 @@ function onFullscreenChange() {
 
 // ── 文档选择 → 子图 ──
 
+const STATUS_LABEL: Record<string, string> = {
+  EXTRACTING: '抽取中',
+  EXTRACTED: '已抽取',
+  FUSING: '融合中',
+  COMPLETED: '已完成',
+}
+
 const docOptions = computed(() =>
-  store.documents.map((d) => ({ label: `${d.name} (ID: ${d.documentId})`, value: d.documentId }))
+  store.documents.map((d) => {
+    const statusText = STATUS_LABEL[d.status] ?? d.status
+    const isProcessing = d.status === 'EXTRACTING' || d.status === 'FUSING'
+    return {
+      label: `${d.name} — ${statusText}`,
+      value: d.documentId,
+      disabled: isProcessing,
+    }
+  }),
 )
 
 async function handleDocSelect(docId: number) {
   selectedDocId.value = docId
   selectedNode.value = null
   ctrlClickedNodeId.value = null
+  hideAlert.value = false // 切换文档时重置提示条
   await store.loadDocumentSubgraph(docId)
 }
 
@@ -234,8 +252,19 @@ onBeforeUnmount(() => {
       />
     </div>
 
+    <!-- 非终态提示条（AC-7：文档 EXTRACTED 但融合未完成） -->
+    <div
+      v-if="store.isSelectedDocNonTerminal && graphData && !hideAlert"
+      class="alert-nonterminal supporting"
+    >
+      <span>该文档图谱数据可能不完整 — 融合尚未完成</span>
+      <button class="alert-nonterminal__close" @click="hideAlert = true" aria-label="关闭提示">
+        ×
+      </button>
+    </div>
+
     <div class="graph-body">
-      <div class="graph-canvas-area" :class="{ 'canvas-area-fs': isFullscreen }">
+      <div class="graph-canvas-area">
         <GraphCanvas
           ref="canvasRef"
           :data="graphData"
@@ -271,6 +300,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
 }
 
 .graph-body {
@@ -281,12 +311,9 @@ onBeforeUnmount(() => {
 }
 
 .graph-canvas-area {
+  flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-.canvas-area-fs {
-  flex: 1;
   min-height: 0;
 }
 
@@ -320,6 +347,40 @@ onBeforeUnmount(() => {
   border-color: var(--color-brand);
 }
 
+.alert-nonterminal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  background: var(--color-brand-veil);
+  border-top: 2px solid var(--color-brand);
+  border-radius: var(--rounded-sm);
+  color: var(--color-text-secondary);
+}
+
+.alert-nonterminal__close {
+  flex-shrink: 0;
+  margin-left: var(--spacing-sm);
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: var(--rounded-sm);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.alert-nonterminal__close:hover {
+  color: var(--color-text-primary);
+}
+
 .graph-controls {
   display: flex;
   align-items: center;
@@ -339,6 +400,13 @@ onBeforeUnmount(() => {
 }
 
 .graph-page:fullscreen .graph-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.graph-page:fullscreen .graph-canvas-area {
   flex: 1;
   display: flex;
   flex-direction: column;

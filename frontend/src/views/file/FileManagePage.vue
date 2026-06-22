@@ -5,7 +5,7 @@ import { useFileStore } from './fileStore'
 import FileUpload from './components/FileUpload.vue'
 import BaseButton from '@/common/components/BaseButton.vue'
 import BaseInput from '@/common/components/BaseInput.vue'
-import StatusBadge from '@/common/components/StatusBadge.vue'
+import StatusPipeline from './components/StatusPipeline.vue'
 import DataTable from '@/common/components/DataTable.vue'
 import type { DataTableColumns } from 'naive-ui'
 import type { TextbookVO } from '@/api/types'
@@ -28,7 +28,7 @@ const columns: DataTableColumns<TextbookVO> = [
   },
   {
     title: '状态', key: 'status', width: 120,
-    render(row) { return h(StatusBadge, { status: row.status }) },
+    render(row) { return h(StatusPipeline, { status: row.status, failReason: row.failReason }) },
   },
   {
     title: '上传时间', key: 'createTime', width: 160,
