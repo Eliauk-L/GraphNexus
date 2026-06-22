@@ -297,8 +297,8 @@ public class ConstructionGraphRepository {
                     // 段1：收集 PREREQUISITE_OF 目标 KP
                     "UNWIND kps AS k " +
                     "OPTIONAL MATCH (k)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
-                    "WITH kps + collect(DISTINCT nextKp) AS nodes1 " +
-                    // 段2：收集 CHILD_OF 分类节点
+                    "WITH kps, kps + collect(DISTINCT nextKp) AS nodes1 " +
+                    // 段2：收集 CHILD_OF 分类节点（只对原始 KP）
                     "UNWIND kps AS k2 " +
                     "OPTIONAL MATCH (k2)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
                     "WITH nodes1 + collect(DISTINCT cat) AS nodes2 " +
@@ -347,7 +347,7 @@ public class ConstructionGraphRepository {
                     // 段2：CHILD_OF 边（KP→Category）
                     "UNWIND kps AS k2 " +
                     "OPTIONAL MATCH (k2)-[r2:CHILD_OF]->(:KnowledgeCategory) " +
-                    "WITH rels1 + collect(DISTINCT r2) AS rels2 " +
+                    "WITH kps, rels1 + collect(DISTINCT r2) AS rels2 " +
                     // 段3：CHILD_OF 边（Category→Category）
                     "UNWIND kps AS k3 " +
                     "OPTIONAL MATCH (k3)-[:CHILD_OF]->(cat:KnowledgeCategory)-[r3:CHILD_OF]->(:KnowledgeCategory) " +
