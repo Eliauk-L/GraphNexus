@@ -379,22 +379,6 @@ public class QueryServiceImpl implements QueryService {
         return null;
     }
 
-    // ======================== 意图识别 ========================
-
-    QueryIntent recognizeIntent(String question) {
-        if (question == null || question.isBlank()) {
-            throw new BusinessException(ErrorCode.A0019, "问题不能为空");
-        }
-        for (var entry : INTENT_KEYWORDS.entrySet()) {
-            if (question.contains(entry.getKey())) {
-                log.debug("意图识别: keyword={}, intent={}", entry.getKey(), entry.getValue());
-                return entry.getValue();
-            }
-        }
-        throw new BusinessException(ErrorCode.A0019,
-                "无法识别查询意图，请更明确地描述问题。当前支持：学生薄弱点诊断（含\"薄弱\"/\"加强\"/\"掌握\"/\"诊断\"等关键词）");
-    }
-
     // ======================== 实体解析 ========================
 
     StudentNode resolveStudent(String studentName, String studentNo) {

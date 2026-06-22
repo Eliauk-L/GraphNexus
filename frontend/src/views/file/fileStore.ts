@@ -3,8 +3,11 @@ import { ref, computed } from 'vue'
 import { uploadFile, listFiles, parseFile, deleteFile } from '@/api/file'
 import type { TextbookVO, FileStatus } from '@/api/types'
 
-// 需要轮询的中间态
-const INTERMEDIATE_STATES: FileStatus[] = ['UPLOADED', 'PARSING']
+// 仅追踪活跃处理态（*ING），排除稳定态（UPLOADED/PARSED/EXTRACTED）避免空转
+const INTERMEDIATE_STATES: FileStatus[] = ['PARSING', 'EXTRACTING', 'FUSING']
+
+/** 最大轮询时长（毫秒），超时强制停止，防止异常情况空转 */
+const MAX_POLLING_DURATION = 5 * 60 * 1000 // 5 分钟
 
 export const useFileStore = defineStore('file', () => {
   const files = ref<TextbookVO[]>([])
@@ -14,6 +17,7 @@ export const useFileStore = defineStore('file', () => {
 
   // 轮询相关
   let pollingTimer: ReturnType<typeof setInterval> | null = null
+  let pollingStartTime: number | null = null
   const isPolling = ref(false)
 
   // 是否存在中间态文件（决定是否继续轮询）
@@ -91,12 +95,21 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  /** 开启状态轮询（若已开启则跳过） */
+  /** 开启状态轮询（若已开启则跳过）。
+   *
+   * 仅追踪活跃处理态（PARSING/EXTRACTING/FUSING），稳定态不触发轮询。
+   * 超过 MAX_POLLING_DURATION 强制停止，防止异常情况空转。 */
   function startPolling() {
     if (pollingTimer) return
     isPolling.value = true
+    pollingStartTime = Date.now()
     pollingTimer = setInterval(async () => {
-      // 无中间态文件 → 停止轮询
+      // 超过最大轮询时长 → 强制停止
+      if (pollingStartTime && Date.now() - pollingStartTime > MAX_POLLING_DURATION) {
+        stopPolling()
+        return
+      }
+      // 无活跃处理态文件 → 停止轮询
       if (!hasIntermediateFiles.value) {
         stopPolling()
         return
@@ -118,6 +131,7 @@ export const useFileStore = defineStore('file', () => {
       clearInterval(pollingTimer)
       pollingTimer = null
     }
+    pollingStartTime = null
     isPolling.value = false
   }
 

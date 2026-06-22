@@ -209,6 +209,7 @@
 - **Git 提交格式**：`<type>(<change-id>): <task-id> <subject>`（如 `feat(init-platform): T01 创建包结构`）
 - Git提交时禁止设置共同创作者 Commit without co-author
 - Git禁止提交.specs/下的内容
+- Git提交时禁止提交非本次任务修改的内容
 - **字段冗余策略**：非频繁修改 + 非唯一索引 + 非 varchar 超长字段允许适当冗余，避免每次查询 JOIN 统计
 - **本地开发环境**：所有基础设施组件（Neo4j 5.x / MySQL 8.0 / MinIO / Redis 7.x / RabbitMQ 3.x）通过 podman 容器化部署，`application-dev.yml` 中配置的连接参数可直接使用。集成测试使用 `@SpringBootTest` + `@ActiveProfiles("dev")` 直连 podman 中的真实组件，不需要 Testcontainers 或 @MockBean 替代
 - 当有新的sql文件产生时，需要将其同步到resources/db/init.sql中

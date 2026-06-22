@@ -94,10 +94,6 @@ function handleUploadFinish() {
 
 onMounted(() => {
   load()
-  // 进入页面时如有中间态文件，启动轮询
-  setTimeout(() => {
-    if (store.hasIntermediateFiles) store.startPolling()
-  }, 1000)
 })
 
 onBeforeUnmount(() => {
@@ -110,9 +106,6 @@ onBeforeUnmount(() => {
     <div class="page-header">
       <h1 class="headline">教材管理</h1>
       <NSpace align="center">
-        <span v-if="store.isPolling" class="polling-hint supporting">
-          实时刷新处理状态…
-        </span>
         <FileUpload @uploaded="handleUploadFinish" />
       </NSpace>
     </div>
@@ -155,25 +148,4 @@ onBeforeUnmount(() => {
   margin-bottom: var(--spacing-md);
 }
 
-.polling-hint {
-  color: var(--color-text-tertiary);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.polling-hint::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-warning);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
-}
 </style>

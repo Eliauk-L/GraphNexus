@@ -291,12 +291,13 @@ defineExpose({ getGraph: () => graph })
 }
 
 .fullscreen-wrapper {
-  height: 100%;
+  flex: 1;
+  height: auto;
 }
 
 .graph-canvas {
-  position: absolute;
-  inset: 0;
+  width: 100%;
+  height: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--rounded-md);
   overflow: hidden;
@@ -309,7 +310,8 @@ defineExpose({ getGraph: () => graph })
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 500px;
+  width: 100%;
+  height: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--rounded-md);
   background: var(--color-surface);

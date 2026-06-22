@@ -42,6 +42,7 @@ export type FileStatus =
   | 'FUSING'
   | 'COMPLETED'
   | 'FAILED'
+  | 'DELETING'
 
 export interface TextbookVO {
   documentId: number
@@ -53,6 +54,7 @@ export interface TextbookVO {
   pageCount: number
   status: FileStatus
   fileType: string
+  failReason?: string
   createTime: string
 }
 

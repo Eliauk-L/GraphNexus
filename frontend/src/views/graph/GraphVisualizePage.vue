@@ -281,7 +281,8 @@ onBeforeUnmount(() => {
 }
 
 .graph-canvas-area {
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .canvas-area-fs {
