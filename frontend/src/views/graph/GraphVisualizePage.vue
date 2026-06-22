@@ -185,6 +185,17 @@ function handleToggleMetricsPanel() {
   }
 }
 
+// nodeId → 显示名称映射（供 MetricsPanel 用）
+const nodeNameMap = computed<Record<string, string>>(() => {
+  if (!graphData.value) return {}
+  const map: Record<string, string> = {}
+  for (const n of graphData.value.nodes) {
+    const name = (n.data.name as string) ?? (n.data.label as string)
+    if (name) map[n.id] = name
+  }
+  return map
+})
+
 const selectedNodeMetrics = computed(() => {
   if (!selectedNode.value) return null
   const deg = metrics.getNodeDegree(selectedNode.value.id)
@@ -328,6 +339,7 @@ onBeforeUnmount(() => {
       :degree-data="metrics.degreeData.value"
       :pagerank-data="metrics.pagerankData.value"
       :pagerank-enabled="metrics.pagerankEnabled.value"
+      :node-names="nodeNameMap"
       @close="showMetricsPanel = false"
       @select-node="handleSelectNode"
     />

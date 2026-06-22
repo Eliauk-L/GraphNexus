@@ -12,6 +12,7 @@ const props = defineProps<{
   degreeData: MetricResultVO[]
   pagerankData: MetricResultVO[]
   pagerankEnabled: boolean
+  nodeNames?: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -63,7 +64,7 @@ const rankedRows = computed<RankRow[]>(() => {
   for (const [nodeId, deg] of map) {
     rows.push({
       nodeId,
-      label: nodeId.length > 8 ? nodeId.substring(0, 8) : nodeId,
+      label: props.nodeNames?.[nodeId] ?? (nodeId.length > 8 ? nodeId.substring(0, 8) : nodeId),
       inDegree: deg.inDeg,
       outDegree: deg.outDeg,
       totalDegree: deg.inDeg + deg.outDeg,
@@ -253,7 +254,7 @@ const isEmpty = computed(() => props.degreeData.length === 0)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100px;
+  max-width: 120px;
 }
 .col-num {
   text-align: right;
