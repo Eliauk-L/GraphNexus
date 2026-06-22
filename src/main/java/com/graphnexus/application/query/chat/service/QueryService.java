@@ -74,4 +74,12 @@ public interface QueryService {
      * @throws com.graphnexus.common.exception.BusinessException A0021 任务不存在
      */
     QueryTaskDO exportSingle(String taskId);
+
+    /**
+     * 删除单条历史诊断记录（物理删除）。
+     *
+     * @param taskId 任务 UUID
+     * @throws com.graphnexus.common.exception.BusinessException A0021 任务不存在
+     */
+    void deleteHistory(String taskId);
 }

@@ -143,4 +143,23 @@ class QueryServiceImplHistoryTest {
 
         assertEquals("A0021", ex.getErrorCode());
     }
+
+    @Test
+    @DisplayName("删除历史记录")
+    void shouldDeleteHistory() {
+        queryService.deleteHistory(completedTaskId);
+
+        // 删除后再次查询应抛异常
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> queryService.exportSingle(completedTaskId));
+        assertEquals("A0021", ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("删除不存在的记录抛 A0021")
+    void shouldThrowForDeleteNonexistent() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> queryService.deleteHistory(UUID.randomUUID().toString()));
+        assertEquals("A0021", ex.getErrorCode());
+    }
 }

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { chat, askAsync, getResult, getHistory, exportSingle } from '@/api/query'
+import { chat, askAsync, getResult, getHistory, exportSingle, deleteHistory } from '@/api/query'
 import type { QueryAskResponse, QueryResultResponse, TokenUsageVO, HistoryRecordVO, HistoryQueryParams } from '@/api/types'
 
 export const useQueryStore = defineStore('query', () => {
@@ -153,6 +153,12 @@ export const useQueryStore = defineStore('query', () => {
     createDownloadLink(blob, `diagnosis-${shortId}.html`)
   }
 
+  async function deleteHistoryRecord(taskId: string) {
+    await deleteHistory(taskId)
+    // 删除后刷新当前列表
+    await loadHistory(historyPage.value)
+  }
+
   return {
     currentQuestion, answer, taskId, intent, outputFormat, status, tokenUsage,
     errorMessage, history,
@@ -160,6 +166,6 @@ export const useQueryStore = defineStore('query', () => {
     // history
     historyRecords, historyTotal, historyLoading, historyPage, historyPageSize,
     historyFilters, loadHistory, resetHistoryFilters,
-    downloadSingleExport,
+    downloadSingleExport, deleteHistoryRecord,
   }
 })

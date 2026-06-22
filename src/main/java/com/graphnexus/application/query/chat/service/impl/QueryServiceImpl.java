@@ -778,6 +778,20 @@ public class QueryServiceImpl implements QueryService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0021, "问答任务不存在: " + taskId));
     }
 
+    @Override
+    @Transactional
+    public void deleteHistory(String taskId) {
+        if (taskId == null || !taskId.matches("^[0-9a-fA-F-]{36}$")) {
+            throw new BusinessException(ErrorCode.A0021, "任务不存在: " + taskId);
+        }
+        QueryTaskDO task = queryTaskRepository.findByTaskId(taskId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.A0021, "问答任务不存在: " + taskId));
+
+        queryTaskRepository.delete(task);
+        log.info("历史记录已删除: taskId={}, question={}", taskId,
+                task.getQuestion() != null ? task.getQuestion().substring(0, Math.min(30, task.getQuestion().length())) : "");
+    }
+
     /**
      * 根据筛选请求构建 JPA Specification 动态 where 链。
      *

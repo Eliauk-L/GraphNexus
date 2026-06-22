@@ -33,6 +33,11 @@ export function getHistory(params: HistoryQueryParams): Promise<PageResult<Histo
   return client.get('/query/history', { params: filtered })
 }
 
+/** 删除单条历史诊断记录 */
+export function deleteHistory(taskId: string): Promise<string> {
+  return client.delete(`/query/history/${taskId}`)
+}
+
 /** 导出单条诊断报告（HTML 格式，返回 Blob） */
 export async function exportSingle(taskId: string): Promise<Blob> {
   const resp = await axios.get(`/api/v1/query/history/${taskId}/export`, {

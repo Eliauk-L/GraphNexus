@@ -2,9 +2,9 @@
 import { ref, watch, h, computed } from 'vue'
 import {
   NCollapse, NCollapseItem, NInput, NSelect, NDatePicker,
-  NButton, NTag, NSpin, NEmpty, NSpace
+  NButton, NTag, NSpin, NEmpty, NSpace, NPopconfirm
 } from 'naive-ui'
-import { Search, FileDown } from '@lucide/vue'
+import { Search, FileDown, Trash2 } from '@lucide/vue'
 import { useQueryStore } from '../queryStore'
 import DataTable from '@/common/components/DataTable.vue'
 import MarkdownReport from './MarkdownReport.vue'
@@ -87,13 +87,27 @@ const columns: DataTableColumns<HistoryRecordVO> = [
     },
   },
   {
-    title: '操作', key: 'actions', width: 80,
+    title: '操作', key: 'actions', width: 120,
     render(row) {
-      return h(NButton, {
-        size: 'tiny',
-        secondary: true,
-        onClick: () => store.downloadSingleExport(row.taskId),
-      }, { icon: () => h(FileDown, { size: 14 }) })
+      return h(NSpace, { size: 'small' }, {
+        default: () => [
+          h(NButton, {
+            size: 'tiny',
+            secondary: true,
+            onClick: () => store.downloadSingleExport(row.taskId),
+          }, { icon: () => h(FileDown, { size: 14 }) }),
+          h(NPopconfirm, {
+            onPositiveClick: () => store.deleteHistoryRecord(row.taskId),
+          }, {
+            trigger: () => h(NButton, {
+              size: 'tiny',
+              tertiary: true,
+              type: 'error',
+            }, { icon: () => h(Trash2, { size: 14 }) }),
+            default: () => '确认删除该条诊断记录？',
+          }),
+        ],
+      })
     },
   },
 ]

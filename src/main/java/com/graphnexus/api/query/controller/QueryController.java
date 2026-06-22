@@ -153,4 +153,21 @@ public class QueryController {
                         ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
                 .body(body);
     }
+
+    /**
+     * 删除单条历史诊断记录。
+     */
+    @Operation(summary = "删除历史诊断记录", description = "物理删除单条历史诊断记录（query_task 为日志表，不做逻辑删除）。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "删除成功"),
+            @ApiResponse(responseCode = "404", description = "A0021 任务不存在"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+    })
+    @DeleteMapping("/history/{taskId}")
+    public ApiResult<String> deleteHistory(
+            @Parameter(description = "任务 ID（UUID 格式）", required = true)
+            @PathVariable String taskId) {
+        queryService.deleteHistory(taskId);
+        return ApiResult.success("ok");
+    }
 }
