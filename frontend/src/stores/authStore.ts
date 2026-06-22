@@ -3,10 +3,12 @@ import { ref, computed } from 'vue'
 import { authApi, type LoginParams, type LoginResult, type RoleVO } from '@/api/auth'
 import { useRouter } from 'vue-router'
 
+const USER_KEY = 'userInfo'
+
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
   const refreshToken = ref<string | null>(localStorage.getItem('refreshToken'))
-  const userInfo = ref<LoginResult['userInfo'] | null>(null)
+  const userInfo = ref<LoginResult['userInfo'] | null>(loadUserInfo())
   const roles = ref<RoleVO[]>([])
 
   const isAuthenticated = computed(() => !!accessToken.value)
@@ -25,6 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
     userInfo.value = d.userInfo
     localStorage.setItem('accessToken', d.accessToken)
     localStorage.setItem('refreshToken', d.refreshToken)
+    saveUserInfo(d.userInfo)
     return d
   }
 
@@ -36,19 +39,21 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken.value = d.refreshToken
     localStorage.setItem('accessToken', d.accessToken)
     localStorage.setItem('refreshToken', d.refreshToken)
-    if (d.userInfo) userInfo.value = d.userInfo
+    if (d.userInfo) {
+      userInfo.value = d.userInfo
+      saveUserInfo(d.userInfo)
+    }
     return d
   }
 
   async function logout() {
-    // 先清除本地状态，确保页面立即重定向
     const rt = refreshToken.value
     accessToken.value = null
     refreshToken.value = null
     userInfo.value = null
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
-    // 通知服务端登出（fire-and-forget，不阻塞跳转）
+    localStorage.removeItem(USER_KEY)
     if (rt) {
       authApi.logout(rt).catch(() => {})
     }
@@ -58,7 +63,27 @@ export const useAuthStore = defineStore('auth', () => {
     const at = localStorage.getItem('accessToken')
     const rt = localStorage.getItem('refreshToken')
     if (at) accessToken.value = at
+    else accessToken.value = null
     if (rt) refreshToken.value = rt
+    else refreshToken.value = null
+    userInfo.value = loadUserInfo()
+  }
+
+  // ── private helpers ──
+
+  function saveUserInfo(info: LoginResult['userInfo'] | null) {
+    if (info) {
+      localStorage.setItem(USER_KEY, JSON.stringify(info))
+    }
+  }
+
+  function loadUserInfo(): LoginResult['userInfo'] | null {
+    try {
+      const raw = localStorage.getItem(USER_KEY)
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
   }
 
   return { accessToken, refreshToken, userInfo, roles, isAuthenticated, userName, userInitial, hasRole, login, refresh, logout, restoreSession }
