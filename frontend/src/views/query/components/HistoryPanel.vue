@@ -283,16 +283,14 @@ function handlePageChange(page: number) {
 }
 
 .preview-body {
+  width: 100%;
   background: #fff;
+  box-sizing: border-box;
 }
 
-/* 修复 NModal card 内部宽度不一致 */
+/* 确保 card content 内部子元素一致撑满 */
 :deep(.n-card__content) {
-  width: 100%;
-}
-
-:deep(.n-spin-container) {
-  width: 100%;
+  padding: 0;
 }
 
 .preview-content {
