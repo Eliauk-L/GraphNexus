@@ -103,7 +103,7 @@ function transformPruningSubgraph(res: SubgraphResponse): G6GraphData {
     nodes: res.nodes.map((n) => ({
       id: n.id,
       data: {
-        label: (n.properties.name as string) ?? (n.properties.label as string) ?? n.id.substring(0, 8),
+        label: n.label ?? (n.properties?.name as string) ?? (n.properties?.label as string) ?? n.id.substring(0, 8),
         nodeType: n.nodeType,
         color: NODE_COLORS[n.nodeType] ?? DEFAULT_NODE_COLOR,
         size: NODE_SIZES[n.nodeType] ?? DEFAULT_NODE_SIZE,

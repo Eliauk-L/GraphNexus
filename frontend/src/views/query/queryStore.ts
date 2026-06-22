@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { chat, askAsync, getResult } from '@/api/query'
-import type { QueryAskResponse, QueryResultResponse, TokenUsageVO } from '@/api/types'
+import { chat, askAsync, getResult, getHistory, exportSingle, exportBatch } from '@/api/query'
+import type { QueryAskResponse, QueryResultResponse, TokenUsageVO, HistoryRecordVO, HistoryQueryParams } from '@/api/types'
 
 export const useQueryStore = defineStore('query', () => {
   const currentQuestion = ref('')
@@ -15,6 +15,14 @@ export const useQueryStore = defineStore('query', () => {
   const history = ref<Array<{ question: string; answer: string; taskId: string }>>([])
 
   let pollingTimer: ReturnType<typeof setInterval> | null = null
+
+  // ── 历史记录状态 ──
+  const historyRecords = ref<HistoryRecordVO[]>([])
+  const historyTotal = ref(0)
+  const historyLoading = ref(false)
+  const historyPage = ref(1)
+  const historyPageSize = ref(10)
+  const historyFilters = ref<HistoryQueryParams>({})
 
   async function sendChat(question: string) {
     currentQuestion.value = question
@@ -100,9 +108,62 @@ export const useQueryStore = defineStore('query', () => {
     })
   }
 
+  // ── 历史记录方法 ──
+
+  async function loadHistory(page?: number, pageSize?: number) {
+    historyLoading.value = true
+    try {
+      const result = await getHistory({
+        ...historyFilters.value,
+        pageNum: page ?? historyPage.value,
+        pageSize: pageSize ?? historyPageSize.value,
+      })
+      historyRecords.value = result.list
+      historyTotal.value = result.total
+      historyPage.value = result.pageNum
+    } catch {
+      // 错误已由 client 拦截器处理
+    } finally {
+      historyLoading.value = false
+    }
+  }
+
+  function resetHistoryFilters() {
+    historyFilters.value = {}
+    historyPage.value = 1
+    loadHistory(1)
+  }
+
+  function createDownloadLink(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  async function downloadSingleExport(taskId: string) {
+    const blob = await exportSingle(taskId)
+    const shortId = taskId.length > 8 ? taskId.substring(0, 8) : taskId
+    createDownloadLink(blob, `diagnosis-${shortId}.md`)
+  }
+
+  async function downloadBatchExport() {
+    const blob = await exportBatch(historyFilters.value)
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    createDownloadLink(blob, `diagnosis-history-${dateStr}.xlsx`)
+  }
+
   return {
     currentQuestion, answer, taskId, intent, outputFormat, status, tokenUsage,
     errorMessage, history,
     sendChat, sendAsync, stopPolling,
+    // history
+    historyRecords, historyTotal, historyLoading, historyPage, historyPageSize,
+    historyFilters, loadHistory, resetHistoryFilters,
+    downloadSingleExport, downloadBatchExport,
   }
 })

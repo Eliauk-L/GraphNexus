@@ -3,6 +3,7 @@ import { useQueryStore } from './queryStore'
 import ChatInput from './components/ChatInput.vue'
 import MarkdownReport from './components/MarkdownReport.vue'
 import TokenUsageBar from './components/TokenUsageBar.vue'
+import HistoryPanel from './components/HistoryPanel.vue'
 import { Loader2 } from '@lucide/vue'
 
 const store = useQueryStore()
@@ -44,6 +45,9 @@ function handleSend(question: string) {
         <TokenUsageBar :token-usage="store.tokenUsage" />
       </div>
     </div>
+
+    <!-- 历史记录面板 -->
+    <HistoryPanel />
   </div>
 </template>
 

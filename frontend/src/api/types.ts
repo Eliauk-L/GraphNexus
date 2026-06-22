@@ -220,6 +220,7 @@ export interface QueryResultResponse {
 export interface SubgraphNodeVO {
   id: string
   nodeType: string
+  label?: string  // 显示名称（从原始节点属性推导）
   properties: Record<string, unknown>
 }
 
@@ -247,4 +248,32 @@ export interface SubgraphResponse {
   nodes: SubgraphNodeVO[]
   edges: SubgraphEdgeVO[]
   pruningMeta: PruningMetaVO
+}
+
+// ── 历史诊断记录 ──
+
+/** 历史记录查询参数 */
+export interface HistoryQueryParams {
+  studentName?: string
+  studentNo?: string
+  subject?: string
+  status?: string
+  startDate?: string   // ISO date: yyyy-MM-dd
+  endDate?: string     // ISO date: yyyy-MM-dd
+  pageNum?: number
+  pageSize?: number
+}
+
+/** 历史诊断记录列表项（不含 answer 正文） */
+export interface HistoryRecordVO {
+  taskId: string
+  question: string
+  studentName: string
+  studentNo: string
+  subject: string
+  status: string
+  intent: string
+  tokenUsage: TokenUsageVO | null
+  elapsedMs: number
+  createTime: string
 }

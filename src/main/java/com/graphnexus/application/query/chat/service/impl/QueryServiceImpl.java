@@ -710,16 +710,14 @@ public class QueryServiceImpl implements QueryService {
     }
 
     String extractKpName(GraphNodeData node) {
-        // KnowledgePointNode 的 name 属性在 properties Map 中
+        // 优先使用 GraphNodeData 顶层 label 字段（从原始节点推导的显示名）
+        if (node.label() != null && !node.label().isBlank()) return node.label();
+        // 其次从 properties 中查找
         if (node.properties() != null) {
-            // 优先取 name
             Object name = node.properties().get("name");
             if (name != null && !name.toString().isBlank()) return name.toString();
-            // 其次取 label
-            Object label = node.properties().get("label");
-            if (label != null && !label.toString().isBlank()) return label.toString();
         }
-        // 最后兜底：截取 id 前 8 位
+        // 兜底
         String id = node.id();
         return id != null && id.length() > 8 ? id.substring(0, 8) + "..." : (id != null ? id : "未知知识点");
     }
