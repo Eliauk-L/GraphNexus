@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, h } from 'vue'
-import { NSpace, useMessage } from 'naive-ui'
+import { NSpace, useMessage, useDialog } from 'naive-ui'
 import { useFileStore } from './fileStore'
 import FileUpload from './components/FileUpload.vue'
 import BaseButton from '@/common/components/BaseButton.vue'
@@ -12,6 +12,7 @@ import type { TextbookVO } from '@/api/types'
 
 const store = useFileStore()
 const message = useMessage()
+const dialog = useDialog()
 
 const page = ref(1)
 const pageSize = ref(10)
@@ -42,7 +43,7 @@ const columns: DataTableColumns<TextbookVO> = [
           ? h(BaseButton, { size: 'small', onClick: () => handleParse(row.documentId) }, () => '解析')
           : null,
         row.status === 'PARSED' || row.status === 'EXTRACTED' || row.status === 'COMPLETED'
-          ? h(BaseButton, { size: 'small', onClick: () => handleExtract(row.documentId) }, () => '图谱化')
+          ? h(BaseButton, { size: 'small', onClick: () => handleExtract(row.documentId) }, () => '图谱构建')
           : null,
         h(BaseButton, {
           variant: 'danger' as const, size: 'small',
@@ -85,19 +86,27 @@ async function handleParse(id: number) {
 async function handleExtract(id: number) {
   try {
     await store.extract(id)
-    message.success('已触发图谱化')
+    message.success('已触发图谱构建')
   } catch {
     // handled by store
   }
 }
 
 async function handleDelete(id: number, name: string) {
-  try {
-    await store.remove(id)
-    message.success(`已删除: ${name}`)
-  } catch {
-    // handled by store
-  }
+  dialog.warning({
+    title: '确认删除',
+    content: `确定要删除「${name}」吗？删除后关联的图谱数据将被清除，此操作不可撤销。`,
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await store.remove(id)
+        message.success(`已删除: ${name}`)
+      } catch {
+        // handled by store
+      }
+    },
+  })
 }
 
 function handleUploadFinish() {
