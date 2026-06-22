@@ -289,6 +289,36 @@ public class ConstructionGraphRepository {
         return save(new SubjectNode(name));
     }
 
+    /**
+     * 按学号查找已有 StudentNode，若无则创建（幂等）。
+     *
+     * <p>MERGE 键为 {@code studentNo}（学号），确保同一学生跨多次考试上传复用同一节点。
+     * 已存在时更新 name/className/grade（以最新上传为准）。</p>
+     */
+    public StudentNode findOrCreateStudent(String studentNo, String name, String className, String grade) {
+        String id = UUID.nameUUIDFromBytes(("STUDENT:" + studentNo).getBytes()).toString();
+
+        String cypher = "MERGE (s:Student {studentNo: $studentNo}) "
+                + "ON CREATE SET s.id = $id, s.name = $name, s.className = $className, "
+                + "s.grade = $grade, s.nodeType = 'Student' "
+                + "ON MATCH SET s.name = $name, s.className = $className, s.grade = $grade "
+                + "RETURN s.id AS id";
+
+        var rows = neo4jClient.query(cypher).bindAll(Map.of(
+                "studentNo", studentNo,
+                "id", id,
+                "name", name,
+                "className", className != null ? className : "",
+                "grade", grade != null ? grade : ""
+        )).fetch().all();
+
+        StudentNode node = new StudentNode(studentNo, name, className, grade);
+        if (!rows.isEmpty()) {
+            node.setId((String) rows.iterator().next().get("id"));
+        }
+        return node;
+    }
+
     // ======================== 内部类 ========================
 
     private static class SimpleGraphEdge extends GraphEdge {

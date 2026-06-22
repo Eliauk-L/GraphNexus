@@ -114,6 +114,94 @@ public class FusionGraphRepository {
         log.debug("已删除 {} 个冗余 KP 节点", kpIds.size());
     }
 
+    // ======================== Student 去重融合 ========================
+
+    /**
+     * 查询所有 Student 节点（含 id + studentNo + name）。
+     */
+    public List<Map<String, Object>> findAllStudents() {
+        try {
+            return new ArrayList<>(neo4jClient.query(
+                    "MATCH (s:Student) RETURN s.id AS id, s.studentNo AS studentNo, s.name AS name " +
+                    "ORDER BY s.id"
+            ).fetch().all());
+        } catch (Exception e) {
+            log.warn("查询全部 Student 节点失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 合并重复 Student 节点（同 studentNo 不同 id）：边重定向到规范节点 + 删除冗余节点。
+     *
+     * <p>规范节点选取规则：同 studentNo 的第一个（按 id 升序，最旧节点存活）。
+     * 需重定向的边类型：ATTENDED、MASTERS。共享节点不级联删除。</p>
+     *
+     * @return 合并的重复节点数（被删除的节点数）
+     */
+    public int mergeDuplicateStudents() {
+        List<Map<String, Object>> allStudents = findAllStudents();
+
+        // 按 studentNo 分组
+        Map<String, List<Map<String, Object>>> byStudentNo = new LinkedHashMap<>();
+        for (Map<String, Object> s : allStudents) {
+            String sno = (String) s.get("studentNo");
+            if (sno != null) {
+                byStudentNo.computeIfAbsent(sno, k -> new ArrayList<>()).add(s);
+            }
+        }
+
+        int deletedCount = 0;
+        for (var entry : byStudentNo.entrySet()) {
+            List<Map<String, Object>> nodes = entry.getValue();
+            if (nodes.size() < 2) continue; // 无重复
+
+            // 选规范节点（第一个，按 id 排序）
+            String canonicalId = (String) nodes.get(0).get("id");
+            for (int i = 1; i < nodes.size(); i++) {
+                String dupId = (String) nodes.get(i).get("id");
+                // 重定向 ATTENDED 边：(:Student {id: dupId})-[r:ATTENDED]->(e:Exam)
+                // → 删除旧边，创建新边
+                redirectStudentEdges(dupId, canonicalId, "ATTENDED");
+                // 重定向 MASTERS 边
+                redirectStudentEdges(dupId, canonicalId, "MASTERS");
+                // 删除冗余 Student 节点
+                deleteStudentNode(dupId);
+                deletedCount++;
+                log.debug("Student 融合: {} → {} (studentNo={})", dupId, canonicalId, entry.getKey());
+            }
+        }
+        if (deletedCount > 0) {
+            log.info("Student 融合完成: 合并 {} 个重复节点", deletedCount);
+        }
+        return deletedCount;
+    }
+
+    /** 将冗余 Student 节点的边重定向到规范节点（先创建新边，再删除旧边） */
+    private void redirectStudentEdges(String fromStudentId, String toStudentId, String edgeType) {
+        try {
+            neo4jClient.query(
+                    "MATCH (a:Student {id: $fromId})-[r:" + edgeType + "]->(b) "
+                    + "MATCH (c:Student {id: $toId}) "
+                    + "CREATE (c)-[r2:" + edgeType + "]->(b) "
+                    + "SET r2 = properties(r) "
+                    + "DELETE r"
+            ).bindAll(Map.of("fromId", fromStudentId, "toId", toStudentId)).run();
+        } catch (Exception e) {
+            log.debug("重定向 Student {} 边 {} 失败（可能无边）: {}", edgeType, fromStudentId, e.getMessage());
+        }
+    }
+
+    /** 删除指定 Student 节点（DETACH DELETE 兜底，幂等） */
+    private void deleteStudentNode(String studentId) {
+        try {
+            neo4jClient.query("MATCH (s:Student {id: $id}) DETACH DELETE s")
+                    .bindAll(Map.of("id", studentId)).run();
+        } catch (Exception e) {
+            log.warn("删除冗余 Student 节点失败: {}", e.getMessage());
+        }
+    }
+
     // ======================== MASTERS 批量操作 ========================
 
     /**

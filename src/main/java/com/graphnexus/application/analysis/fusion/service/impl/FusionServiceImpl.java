@@ -79,9 +79,15 @@ public class FusionServiceImpl implements FusionService {
                 }
             }
 
-            // ② Neo4j 事务内：执行全部 merge + MASTERS 重算（见 ADR-020）
+            // ② Neo4j 事务内：Student 去重 → KP merge → MASTERS 重算（见 ADR-020）
             TransactionTemplate txTemplate = new TransactionTemplate(neo4jTransactionManager);
             int totalMasters = txTemplate.execute(status -> {
+                // ②a 合并重复 Student 节点（同 studentNo 重复 → 边重定向 + 删除冗余）
+                int mergedStudents = fusionGraphRepository.mergeDuplicateStudents();
+                if (mergedStudents > 0) {
+                    log.info("全量融合前 Student 去重: 合并 {} 个重复节点", mergedStudents);
+                }
+
                 int mastersCount = 0;
                 for (var entry : groupsBySubject.entrySet()) {
                     groupBuilder.merge(entry.getValue());

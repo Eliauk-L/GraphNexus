@@ -65,11 +65,10 @@ public class GradeGraphEventListener {
         examNode = constructionGraphRepository.save(examNode);
         constructionGraphRepository.saveEdge(new BelongsToSubjectEdge(examNode.getId(), subjectNode.getId()));
 
-        // ③ MERGE StudentNode + AttendedEdge
+        // ③ MERGE StudentNode（按 studentNo 去重）+ AttendedEdge
         for (ExamRecordDO rec : records) {
-            StudentNode studentNode = new StudentNode(
+            StudentNode studentNode = constructionGraphRepository.findOrCreateStudent(
                     rec.getStudentNo(), rec.getName(), rec.getClassName(), null);
-            studentNode = constructionGraphRepository.save(studentNode);
             constructionGraphRepository.saveEdge(new AttendedEdge(studentNode.getId(), examNode.getId()));
         }
 
