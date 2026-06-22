@@ -1,8 +1,12 @@
 package com.graphnexus.application.query.chat.config;
 
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+
+import jakarta.annotation.PostConstruct;
+import java.util.Set;
 
 /**
  * 智能问答配置属性 — 绑定 application-dev.yml 中 {@code query.*} 配置项。
@@ -13,6 +17,7 @@ import org.springframework.stereotype.Component;
  * @author Jay
  * @date 2026/06/17
  */
+@Slf4j
 @Data
 @Component
 @ConfigurationProperties(prefix = "query")
@@ -32,6 +37,22 @@ public class QueryProperties {
 
     /** 同步请求超时 */
     private Timeout timeout = new Timeout();
+
+    /** 输出格式 */
+    private OutputFormat output = new OutputFormat();
+
+    private static final Set<String> VALID_FORMATS = Set.of("html-svg", "markdown");
+
+    @PostConstruct
+    void validate() {
+        String format = output.getFormat();
+        if (format == null || !VALID_FORMATS.contains(format)) {
+            throw new IllegalArgumentException(
+                    "query.output-format 配置值非法: '" + format
+                    + "'，仅允许: " + String.join(", ", VALID_FORMATS));
+        }
+        log.info("Query output format: {}", format);
+    }
 
     @Data
     public static class TokenBudget {
@@ -76,5 +97,11 @@ public class QueryProperties {
     public static class Timeout {
         /** 同步问答超时（秒） */
         private int syncTimeoutSeconds = 30;
+    }
+
+    @Data
+    public static class OutputFormat {
+        /** 输出格式: html-svg (默认) | markdown (回滚) */
+        private String format = "html-svg";
     }
 }

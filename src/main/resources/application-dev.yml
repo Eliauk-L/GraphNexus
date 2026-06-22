@@ -168,6 +168,7 @@ query:
     queue-capacity: 10
   timeout:
     sync-timeout-seconds: 30
+  output-format: html-svg  # html-svg | markdown
 
 # ---------------------------------------------------------------------------
 # 日志
