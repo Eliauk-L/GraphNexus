@@ -65,12 +65,15 @@ client.interceptors.response.use(
     const errData: ErrorResponse | undefined = error.response?.data
     const errorCode = errData?.errorCode
 
-    if (errorCode) {
-      // 业务错误：优先用 userTip，回退到错误码映射
-      const friendlyTip = errData?.userTip || FRIENDLY_TIPS[errorCode] || '操作失败，请稍后重试'
-      showErrorToast(friendlyTip, errorCode)
-    } else if (!error.response) {
-      // 网络错误（后端未启动 / 网络不通），5s 内只提示一次
+    // 判断是否为后端服务不可达（Vite proxy ECONNREFUSED / 网络不通）
+    const isServerDown =
+      !error.response ||
+      error.code === 'ECONNREFUSED' ||
+      error.code === 'ERR_BAD_RESPONSE' ||
+      error.code === 'ECONNABORTED' ||
+      (error.response?.status && error.response.status >= 502)
+
+    if (isServerDown) {
       const now = Date.now()
       if (now - lastNetworkErrorTime > NETWORK_ERROR_DEBOUNCE) {
         lastNetworkErrorTime = now
@@ -79,9 +82,10 @@ client.interceptors.response.use(
           closable: true,
         })
       }
-    } else if (error.code === 'ECONNABORTED') {
-      // 请求超时
-      message.warning('请求超时，请检查后端服务是否正常运行', { duration: 5000 })
+    } else if (errorCode) {
+      // 业务错误：优先用 userTip，回退到错误码映射
+      const friendlyTip = errData?.userTip || FRIENDLY_TIPS[errorCode] || '操作失败，请稍后重试'
+      showErrorToast(friendlyTip, errorCode)
     } else {
       // 其他 HTTP 错误
       const status = error.response.status
