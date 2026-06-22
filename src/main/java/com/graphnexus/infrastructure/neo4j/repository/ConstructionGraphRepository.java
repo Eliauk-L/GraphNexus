@@ -290,22 +290,12 @@ public class ConstructionGraphRepository {
      */
     public List<GraphNode> findBySubject(String subjectName) {
         try {
-            // 分段收集避免 OPTIONAL MATCH 笛卡尔积：每段 UNWIND→OPTIONAL MATCH→collect(DISTINCT)
             Collection<Map<String, Object>> rows = neo4jClient.query(
                     "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
-                    "WITH collect(kp) AS kps " +
-                    // 段1：收集 PREREQUISITE_OF 目标 KP
-                    "UNWIND kps AS k " +
-                    "OPTIONAL MATCH (k)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
-                    "WITH kps, kps + collect(DISTINCT nextKp) AS nodes1 " +
-                    // 段2：收集 CHILD_OF 分类节点（只对原始 KP）
-                    "UNWIND kps AS k2 " +
-                    "OPTIONAL MATCH (k2)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
-                    "WITH nodes1 + collect(DISTINCT cat) AS nodes2 " +
-                    // 段3：收集父级分类
-                    "UNWIND nodes2 AS n2 " +
-                    "OPTIONAL MATCH (n2:KnowledgeCategory)-[:CHILD_OF]->(parentCat:KnowledgeCategory) " +
-                    "WITH nodes2 + collect(DISTINCT parentCat) AS allNodes " +
+                    "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
+                    "OPTIONAL MATCH (kp)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
+                    "OPTIONAL MATCH (cat)-[:CHILD_OF]->(parentCat:KnowledgeCategory) " +
+                    "WITH collect(DISTINCT kp) + collect(DISTINCT nextKp) + collect(DISTINCT cat) + collect(DISTINCT parentCat) AS allNodes " +
                     "UNWIND allNodes AS n " +
                     "WITH DISTINCT n WHERE n IS NOT NULL " +
                     "RETURN n ORDER BY labels(n)[0] " +
@@ -336,22 +326,12 @@ public class ConstructionGraphRepository {
      */
     public List<GraphEdge> findEdgesBySubject(String subjectName) {
         try {
-            // 分段收集避免 OPTIONAL MATCH 笛卡尔积
             Collection<Map<String, Object>> result = neo4jClient.query(
                     "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
-                    "WITH collect(kp) AS kps " +
-                    // 段1：PREREQUISITE_OF 边
-                    "UNWIND kps AS k " +
-                    "OPTIONAL MATCH (k)-[r1:PREREQUISITE_OF]->(:KnowledgePoint) " +
-                    "WITH kps, collect(DISTINCT r1) AS rels1 " +
-                    // 段2：CHILD_OF 边（KP→Category）
-                    "UNWIND kps AS k2 " +
-                    "OPTIONAL MATCH (k2)-[r2:CHILD_OF]->(:KnowledgeCategory) " +
-                    "WITH kps, rels1 + collect(DISTINCT r2) AS rels2 " +
-                    // 段3：CHILD_OF 边（Category→Category）
-                    "UNWIND kps AS k3 " +
-                    "OPTIONAL MATCH (k3)-[:CHILD_OF]->(cat:KnowledgeCategory)-[r3:CHILD_OF]->(:KnowledgeCategory) " +
-                    "WITH rels2 + collect(DISTINCT r3) AS allRels " +
+                    "OPTIONAL MATCH (kp)-[r1:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
+                    "OPTIONAL MATCH (kp)-[r2:CHILD_OF]->(cat:KnowledgeCategory) " +
+                    "OPTIONAL MATCH (cat)-[r3:CHILD_OF]->(parentCat:KnowledgeCategory) " +
+                    "WITH collect(DISTINCT r1) + collect(DISTINCT r2) + collect(DISTINCT r3) AS allRels " +
                     "UNWIND allRels AS r " +
                     "WITH DISTINCT r WHERE r IS NOT NULL " +
                     "RETURN startNode(r).id AS sourceNodeId, endNode(r).id AS targetNodeId, type(r) AS edgeType"
