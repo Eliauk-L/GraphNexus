@@ -3,7 +3,7 @@ import type { ExtractionResultVO, GraphSubgraphVO, MetricResultVO } from './type
 
 /** 触发文档知识图谱抽取 */
 export function extractGraph(documentId: number): Promise<ExtractionResultVO> {
-  return client.post(`/graph/extract/${documentId}`)
+  return client.post(`/graph/construction/extract/${documentId}`)
 }
 
 /** 查询文档子图 */

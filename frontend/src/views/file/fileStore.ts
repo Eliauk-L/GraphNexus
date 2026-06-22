@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { uploadFile, listFiles, parseFile, deleteFile } from '@/api/file'
+import { extractGraph } from '@/api/graph'
 import type { TextbookVO, FileStatus } from '@/api/types'
 
 // 仅追踪活跃处理态（*ING），排除稳定态（UPLOADED/PARSED/EXTRACTED）避免空转
@@ -84,6 +85,19 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
+  /** 触发图谱构建（抽取+融合），用于手动重试图谱化 */
+  async function extract(id: number) {
+    error.value = null
+    try {
+      await extractGraph(id)
+      await loadFiles()
+      startPolling()
+    } catch {
+      error.value = '图谱化失败'
+      throw new Error('图谱化失败')
+    }
+  }
+
   async function remove(id: number) {
     error.value = null
     try {
@@ -137,6 +151,6 @@ export const useFileStore = defineStore('file', () => {
 
   return {
     files, total, loading, error, isPolling, hasIntermediateFiles,
-    loadFiles, upload, parse, remove, startPolling, stopPolling,
+    loadFiles, upload, parse, extract, remove, startPolling, stopPolling,
   }
 })

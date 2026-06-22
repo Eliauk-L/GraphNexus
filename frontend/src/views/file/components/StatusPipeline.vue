@@ -46,6 +46,9 @@ const isDeleting = computed(() => props.status === 'DELETING')
 // ── tooltip 内容 ──
 
 const tooltipText = computed(() => {
+  const base = props.status === 'PARSED' && props.failReason
+    ? `已解析 — 抽取失败：${props.failReason}`
+    : undefined
   const map: Record<string, string> = {
     UPLOADED: '已上传 — 等待解析',
     PARSING: '解析中 — 正在提取文档文本',
@@ -57,7 +60,7 @@ const tooltipText = computed(() => {
     FAILED: `失败${props.failReason ? '：' + props.failReason : ''}`,
     DELETING: '删除中 — 正在清理关联数据',
   }
-  return map[props.status] ?? props.status
+  return base ?? map[props.status] ?? props.status
 })
 
 // ── 截断 failReason ──
