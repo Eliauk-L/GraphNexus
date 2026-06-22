@@ -6,11 +6,20 @@
 
 ## 当前活动
 
-- **Change ID**: `transaction-management-refactor`
-- **当前阶段**: DEV ✅ → 下一步 TEST/REVIEW
-- **当前角色**: Dev → 下一步 Tester/Reviewer
+- **Change ID**: `diagnosis-history-export`
+- **当前阶段**: CHANGE ✅ → REQUIREMENT
+- **当前角色**: Architect（需求分析师）
 - **最后更新**: 2026-06-22
 - **路径建议**: 完整（`REQUIREMENT → DESIGN → TASK → DEV → TEST → REVIEW → INTEGRATION`）
+- **用户决策**: Q1 列表字段→A 精简型 | Q2 导出→单条+批量 | Q3 UI 位置→A 折叠面板
+- **工件**: `@.specs/diagnosis-history-export/CHANGE.md`
+
+---
+
+## 上一个活动
+
+- **Change ID**: `transaction-management-refactor`
+- **当前阶段**: DEV ✅ → 下一步 TEST/REVIEW
 - **DEV 执行记录**: 11 任务 · 4 波次 · 212 单测全通过
 - **工件**: `@.specs/transaction-management-refactor/{CHANGE,REQUIREMENT,DESIGN,TASK}.md` + `@.specs/adr/{028,029}-*.md`
 - **最后更新**: 2026-06-22

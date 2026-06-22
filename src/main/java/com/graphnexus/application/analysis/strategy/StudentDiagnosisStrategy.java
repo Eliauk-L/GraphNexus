@@ -178,12 +178,17 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
     }
 
     private StudentNode buildStudentNode(Map<String, Object> row) {
-        return new StudentNode(
+        StudentNode node = new StudentNode(
                 (String) row.get("studentNo"),
                 (String) row.get("name"),
                 (String) row.get("className"),
                 (String) row.get("grade")
         );
+        Object id = row.get("id");
+        if (id != null) {
+            node.setId(id.toString());
+        }
+        return node;
     }
 
     private PrunedSubgraph buildResult(

@@ -124,7 +124,6 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./deployment/init-sql:/docker-entrypoint-initdb.d:Z,ro
     environment:
       - MYSQL_ROOT_PASSWORD=graphnexus123
       - MYSQL_DATABASE=graphnexus
@@ -152,61 +151,61 @@ services:
   # =========================================================================
   # 3. Redis — 缓存
   # =========================================================================
-  redis:
-    image: docker.io/redis:7-alpine
-    container_name: graphnexus-redis
-    restart: unless-stopped
-    hostname: redis
-    networks:
-      - graphnexus-net
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-      - ./deployment/redis/redis.conf:/usr/local/etc/redis/redis.conf:Z,ro
-    command: redis-server /usr/local/etc/redis/redis.conf
-    environment:
-      - REDIS_PASSWORD=graphnexus123
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a graphnexus123 ping | grep PONG"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    sysctls:
-      - net.core.somaxconn=1024
-    labels:
-      com.graphnexus.role: "cache"
+  # redis:
+  #   image: docker.io/redis:7-alpine
+  #   container_name: graphnexus-redis
+  #   restart: unless-stopped
+  #   hostname: redis
+  #   networks:
+  #     - graphnexus-net
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #     - ./deployment/redis/redis.conf:/usr/local/etc/redis/redis.conf:Z,ro
+  #   command: redis-server /usr/local/etc/redis/redis.conf
+  #   environment:
+  #     - REDIS_PASSWORD=graphnexus123
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "redis-cli -a graphnexus123 ping | grep PONG"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   sysctls:
+  #     - net.core.somaxconn=1024
+  #   labels:
+  #     com.graphnexus.role: "cache"
 
-  # =========================================================================
-  # 4. RabbitMQ — 消息队列
-  # =========================================================================
-  rabbitmq:
-    image: docker.io/rabbitmq:3.13-management-alpine
-    container_name: graphnexus-rabbitmq
-    restart: unless-stopped
-    hostname: rabbitmq
-    networks:
-      - graphnexus-net
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-      - ./deployment/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:Z,ro
-      - ./deployment/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:Z,ro
-    environment:
-      - RABBITMQ_DEFAULT_USER=graphnexus
-      - RABBITMQ_DEFAULT_PASS=graphnexus123
-      - RABBITMQ_DEFAULT_VHOST=graphnexus
-    healthcheck:
-      test: ["CMD-SHELL", "rabbitmq-diagnostics check_port_connectivity"]
-      interval: 20s
-      timeout: 10s
-      retries: 6
-      start_period: 60s
-    labels:
-      com.graphnexus.role: "message-queue"
+  # # =========================================================================
+  # # 4. RabbitMQ — 消息队列
+  # # =========================================================================
+  # rabbitmq:
+  #   image: docker.io/rabbitmq:3.13-management-alpine
+  #   container_name: graphnexus-rabbitmq
+  #   restart: unless-stopped
+  #   hostname: rabbitmq
+  #   networks:
+  #     - graphnexus-net
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"
+  #   volumes:
+  #     - rabbitmq-data:/var/lib/rabbitmq
+  #     - ./deployment/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:Z,ro
+  #     - ./deployment/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:Z,ro
+  #   environment:
+  #     - RABBITMQ_DEFAULT_USER=graphnexus
+  #     - RABBITMQ_DEFAULT_PASS=graphnexus123
+  #     - RABBITMQ_DEFAULT_VHOST=graphnexus
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "rabbitmq-diagnostics check_port_connectivity"]
+  #     interval: 20s
+  #     timeout: 10s
+  #     retries: 6
+  #     start_period: 60s
+  #   labels:
+  #     com.graphnexus.role: "message-queue"
 
   # =========================================================================
   # 5. MinIO — 对象存储

@@ -102,6 +102,10 @@
 | **邻域展开** | 图交互模式：点击节点后，以该节点为中心高亮其 1 跳邻居节点和连接边，其余节点/边降低透明度。用于快速探索某知识点的直接关联 |
 | **路径高亮** | 图交互模式：用户选择两个节点后，高亮它们之间的最短路径（节点和边加粗），其余元素降低透明度。用于理解知识点间的关联链路 |
 | **剪枝子图** | 智能问答流程中由 `SubgraphPruningStrategy` 从宽图谱中裁切出的子图，通过 `GET /api/v1/analysis/subgraph/{taskId}` 返回。与文档子图不同，节点含完整 `properties` Map（如 name/label/description 等），边含 `weight` 属性，附带 `PruningMeta`（策略名/阈值/截断信息）。前端同时渲染图结构和元信息面板 |
+| **短事务** | 仅包含 MySQL CRUD 操作（≤5 条 SQL）的 `@Transactional` 方法，执行时间 ≤50ms，立即提交使状态对外可见。不包含外部 API 调用、Neo4j 写入或事件发布。是本次重构的核心事务策略 |
+| **假可见性（saveAndFlush 陷阱）** | 在 MySQL InnoDB `REPEATABLE_READ` 下，`saveAndFlush()` 将 SQL 发送到数据库但未提交，其他数据库连接在自己的快照读中看不到这些未提交变更。当前 `TextbookServiceImpl.parse()` 使用此模式试图让前端轮询看到中间状态，实际不可见——是本次重构要消除的 anti-pattern |
+| **跨存储补偿** | Neo4j 写入失败后，通过独立短事务将 MySQL 状态回退到上一稳定态 + `failReason` 的策略。不具备分布式事务原子性，接受最终一致：中间态（如 EXTRACTING→PARSED）的短暂不一致窗口 ≤1s |
+| **事务外事件发布** | 事件在 MySQL 事务提交之后发布（发布方不标注 `@Transactional`），替代当前 `TransactionSynchronizationManager.registerSynchronization().afterCommit()` 手动回调模式。@Async 监听器在新线程中自然读到已提交数据 |
 
 ## 已锁技术决策
 
@@ -192,6 +196,7 @@
 | SVG 内容范围 | LLM 生成自包含 SVG（含 `xmlns` + `viewBox`，不依赖外部 JS/CSS），涵盖三种：① 数据图表（柱状图/雷达图，用于掌握度分布）；② 知识图谱子图（circle+line+text 拓扑图，用于依赖链可视化）；③ 数学公式（MathML 或纯 SVG 路径）。前端仅做渲染不做计算。v1 每图表最多 10 个数据点、最大画布 800×600 | 2026-06-22 | `llm-intent-recognition` CHANGE（Q3） |
 | 策略路由注册机制 | `PruningStrategyRegistry`（Map<String, SubgraphPruningStrategy>）按意图名路由策略。`QueryServiceImpl` 注入 Registry 替代直接注入 `StudentDiagnosisStrategy`。新增意图只需实现接口 + `@Component` 注册，不改 `QueryServiceImpl` | 2026-06-22 | `llm-intent-recognition` REQUIREMENT（US-4） |
 | 前端 HTML/SVG 安全渲染 | 新增 `HtmlSvgViewer.vue` 组件，用 DOMPurify 白名单净化后 `v-html` 渲染。白名单：HTML 结构标签 + SVG 图形标签 + MathML 标签；阻断 script/foreignObject/事件属性/xlink:href。后端 `outputFormat` 字段驱动 `IntelligentQAPage.vue` 选择 `HtmlSvgViewer` 或 `MarkdownViewer` | 2026-06-22 | `llm-intent-recognition` CHANGE |
+| 事务边界策略 | ① 状态更新 = 独立短事务立即提交（前端轮询可见中间态）；② 慢操作（LLM/MinerU/MinIO）= 无事务；③ Neo4j = 独立 `Neo4jTransactionManager`（不与 JPA 嵌套）；④ 事件 = 事务外发布（消除 afterCommit）；⑤ `@EventListener` 不标注 `@Transactional`（委托 Service）；⑥ 跨存储失败 → MySQL 状态回退 + failReason 补偿 | 2026-06-22 | `transaction-management-refactor` REQUIREMENT |
 
 ## 默认行为
 
@@ -203,7 +208,14 @@
 - 异常在 L3 捕获并向上抛 BusinessException，在 L1 由 GlobalExceptionHandler 统一处理
 - 注释使用中文，代码标识符使用英文，注释的作者设置为 Jay
 - **分层异常传递**：L3 捕获技术异常 → 向上抛 `BusinessException`（不记日志）；L2 捕获并记日志（含参数和上下文）；L1 禁止向上抛，由 `GlobalExceptionHandler` 统一处理
-- **事务管理**：`@Transactional` 仅放 L2 Service 方法；查询用 `@Transactional(readOnly = true)`；Neo4j 与 MySQL 事务独立，通过消息队列最终一致
+- **事务管理**：`@Transactional` 仅放 L2 Service 的 **public** 方法；查询用 `@Transactional(readOnly = true)`；Neo4j 与 MySQL 事务独立，无分布式事务协调，跨存储最终一致性通过状态机补偿实现
+- **事务边界策略（由 `transaction-management-refactor` 锁定）**：
+  - **状态更新短事务**：文档/成绩处理管线中的状态变更（如 `UPLOADED→PARSING`）使用独立短事务立即提交，使前端轮询可观察到中间态
+  - **长耗时操作无事务**：LLM 调用、MinerU API 调用、MinIO 文件 I/O 不在 `@Transactional` 方法内执行
+  - **Neo4j 独立事务**：Neo4j 写操作由 `Neo4jTransactionManager` + `TransactionTemplate` 管理（维持 `FusionServiceImpl` 范式），不与 JPA 事务嵌套
+  - **事件事务外发布**：`ApplicationEventPublisher.publishEvent()` 不在任何 `@Transactional` 方法内调用；禁止使用 `TransactionSynchronizationManager.registerSynchronization()` 手动 afterCommit 回调
+  - **@EventListener 不标注 @Transactional**：事务逻辑委托给独立 Service public 方法
+  - **跨存储补偿**：Neo4j 写入失败时，MySQL 状态通过新短事务回退到上一步稳定态 + `failReason` 记录
 - **数据对象转换链**：前端 JSON → L1 DTO/VO → L2 BO/Query → L3 DO/Entity，跨层禁止直接传 DO
 - **文档删除联动**：幂等操作。① `findById`（含 DELETING 状态，允许重试）→ ② `isDeleted=1` 直接返回 → ③ 进入/保持 DELETING → ④ MinIO 删除（容忍文件不存在）→ ⑤ Neo4j 图谱清除 → ⑥ `markDeleted()`。正常查询排除 DELETING 状态
 - **Git 提交格式**：`<type>(<change-id>): <task-id> <subject>`（如 `feat(init-platform): T01 创建包结构`）

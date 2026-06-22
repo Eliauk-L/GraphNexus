@@ -19,10 +19,7 @@ export function queryPageRank(nodeTypes?: string[], edgeTypes?: string[]): Promi
   })
 }
 
-/** 查询全量融合图谱 */
-export function fetchFullGraph(): Promise<GraphSubgraphVO> {
-  return client.get('/graph/construction/full')
-}
+/** 查询度中心性 */
 export function queryDegree(nodeTypes?: string[], edgeTypes?: string[]): Promise<MetricResultVO[]> {
   return client.get('/graph/metrics/degree', {
     params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(',') },

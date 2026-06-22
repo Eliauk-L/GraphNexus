@@ -2,17 +2,14 @@
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGraphStore } from './graphStore'
-import type { GraphViewMode } from './graphStore'
 import { toGraphData } from './graphAdapter'
 import type { G6GraphData } from './graphAdapter'
 import { useGraphInteraction } from './composables/useGraphInteraction'
 import BaseSelect from '@/common/components/BaseSelect.vue'
-import BaseCard from '@/common/components/BaseCard.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
 import GraphToolbar from './components/GraphToolbar.vue'
 import GraphLegend from './components/GraphLegend.vue'
 import NodeDetailPanel from './components/NodeDetailPanel.vue'
-import type { FileStatus } from '@/api/types'
 
 const store = useGraphStore()
 const route = useRoute()
@@ -20,7 +17,6 @@ const selectedNode = ref<{ id: string; data: Record<string, unknown> } | null>(n
 const selectedDocId = ref<number | null>(null)
 const ctrlClickedNodeId = ref<string | null>(null)
 const searchResults = ref<{ id: string; label: string; nodeType: string }[]>([])
-const hideAlert = ref(false)
 
 const graphData = ref<G6GraphData | null>(null)
 const canvasRef = ref<any>(null)
@@ -62,66 +58,25 @@ async function toggleFullscreen() {
 
 function onFullscreenChange() {
   isFullscreen.value = !!document.fullscreenElement
-  // 退出全屏后 G6 需要重新适应容器尺寸
-  if (!document.fullscreenElement) {
-    setTimeout(() => {
-      const g = canvasRef.value?.getGraph?.()
-      if (g) {
-        try { g.render() } catch { /* ignore */ }
-      }
-    }, 300)
-  } else {
-    // 进入全屏后也触发重绘
-    setTimeout(() => {
-      const g = canvasRef.value?.getGraph?.()
-      if (g) {
-        try { g.render() } catch { /* ignore */ }
-      }
-    }, 300)
-  }
+  setTimeout(() => {
+    const g = canvasRef.value?.getGraph?.()
+    if (g) {
+      try { g.render() } catch { /* ignore */ }
+    }
+  }, 300)
 }
 
 // ── 文档选择 → 子图 ──
 
-const STATUS_LABEL: Record<string, string> = {
-  EXTRACTING: '抽取中',
-  EXTRACTED: '已抽取',
-  FUSING: '融合中',
-  COMPLETED: '已完成',
-}
-
 const docOptions = computed(() =>
-  store.documents.map((d) => {
-    const statusText = STATUS_LABEL[d.status] ?? d.status
-    const isProcessing = d.status === 'EXTRACTING' || d.status === 'FUSING'
-    return {
-      label: `${d.name} — ${statusText}`,
-      value: d.documentId,
-      disabled: isProcessing,
-    }
-  }),
+  store.documents.map((d) => ({ label: `${d.name} (ID: ${d.documentId})`, value: d.documentId }))
 )
 
 async function handleDocSelect(docId: number) {
   selectedDocId.value = docId
   selectedNode.value = null
   ctrlClickedNodeId.value = null
-  hideAlert.value = false // 切换文档时重置提示条
   await store.loadDocumentSubgraph(docId)
-}
-
-// ── 视图模式切换 ──
-
-async function handleViewModeChange(mode: GraphViewMode) {
-  selectedNode.value = null
-  ctrlClickedNodeId.value = null
-  graphData.value = null
-
-  if (mode === 'full') {
-    await store.loadFullGraph()
-  } else if (selectedDocId.value) {
-    await store.loadDocumentSubgraph(selectedDocId.value)
-  }
 }
 
 // ── 搜索 ──
@@ -192,7 +147,6 @@ function handleCanvasReady(g: any) {
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
-    // 如果处于全屏，Esc 会由浏览器处理退出全屏，这里只清理交互状态
     interaction.clearHighlight()
     selectedNode.value = null
     ctrlClickedNodeId.value = null
@@ -219,9 +173,7 @@ onBeforeUnmount(() => {
   <div ref="graphContainer" class="graph-page">
     <div class="graph-topbar">
       <GraphToolbar
-        :view-mode="store.viewMode"
         :search-results="searchResults"
-        @update:view-mode="handleViewModeChange"
         @search="handleSearch"
         @select-node="handleSelectNode"
       />
@@ -241,8 +193,7 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <!-- 文档选择器（仅文档子图模式，全屏时隐藏） -->
-    <div v-if="store.viewMode === 'document' && !isFullscreen" style="margin-bottom: var(--spacing-md);">
+    <div v-if="!isFullscreen" style="margin-bottom: var(--spacing-sm); flex-shrink: 0;">
       <BaseSelect
         :model-value="selectedDocId"
         :options="docOptions"
@@ -250,17 +201,6 @@ onBeforeUnmount(() => {
         style="width: 320px"
         @update:model-value="(v) => handleDocSelect(v as number)"
       />
-    </div>
-
-    <!-- 非终态提示条（AC-7：文档 EXTRACTED 但融合未完成） -->
-    <div
-      v-if="store.isSelectedDocNonTerminal && graphData && !hideAlert"
-      class="alert-nonterminal supporting"
-    >
-      <span>该文档图谱数据可能不完整 — 融合尚未完成</span>
-      <button class="alert-nonterminal__close" @click="hideAlert = true" aria-label="关闭提示">
-        ×
-      </button>
     </div>
 
     <div class="graph-body">
@@ -299,21 +239,16 @@ onBeforeUnmount(() => {
 .graph-page {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 112px);
 }
 
 .graph-body {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 .graph-canvas-area {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 .graph-topbar {
@@ -321,6 +256,7 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   gap: var(--spacing-sm);
   flex-shrink: 0;
+  margin-bottom: var(--spacing-sm);
 }
 
 .graph-topbar > :first-child {
@@ -345,55 +281,29 @@ onBeforeUnmount(() => {
   color: var(--color-brand);
   border-color: var(--color-brand);
 }
-
-.alert-nonterminal {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-sm) var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-  background: var(--color-brand-veil);
-  border-top: 2px solid var(--color-brand);
-  border-radius: var(--rounded-sm);
-  color: var(--color-text-secondary);
-}
-
-.alert-nonterminal__close {
-  flex-shrink: 0;
-  margin-left: var(--spacing-sm);
-  padding: 0;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--color-text-tertiary);
-  font-size: 1rem;
-  cursor: pointer;
-  border-radius: var(--rounded-sm);
-  transition: color var(--duration-fast) var(--ease-out);
-}
-
-.alert-nonterminal__close:hover {
-  color: var(--color-text-primary);
-}
-
-.graph-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
 </style>
 
-<!-- 全屏样式（不 scoped，使 :fullscreen 伪类生效） -->
 <style>
 .graph-page:fullscreen {
   padding: var(--spacing-md);
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100vh;
+  width: 100vw;
+}
+
+.graph-page:fullscreen .graph-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.graph-page:fullscreen .graph-canvas-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 </style>

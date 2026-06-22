@@ -1,28 +1,18 @@
 <script setup lang="ts">
 /**
- * GraphToolbar — 图谱搜索框 + 视图模式切换。
- * 见 UI-DESIGN §4.1。
+ * GraphToolbar — 图谱搜索框。
  */
-import { ref, watch, computed } from 'vue'
+import { ref, computed } from 'vue'
 import BaseInput from '@/common/components/BaseInput.vue'
 
-export type ViewMode = 'document' | 'full'
-
 const props = defineProps<{
-  viewMode: ViewMode
   searchResults?: { id: string; label: string; nodeType: string }[]
 }>()
 
 const emit = defineEmits<{
-  'update:viewMode': [mode: ViewMode]
   'search': [query: string]
   'select-node': [nodeId: string]
 }>()
-
-const modes: { value: ViewMode; label: string }[] = [
-  { value: 'document', label: '文档子图' },
-  { value: 'full', label: '全量图谱' },
-]
 
 const searchQuery = ref('')
 const showDropdown = computed(() => (props.searchResults?.length ?? 0) > 0 && searchQuery.value.length >= 2)
@@ -42,11 +32,6 @@ function onSelectNode(nodeId: string) {
   searchQuery.value = ''
 }
 
-function onSelectMode(mode: ViewMode) {
-  emit('update:viewMode', mode)
-}
-
-// 搜索结果节点类型颜色
 function nodeTypeColor(type: string): string {
   const colors: Record<string, string> = {
     KnowledgePoint: '#3B82F6',
@@ -70,7 +55,6 @@ function nodeTypeColor(type: string): string {
           style="width: 280px"
           @update:model-value="onSearchInput"
         />
-        <!-- 搜索下拉 -->
         <div v-if="showDropdown" class="search-dropdown">
           <div
             v-for="item in searchResults"
@@ -88,19 +72,6 @@ function nodeTypeColor(type: string): string {
         </div>
       </div>
     </div>
-
-    <!-- 视图模式 Segmented Toggle -->
-    <div class="segmented-toggle">
-      <button
-        v-for="mode in modes"
-        :key="mode.value"
-        class="seg-btn"
-        :class="{ active: props.viewMode === mode.value }"
-        @click="onSelectMode(mode.value)"
-      >
-        {{ mode.label }}
-      </button>
-    </div>
   </div>
 </template>
 
@@ -108,7 +79,6 @@ function nodeTypeColor(type: string): string {
 .graph-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
   min-height: 36px;
@@ -168,34 +138,5 @@ function nodeTypeColor(type: string): string {
 .search-item-type {
   color: var(--color-text-tertiary);
   flex-shrink: 0;
-}
-
-.segmented-toggle {
-  display: flex;
-  border: 1px solid var(--color-border);
-  border-radius: var(--rounded-sm);
-  overflow: hidden;
-}
-
-.seg-btn {
-  padding: 6px 14px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 150ms ease, color 150ms ease;
-  white-space: nowrap;
-}
-.seg-btn:not(:last-child) {
-  border-right: 1px solid var(--color-border);
-}
-.seg-btn:hover {
-  background: var(--color-brand-veil);
-}
-.seg-btn.active {
-  background: var(--color-brand);
-  color: var(--color-text-on-brand);
 }
 </style>

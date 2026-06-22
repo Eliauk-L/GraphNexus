@@ -130,9 +130,6 @@ export interface GraphSubgraphVO {
   edges: GraphEdgeVO[]
 }
 
-/** 全量融合图谱 — 复用 GraphSubgraphVO 结构（nodes[] + edges[]），无额外字段 */
-export type FullGraphVO = GraphSubgraphVO
-
 // ── 融合管理 ──
 
 export interface FusionExecuteVO {

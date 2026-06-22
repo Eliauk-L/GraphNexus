@@ -686,12 +686,18 @@ public class QueryServiceImpl implements QueryService {
     }
 
     StudentNode buildStudentNode(Map<String, Object> row) {
-        return new StudentNode(
+        StudentNode node = new StudentNode(
                 (String) row.get("studentNo"),
                 (String) row.get("name"),
                 (String) row.get("className"),
                 (String) row.get("grade")
         );
+        // Neo4j Cypher 返回的 s.id 是节点内部 ID（UUID），必须设置
+        Object id = row.get("id");
+        if (id != null) {
+            node.setId(id.toString());
+        }
+        return node;
     }
 
     String extractKpName(GraphNodeData node) {
