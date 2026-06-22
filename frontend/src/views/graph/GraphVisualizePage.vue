@@ -39,7 +39,7 @@ function refreshGraphData() {
 }
 
 function applyMetricsToGraph() {
-  if (store.viewMode !== 'subject' || !graphData.value) return
+  if (!graphData.value) return
   if (metrics.degreeData.value.length === 0) return
   const updated = applyMetrics(
     graphData.value,
@@ -54,7 +54,7 @@ watch(() => store.currentGraph, () => {
 })
 
 watch([() => metrics.degreeData.value, () => metrics.pagerankData.value, () => metrics.pagerankEnabled.value], () => {
-  if (store.viewMode === 'subject' && graphData.value) {
+  if (graphData.value) {
     const updated = applyMetrics(
       toGraphData(store.currentGraph!),
       metrics.degreeData.value,
@@ -109,6 +109,11 @@ async function handleDocSelect(docId: number) {
   selectedNode.value = null
   ctrlClickedNodeId.value = null
   await store.loadDocumentSubgraph(docId)
+  // 文档模式下加载该文档关联 KP 的指标
+  metrics.loadDegreeMetrics(undefined, String(docId))
+  if (metrics.pagerankEnabled.value) {
+    metrics.loadPageRankMetrics(undefined, String(docId))
+  }
 }
 
 async function handleSubjectSelect(subject: string | null) {
@@ -130,8 +135,11 @@ async function handleSubjectSelect(subject: string | null) {
 }
 
 watch(() => metrics.pagerankEnabled.value, (enabled) => {
-  if (enabled && store.viewMode === 'subject' && store.currentSubject) {
+  if (!enabled) return
+  if (store.viewMode === 'subject' && store.currentSubject) {
     metrics.loadPageRankMetrics(store.currentSubject)
+  } else if (store.viewMode === 'document' && store.currentDocId) {
+    metrics.loadPageRankMetrics(undefined, String(store.currentDocId))
   }
 })
 
@@ -292,7 +300,7 @@ onBeforeUnmount(() => {
         v-if="graphData"
         :node-types="interaction.allNodeTypes.value"
         :edge-types="interaction.allEdgeTypes.value"
-        :pagerank-enabled="metrics.pagerankEnabled.value && store.viewMode === 'subject'"
+        :pagerank-enabled="metrics.pagerankEnabled.value"
         @update:node-filter="handleNodeFilter"
         @update:edge-filter="handleEdgeFilter"
       />

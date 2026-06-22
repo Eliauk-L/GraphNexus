@@ -389,6 +389,27 @@ public class ConstructionGraphRepository {
         }
     }
 
+    /**
+     * 轻量查询 — 仅返回指定文档关联的所有 KnowledgePoint 的 id 集合。
+     *
+     * <p>路径：Document → EXTRACTS → Entity → ALIGNED_TO → KnowledgePoint。
+     * 用于 MetricsService 按文档过滤指标结果。</p>
+     */
+    public Set<String> findKpIdsByDocumentId(String documentId) {
+        try {
+            return neo4jClient.query(
+                    "MATCH (d {documentId: $docId})-[:EXTRACTS]->(:Entity)-[:ALIGNED_TO]->(kp:KnowledgePoint) " +
+                    "RETURN DISTINCT kp.id AS id"
+            ).bindAll(Map.of("docId", documentId)).fetch().all().stream()
+                    .map(row -> (String) row.get("id"))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.warn("按 documentId={} 查询 KP ID 集合失败: {}", documentId, e.getMessage());
+            return Collections.emptySet();
+        }
+    }
+
     // ======================== Subject 辅助 ========================
 
     /**

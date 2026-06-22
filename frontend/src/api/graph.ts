@@ -11,18 +11,28 @@ export function getDocumentSubgraph(documentId: number): Promise<GraphSubgraphVO
   return client.get(`/graph/construction/document/${documentId}`)
 }
 
-/** 查询 PageRank */
-export function queryPageRank(nodeTypes?: string[], edgeTypes?: string[], subject?: string): Promise<MetricResultVO[]> {
+/** 查询 PageRank（支持 subject 或 documentId 过滤） */
+export function queryPageRank(
+  nodeTypes?: string[],
+  edgeTypes?: string[],
+  subject?: string,
+  documentId?: string,
+): Promise<MetricResultVO[]> {
   return client.get('/graph/metrics/pagerank', {
-    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(','), subject },
+    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(','), subject, documentId },
     paramsSerializer: { indexes: null },
   })
 }
 
-/** 查询度中心性 */
-export function queryDegree(nodeTypes?: string[], edgeTypes?: string[], subject?: string): Promise<MetricResultVO[]> {
+/** 查询度中心性（支持 subject 或 documentId 过滤） */
+export function queryDegree(
+  nodeTypes?: string[],
+  edgeTypes?: string[],
+  subject?: string,
+  documentId?: string,
+): Promise<MetricResultVO[]> {
   return client.get('/graph/metrics/degree', {
-    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(','), subject },
+    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(','), subject, documentId },
     paramsSerializer: { indexes: null },
   })
 }

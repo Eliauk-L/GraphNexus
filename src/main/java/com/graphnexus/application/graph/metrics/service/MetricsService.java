@@ -52,6 +52,28 @@ public interface MetricsService {
     List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName);
 
     /**
+     * 查询 PageRank 值（按学科或文档范围过滤）。
+     *
+     * @param nodeTypes   节点类型标签集合
+     * @param edgeTypes   边类型集合
+     * @param subjectName 可选学科名称
+     * @param documentId  可选文档 ID（MySQL 主键），用于按文档过滤 KP
+     * @return 按值降序排列的 PageRank 结果
+     */
+    List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName, String documentId);
+
+    /**
+     * 查询度中心性（按学科或文档范围过滤）。
+     *
+     * @param nodeTypes   节点类型标签集合
+     * @param edgeTypes   边类型集合
+     * @param subjectName 可选学科名称
+     * @param documentId  可选文档 ID（MySQL 主键），用于按文档过滤 KP
+     * @return 每个节点两条记录：inDegree + outDegree
+     */
+    List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName, String documentId);
+
+    /**
      * 清空所有指标缓存（图谱变更时由事件监听器调用）。
      */
     void clearCache();

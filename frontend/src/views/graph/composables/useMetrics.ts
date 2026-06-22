@@ -35,25 +35,23 @@ export function useMetrics() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function loadDegreeMetrics(subject: string): Promise<void> {
+  async function loadDegreeMetrics(subject?: string, documentId?: string): Promise<void> {
     loading.value = true
     error.value = null
     try {
-      degreeData.value = await queryDegree(['KnowledgePoint'], undefined, subject)
+      degreeData.value = await queryDegree(['KnowledgePoint'], undefined, subject, documentId)
     } catch (e: any) {
       error.value = e?._backendMessage ?? '度量数据加载失败'
-      // AC-10 降级：不抛异常，度量为空时图谱用默认样式
       degreeData.value = []
     } finally {
       loading.value = false
     }
   }
 
-  async function loadPageRankMetrics(subject: string): Promise<void> {
+  async function loadPageRankMetrics(subject?: string, documentId?: string): Promise<void> {
     try {
-      pagerankData.value = await queryPageRank(['KnowledgePoint'], undefined, subject)
+      pagerankData.value = await queryPageRank(['KnowledgePoint'], undefined, subject, documentId)
     } catch (e: any) {
-      // PageRank 加载失败不阻塞（AC-10），静默降级
       pagerankData.value = []
     }
   }

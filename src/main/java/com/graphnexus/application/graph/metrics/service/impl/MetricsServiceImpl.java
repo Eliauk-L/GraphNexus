@@ -104,29 +104,56 @@ public class MetricsServiceImpl implements MetricsService {
 
     @Override
     public List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName) {
-        List<MetricResultBO> fullResults = queryPageRank(nodeTypes, edgeTypes);
-        return filterBySubject(fullResults, subjectName);
+        return queryPageRank(nodeTypes, edgeTypes, subjectName, null);
     }
 
     @Override
     public List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName) {
+        return queryDegree(nodeTypes, edgeTypes, subjectName, null);
+    }
+
+    @Override
+    public List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName, String documentId) {
+        List<MetricResultBO> fullResults = queryPageRank(nodeTypes, edgeTypes);
+        return filterByScope(fullResults, subjectName, documentId);
+    }
+
+    @Override
+    public List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName, String documentId) {
         List<MetricResultBO> fullResults = queryDegree(nodeTypes, edgeTypes);
-        return filterBySubject(fullResults, subjectName);
+        return filterByScope(fullResults, subjectName, documentId);
     }
 
     /**
-     * 按学科过滤指标结果 — ADR-033 结果层后置过滤。
+     * 按学科或文档范围过滤指标结果。
+     *
+     * <p>subjectName 和 documentId 至少一个非空。同时传时取交集（AND）。
+     * 全图 GDS 计算一次，结果按 scope 后置过滤，不同 scope 共享缓存。</p>
      */
-    private List<MetricResultBO> filterBySubject(List<MetricResultBO> fullResults, String subjectName) {
-        if (subjectName == null || subjectName.isBlank()) {
+    private List<MetricResultBO> filterByScope(List<MetricResultBO> fullResults, String subjectName, String documentId) {
+        Set<String> scopeKpIds = null;
+
+        if (subjectName != null && !subjectName.isBlank()) {
+            scopeKpIds = constructionGraphRepository.findKpIdsBySubject(subjectName);
+        }
+
+        if (documentId != null && !documentId.isBlank()) {
+            Set<String> docKpIds = constructionGraphRepository.findKpIdsByDocumentId(documentId);
+            if (scopeKpIds == null) {
+                scopeKpIds = docKpIds;
+            } else {
+                scopeKpIds = new java.util.HashSet<>(scopeKpIds);
+                scopeKpIds.retainAll(docKpIds); // 交集
+            }
+        }
+
+        if (scopeKpIds == null || scopeKpIds.isEmpty()) {
             return fullResults;
         }
-        Set<String> subjectKpIds = constructionGraphRepository.findKpIdsBySubject(subjectName);
-        if (subjectKpIds.isEmpty()) {
-            return Collections.emptyList();
-        }
+
+        final Set<String> finalScope = scopeKpIds;
         return fullResults.stream()
-                .filter(r -> subjectKpIds.contains(r.nodeId()))
+                .filter(r -> finalScope.contains(r.nodeId()))
                 .collect(Collectors.toList());
     }
 

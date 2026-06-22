@@ -45,14 +45,16 @@ public class MetricsController {
             @Parameter(description = "边类型列表（逗号分隔），与中心节点允许的边取交集。空 = 使用全部允许边", example = "PREREQUISITE_OF")
             @RequestParam(required = false) List<String> edgeTypes,
             @Parameter(description = "可选学科名称，传入后仅返回 BELONGS_TO_SUBJECT 指向该学科的节点指标", example = "数学")
-            @RequestParam(required = false) String subject) {
+            @RequestParam(required = false) String subject,
+            @Parameter(description = "可选文档 ID（MySQL 主键），传入后仅返回该文档关联的 KP 指标（通过 EXTRACTS→ALIGNED_TO 路径）", example = "1")
+            @RequestParam(required = false) String documentId) {
 
         MetricsQueryRequest request = new MetricsQueryRequest();
         request.setNodeTypes(nodeTypes);
         if (edgeTypes != null) request.setEdgeTypes(edgeTypes);
 
         List<MetricResultBO> results = metricsService.queryPageRank(
-                request.nodeTypeSet(), request.edgeTypeSet(), subject);
+                request.nodeTypeSet(), request.edgeTypeSet(), subject, documentId);
         List<MetricResultVO> vos = results.stream()
                 .map(MetricResultVO::from)
                 .toList();
@@ -75,14 +77,16 @@ public class MetricsController {
             @Parameter(description = "边类型列表（逗号分隔），与中心节点允许的边取交集。空 = 使用全部允许边", example = "PREREQUISITE_OF")
             @RequestParam(required = false) List<String> edgeTypes,
             @Parameter(description = "可选学科名称，传入后仅返回 BELONGS_TO_SUBJECT 指向该学科的节点指标", example = "数学")
-            @RequestParam(required = false) String subject) {
+            @RequestParam(required = false) String subject,
+            @Parameter(description = "可选文档 ID（MySQL 主键），传入后仅返回该文档关联的 KP 指标", example = "1")
+            @RequestParam(required = false) String documentId) {
 
         MetricsQueryRequest request = new MetricsQueryRequest();
         request.setNodeTypes(nodeTypes);
         if (edgeTypes != null) request.setEdgeTypes(edgeTypes);
 
         List<MetricResultBO> results = metricsService.queryDegree(
-                request.nodeTypeSet(), request.edgeTypeSet(), subject);
+                request.nodeTypeSet(), request.edgeTypeSet(), subject, documentId);
         List<MetricResultVO> vos = results.stream()
                 .map(MetricResultVO::from)
                 .toList();
