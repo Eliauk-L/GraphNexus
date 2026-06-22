@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { chat, askAsync, getResult, getHistory, exportSingle, exportBatch } from '@/api/query'
+import { chat, askAsync, getResult, getHistory, exportSingle } from '@/api/query'
 import type { QueryAskResponse, QueryResultResponse, TokenUsageVO, HistoryRecordVO, HistoryQueryParams } from '@/api/types'
 
 export const useQueryStore = defineStore('query', () => {
@@ -150,13 +150,7 @@ export const useQueryStore = defineStore('query', () => {
   async function downloadSingleExport(taskId: string) {
     const blob = await exportSingle(taskId)
     const shortId = taskId.length > 8 ? taskId.substring(0, 8) : taskId
-    createDownloadLink(blob, `diagnosis-${shortId}.md`)
-  }
-
-  async function downloadBatchExport() {
-    const blob = await exportBatch(historyFilters.value)
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    createDownloadLink(blob, `diagnosis-history-${dateStr}.xlsx`)
+    createDownloadLink(blob, `diagnosis-${shortId}.html`)
   }
 
   return {
@@ -166,6 +160,6 @@ export const useQueryStore = defineStore('query', () => {
     // history
     historyRecords, historyTotal, historyLoading, historyPage, historyPageSize,
     historyFilters, loadHistory, resetHistoryFilters,
-    downloadSingleExport, downloadBatchExport,
+    downloadSingleExport,
   }
 })

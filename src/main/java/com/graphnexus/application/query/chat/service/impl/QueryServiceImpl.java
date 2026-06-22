@@ -778,24 +778,6 @@ public class QueryServiceImpl implements QueryService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0021, "问答任务不存在: " + taskId));
     }
 
-    @Override
-    public List<QueryTaskDO> exportBatch(HistoryQueryRequest req) {
-        Specification<QueryTaskDO> spec = buildHistorySpec(req);
-        long count = queryTaskRepository.count(spec);
-
-        if (count > 5_000) {
-            log.info("批量导出超限: count={}, filters={}", count, req);
-            throw new BusinessException(ErrorCode.A0023,
-                    "导出记录数超过上限（5000 条），当前匹配 " + count + " 条，请缩小筛选范围");
-        }
-
-        if (count == 0) {
-            return Collections.emptyList();
-        }
-
-        return queryTaskRepository.findAll(spec);
-    }
-
     /**
      * 根据筛选请求构建 JPA Specification 动态 where 链。
      *

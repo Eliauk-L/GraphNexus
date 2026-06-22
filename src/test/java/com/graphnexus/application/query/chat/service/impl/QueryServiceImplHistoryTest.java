@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -143,23 +142,5 @@ class QueryServiceImplHistoryTest {
                 () -> queryService.exportSingle(UUID.randomUUID().toString()));
 
         assertEquals("A0021", ex.getErrorCode());
-    }
-
-    @Test
-    @DisplayName("批量导出返回筛选记录")
-    void shouldExportBatch() {
-        List<QueryTaskDO> tasks = queryService.exportBatch(
-                new HistoryQueryRequest(null, null, null, null, null, null, 1, Integer.MAX_VALUE));
-
-        assertEquals(2, tasks.size());
-    }
-
-    @Test
-    @DisplayName("批量导出空筛选返回空列表")
-    void shouldExportBatchEmpty() {
-        List<QueryTaskDO> tasks = queryService.exportBatch(
-                new HistoryQueryRequest(null, null, "化学", null, null, null, 1, Integer.MAX_VALUE));
-
-        assertTrue(tasks.isEmpty());
     }
 }

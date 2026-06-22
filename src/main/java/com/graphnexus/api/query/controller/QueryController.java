@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,10 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 /**
  * 智能问答 REST API 控制器。
@@ -127,11 +123,11 @@ public class QueryController {
     }
 
     /**
-     * 导出单条诊断报告。
+     * 导出单条诊断报告（HTML 格式）。
      */
-    @Operation(summary = "导出单条诊断报告", description = "下载单条诊断的完整 LLM 分析报告为文件。根据 answer 内容首字符判定格式：'<' 开头输出 .html，'#' 开头输出 .md。")
+    @Operation(summary = "导出单条诊断报告", description = "下载单条诊断的完整 LLM 分析报告为 HTML 文件。")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "文件下载"),
+            @ApiResponse(responseCode = "200", description = "HTML 文件下载"),
             @ApiResponse(responseCode = "404", description = "A0021 任务不存在"),
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
@@ -143,14 +139,8 @@ public class QueryController {
         QueryTaskDO task = queryService.exportSingle(taskId);
         String answer = task.getAnswer() != null ? task.getAnswer() : "";
 
-        // 按首字符判定格式
-        boolean isHtml = answer.trim().startsWith("<");
-        MediaType contentType = isHtml
-                ? MediaType.valueOf("text/html; charset=UTF-8")
-                : MediaType.valueOf("text/markdown; charset=UTF-8");
-        String extension = isHtml ? ".html" : ".md";
         String shortId = taskId.length() > 8 ? taskId.substring(0, 8) : taskId;
-        String filename = "diagnosis-" + shortId + extension;
+        String filename = "diagnosis-" + shortId + ".html";
 
         StreamingResponseBody body = outputStream -> {
             outputStream.write(answer.getBytes(StandardCharsets.UTF_8));
@@ -158,80 +148,7 @@ public class QueryController {
         };
 
         return ResponseEntity.ok()
-                .contentType(contentType)
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
-                .body(body);
-    }
-
-    /**
-     * 批量导出历史记录为 Excel。
-     */
-    @Operation(summary = "批量导出历史记录", description = "按筛选条件导出历史记录为 Excel（.xlsx）文件。不含 answer 正文列。最多导出 5000 条，超出返回 400。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Excel 文件下载"),
-            @ApiResponse(responseCode = "400", description = "A0023 导出记录数超过上限（5000 条）"),
-            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
-    })
-    @GetMapping("/history/export")
-    public ResponseEntity<StreamingResponseBody> exportBatch(HistoryQueryRequest req) {
-
-        List<QueryTaskDO> tasks = queryService.exportBatch(req);
-
-        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String filename = "diagnosis-history-" + dateStr + ".xlsx";
-
-        StreamingResponseBody body = outputStream -> {
-            try (SXSSFWorkbook workbook = new SXSSFWorkbook(100)) {
-                var sheet = workbook.createSheet("历史诊断记录");
-
-                // 表头行
-                var headerRow = sheet.createRow(0);
-                String[] headers = {"提问时间", "问题", "学生姓名", "学号", "学科",
-                        "状态", "意图", "Token用量", "耗时ms"};
-                for (int i = 0; i < headers.length; i++) {
-                    headerRow.createCell(i).setCellValue(headers[i]);
-                }
-
-                // 数据行
-                int rowIdx = 1;
-                for (QueryTaskDO task : tasks) {
-                    var row = sheet.createRow(rowIdx++);
-                    row.createCell(0).setCellValue(
-                            task.getCreateTime() != null
-                                    ? task.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                    : "");
-                    row.createCell(1).setCellValue(task.getQuestion() != null ? task.getQuestion() : "");
-                    row.createCell(2).setCellValue(task.getStudentName() != null ? task.getStudentName() : "");
-                    row.createCell(3).setCellValue(task.getStudentNo() != null ? task.getStudentNo() : "");
-                    row.createCell(4).setCellValue(task.getSubject() != null ? task.getSubject() : "");
-                    row.createCell(5).setCellValue(task.getStatus() != null ? task.getStatus().name() : "");
-                    row.createCell(6).setCellValue(task.getIntent() != null ? task.getIntent() : "");
-                    // Token 用量：从 JSON 提取 estimatedTokens
-                    String tokenInfo = "";
-                    if (task.getTokenUsageJson() != null) {
-                        try {
-                            var node = new com.fasterxml.jackson.databind.ObjectMapper()
-                                    .readTree(task.getTokenUsageJson());
-                            tokenInfo = node.has("estimatedTokens")
-                                    ? String.valueOf(node.get("estimatedTokens").asInt()) : "";
-                        } catch (Exception ignored) {
-                        }
-                    }
-                    row.createCell(7).setCellValue(tokenInfo);
-                    row.createCell(8).setCellValue(task.getElapsedMs() != null
-                            ? task.getElapsedMs().toString() : "");
-                }
-
-                workbook.write(outputStream);
-                outputStream.flush();
-                workbook.dispose();
-            }
-        };
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.valueOf(
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentType(MediaType.valueOf("text/html; charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
                 .body(body);

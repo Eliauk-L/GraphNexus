@@ -4,7 +4,7 @@ import {
   NCollapse, NCollapseItem, NInput, NSelect, NDatePicker,
   NButton, NTag, NSpin, NEmpty, NSpace
 } from 'naive-ui'
-import { Search, Download, FileDown, ChevronDown, ChevronRight, Archive } from '@lucide/vue'
+import { Search, FileDown } from '@lucide/vue'
 import { useQueryStore } from '../queryStore'
 import DataTable from '@/common/components/DataTable.vue'
 import MarkdownReport from './MarkdownReport.vue'
@@ -178,15 +178,6 @@ function handlePageChange(page: number) {
           <NButton size="small" @click="applyFilters">
             <template #icon><Search :size="14" /></template>
             查询
-          </NButton>
-          <NButton
-            size="small"
-            secondary
-            :disabled="store.historyTotal === 0"
-            @click="store.downloadBatchExport()"
-          >
-            <template #icon><Download :size="14" /></template>
-            批量导出
           </NButton>
         </NSpace>
 

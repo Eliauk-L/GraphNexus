@@ -33,24 +33,9 @@ export function getHistory(params: HistoryQueryParams): Promise<PageResult<Histo
   return client.get('/query/history', { params: filtered })
 }
 
-/** 导出单条诊断报告（返回 Blob） */
+/** 导出单条诊断报告（HTML 格式，返回 Blob） */
 export async function exportSingle(taskId: string): Promise<Blob> {
   const resp = await axios.get(`/api/v1/query/history/${taskId}/export`, {
-    responseType: 'blob',
-  })
-  return resp.data as Blob
-}
-
-/** 批量导出历史记录为 Excel（返回 Blob） */
-export async function exportBatch(params: HistoryQueryParams): Promise<Blob> {
-  const filtered: Record<string, string | number> = {}
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== '') {
-      filtered[k] = v
-    }
-  }
-  const resp = await axios.get('/api/v1/query/history/export', {
-    params: filtered,
     responseType: 'blob',
   })
   return resp.data as Blob

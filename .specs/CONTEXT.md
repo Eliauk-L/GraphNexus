@@ -197,9 +197,8 @@
 | 策略路由注册机制 | `PruningStrategyRegistry`（Map<String, SubgraphPruningStrategy>）按意图名路由策略。`QueryServiceImpl` 注入 Registry 替代直接注入 `StudentDiagnosisStrategy`。新增意图只需实现接口 + `@Component` 注册，不改 `QueryServiceImpl` | 2026-06-22 | `llm-intent-recognition` REQUIREMENT（US-4） |
 | 前端 HTML/SVG 安全渲染 | 新增 `HtmlSvgViewer.vue` 组件，用 DOMPurify 白名单净化后 `v-html` 渲染。白名单：HTML 结构标签 + SVG 图形标签 + MathML 标签；阻断 script/foreignObject/事件属性/xlink:href。后端 `outputFormat` 字段驱动 `IntelligentQAPage.vue` 选择 `HtmlSvgViewer` 或 `MarkdownViewer` | 2026-06-22 | `llm-intent-recognition` CHANGE |
 | 事务边界策略 | ① 状态更新 = 独立短事务立即提交（前端轮询可见中间态）；② 慢操作（LLM/MinerU/MinIO）= 无事务；③ Neo4j = 独立 `Neo4jTransactionManager`（不与 JPA 嵌套）；④ 事件 = 事务外发布（消除 afterCommit）；⑤ `@EventListener` 不标注 `@Transactional`（委托 Service）；⑥ 跨存储失败 → MySQL 状态回退 + failReason 补偿 | 2026-06-22 | `transaction-management-refactor` REQUIREMENT |
-| 诊断历史记录导出上限 | 批量 Excel 导出单次上限 5000 条，超出返回 HTTP 400 + 错误码 A0023，提示用户缩小筛选范围 | 2026-06-22 | `diagnosis-history-export` REQUIREMENT |
 | JPA 动态条件查询方案 | 多可选筛选参数的 Repository 查询使用 `JpaSpecificationExecutor` + Service 层 `Specification` 动态 where 链构建，替代 `@Query` JPQL 拼接或方法名派生。项目首次引入，`QueryTaskRepository` 为首个实现 | 2026-06-22 | `diagnosis-history-export` DESIGN ADR-030 |
-| 诊断报告导出格式 v2 | 单条：原样输出 `answer` HTML/Markdown，Content-Type 按首字符判定（`<` → text/html，`#` → text/markdown），文件名后缀随之；批量：SXSSFWorkbook 流式写 `.xlsx`，9 列不含 answer 正文。文件下载统一 `StreamingResponseBody` | 2026-06-22 | `diagnosis-history-export` DESIGN ADR-031 |
+| 诊断报告导出格式 v2 | 单条：HTML 格式（`.html`），Content-Type `text/html; charset=UTF-8`，文件名 `diagnosis-{taskId前8位}.html`，`StreamingResponseBody` 流式下载 | 2026-06-22 | `diagnosis-history-export` DESIGN |
 | 文件下载响应模式 | 项目首次文件下载 API：Controller 返回 `ResponseEntity<StreamingResponseBody>`，设置 `Content-Type` + `Content-Disposition: attachment`，异步写 `ServletOutputStream` | 2026-06-22 | `diagnosis-history-export` DESIGN D4 |
 
 ## 默认行为
@@ -316,8 +315,8 @@
 | **前端状态轮询** | 前端通过定时 `setInterval` 拉取 `GET /api/v1/file/textbooks` 列表，检测文件状态变化的机制。仅对 `*ING` 活跃处理态（PARSING/EXTRACTING/FUSING）轮询，最大持续 5 分钟，超时或全入终态后自动停止 | 文件管理页 `fileStore.ts` |
 | **管线进度指示器** | 文件列表状态列的紧凑步骤条组件，展示「解析 → 抽取 → 融合」三阶段完成/进行中/未开始状态，替代原有纯文字 `StatusBadge` | `frontend-status-flow` REQUIREMENT |
 | **历史诊断记录** | 学情诊断页面中用户发起的每次问答的持久化记录，存储在 `query_task` 表中。支持按学生/学科/状态/时间范围筛选分页查询，默认按时间倒序 | `diagnosis-history-export` REQUIREMENT |
-| **诊断报告导出** | 将诊断记录导出为文件的功能。单条导出：下载完整的 LLM 分析报告为 Markdown（`.md`）文件；批量导出：将筛选结果列表导出为 Excel（`.xlsx`）文件，不含 answer 正文。批量上限 5000 条 | `diagnosis-history-export` REQUIREMENT |
-| **HistoryPanel** | 学情诊断页面中 ChatInput 下方的可折叠历史记录面板组件。含筛选栏（学生/学科/状态/时间范围）、分页列表（时间/问题摘要/学生/学科/状态）、单条展开详情（复用 MarkdownReport/HtmlSvgViewer）、单条/批量导出按钮 | `diagnosis-history-export` REQUIREMENT |
+| **诊断报告导出** | 将单条诊断记录导出为 HTML 文件（`.html`）的功能。下载完整的 LLM 分析报告原文，Content-Type `text/html; charset=UTF-8` | `diagnosis-history-export` REQUIREMENT |
+| **HistoryPanel** | 学情诊断页面中 ChatInput 下方的可折叠历史记录面板组件。含筛选栏（学生/学科/状态/时间范围）、分页列表（时间/问题摘要/学生/学科/状态）、单条展开详情（复用 MarkdownReport/HtmlSvgViewer）、单条导出按钮 | `diagnosis-history-export` REQUIREMENT |
 
 ## 禁动清单
 

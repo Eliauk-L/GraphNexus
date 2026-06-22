@@ -7,8 +7,6 @@ import com.graphnexus.application.query.chat.model.QueryResultBO;
 import com.graphnexus.common.PageResult;
 import com.graphnexus.infrastructure.mysql.query.entity.QueryTaskDO;
 
-import java.util.List;
-
 /**
  * 智能问答服务接口 — 编排意图识别、图剪枝、Prompt 组装、LLM 调用的完整链路。
  *
@@ -76,13 +74,4 @@ public interface QueryService {
      * @throws com.graphnexus.common.exception.BusinessException A0021 任务不存在
      */
     QueryTaskDO exportSingle(String taskId);
-
-    /**
-     * 批量导出查询 — 按筛选条件返回全部匹配记录（不分页），由 Controller 写 Excel。
-     *
-     * @param req 筛选条件（不含分页参数）
-     * @return 匹配记录列表（不含 answer 正文列）
-     * @throws com.graphnexus.common.exception.BusinessException A0023 记录数超上限
-     */
-    List<QueryTaskDO> exportBatch(HistoryQueryRequest req);
 }
