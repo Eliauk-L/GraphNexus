@@ -5,27 +5,16 @@ export function registerAuthGuard(router: Router) {
   router.beforeEach((to, _from, next) => {
     const authStore = useAuthStore()
 
+    // 每次导航都从 localStorage 恢复，确保护栏看到的是最新状态
     authStore.restoreSession()
 
-    const authed = authStore.isAuthenticated
-    const userInfo = authStore.userInfo
-    const roles = userInfo?.roles
-
-    console.log('[Guard]', to.path, {
-      authed,
-      hasUserInfo: !!userInfo,
-      roles: roles,
-      metaRoles: to.meta.roles,
-    })
-
     // 已登录用户访问 /login → 跳首页
-    if (to.meta.guest && authed) {
+    if (to.meta.guest && authStore.isAuthenticated) {
       return next('/materials')
     }
 
     // 未登录用户访问非 guest 页面 → 跳登录
-    if (!to.meta.guest && !authed) {
-      console.log('[Guard] → /login (not authenticated)')
+    if (!to.meta.guest && !authStore.isAuthenticated) {
       return next({ path: '/login', query: { redirect: to.fullPath } })
     }
 
@@ -34,7 +23,6 @@ export function registerAuthGuard(router: Router) {
       const required = to.meta.roles as string[]
       const hasPermission = required.some((r: string) => authStore.hasRole(r))
       if (!hasPermission) {
-        console.log('[Guard] → /403', { required, userRoles: roles })
         return next('/403')
       }
     }

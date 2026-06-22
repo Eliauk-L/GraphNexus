@@ -22,12 +22,6 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(params: LoginParams) {
     const res = await authApi.login(params)
     const d = res.data.data
-    console.log('[AuthStore] login response:', {
-      hasAccessToken: !!d.accessToken,
-      hasUserInfo: !!d.userInfo,
-      roles: d.userInfo?.roles,
-      rawData: res.data,
-    })
     accessToken.value = d.accessToken
     refreshToken.value = d.refreshToken
     userInfo.value = d.userInfo
@@ -70,12 +64,6 @@ export const useAuthStore = defineStore('auth', () => {
     const at = localStorage.getItem('accessToken')
     const rt = localStorage.getItem('refreshToken')
     const ui = loadUserInfo()
-    console.log('[AuthStore] restoreSession:', {
-      hasToken: !!at,
-      hasUserInfo: !!ui,
-      roles: ui?.roles,
-      userInfoRaw: localStorage.getItem(USER_KEY)?.substring(0, 100),
-    })
     if (at) accessToken.value = at
     else accessToken.value = null
     if (rt) refreshToken.value = rt
