@@ -39,7 +39,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
-        System.out.println(token);
         if (token == null) {
             filterChain.doFilter(request, response);
             return;
@@ -48,7 +47,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             // 1. 验证 JWT 签名 + 有效期
             if (!jwtTokenProvider.validateToken(token)) {
-                filterChain.doFilter(request, response);
+                response.setContentType("application/json;charset=UTF-8");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"errorCode\":\"A0025\",\"userTip\":\"Token已过期\"}");
                 return;
             }
 
