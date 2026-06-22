@@ -12,7 +12,6 @@ defineProps<{
 
 defineEmits<{
   close: []
-  'expand-neighbors': []
 }>()
 
 /** 不在详情面板展示的字段 */
@@ -125,11 +124,6 @@ function formatValue(value: unknown): string {
         </div>
       </template>
 
-      <div class="detail-actions">
-        <button class="btn-expand" @click="$emit('expand-neighbors')">
-          展开邻域
-        </button>
-      </div>
     </div>
   </Transition>
 </template>
@@ -211,29 +205,6 @@ function formatValue(value: unknown): string {
 }
 
 .detail-empty {
-  text-align: center;
-}
-
-.detail-actions {
-  margin-top: var(--spacing-lg);
-}
-
-.btn-expand {
-  width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--color-brand);
-  color: var(--color-text-on-brand);
-  border: none;
-  border-radius: var(--rounded-md);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: transform 150ms ease, background 300ms ease;
-}
-.btn-expand:hover {
-  background: var(--color-brand-deep);
-  transform: translateY(-1px);
-}
 
 /* slide transition */
 .slide-enter-active,
