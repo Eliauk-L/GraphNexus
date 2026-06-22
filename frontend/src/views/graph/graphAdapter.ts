@@ -1,4 +1,4 @@
-import type { GraphSubgraphVO, SubgraphResponse } from '@/api/types'
+import type { GraphSubgraphVO, SubgraphResponse, MetricResultVO } from '@/api/types'
 import {
   NODE_COLORS,
   NODE_SIZES,
@@ -9,6 +9,12 @@ import {
   DEFAULT_NODE_SIZE,
   DEFAULT_EDGE_COLOR,
   DEFAULT_EDGE_WIDTH,
+  METRIC_SIZE_MIN,
+  METRIC_SIZE_MAX,
+  METRIC_SIZE_DEFAULT,
+  PAGERANK_COLORS,
+  percentileIndex,
+  linearMap,
 } from './constants'
 
 // ── G6 v5 GraphData 类型 ──
@@ -129,4 +135,62 @@ function transformPruningSubgraph(res: SubgraphResponse): G6GraphData {
         },
       })),
   }
+}
+
+// ── 度量映射 ──
+
+/**
+ * 将度量数据应用到 G6 GraphData，更新 KnowledgePoint 节点的 size 和 color。
+ *
+ * - size: 基于总度数线性映射到 [METRIC_SIZE_MIN, METRIC_SIZE_MAX]
+ * - color: 若 pagerankData 非空，按 PageRank 百分位映射 PAGERANK_COLORS 色阶
+ */
+export function applyMetrics(
+  graphData: G6GraphData,
+  degreeData: MetricResultVO[],
+  pagerankData?: MetricResultVO[],
+): G6GraphData {
+  const degreeMap = new Map<string, { inDegree: number; outDegree: number; totalDegree: number }>()
+  for (const d of degreeData) {
+    if (d.nodeType !== 'KnowledgePoint') continue
+    const entry = degreeMap.get(d.nodeId) ?? { inDegree: 0, outDegree: 0, totalDegree: 0 }
+    if (d.metricName === 'inDegree') entry.inDegree = d.metricValue
+    else if (d.metricName === 'outDegree') entry.outDegree = d.metricValue
+    entry.totalDegree = entry.inDegree + entry.outDegree
+    degreeMap.set(d.nodeId, entry)
+  }
+
+  const degrees = [...degreeMap.values()].map((e) => e.totalDegree)
+  const minDegree = degrees.length > 0 ? Math.min(...degrees) : 0
+  const sortedDeg = [...degrees].sort((a, b) => a - b)
+  const p95Idx = Math.floor(sortedDeg.length * 0.95)
+  const maxDegree = sortedDeg.length > 0 ? sortedDeg[Math.min(p95Idx, sortedDeg.length - 1)] : 1
+
+  let pagerankMap: Map<string, number> | null = null
+  let allScores: number[] = []
+  if (pagerankData && pagerankData.length > 0) {
+    pagerankMap = new Map<string, number>()
+    for (const p of pagerankData) {
+      if (p.nodeType === 'KnowledgePoint') {
+        pagerankMap.set(p.nodeId, p.metricValue)
+        allScores.push(p.metricValue)
+      }
+    }
+  }
+
+  const updatedNodes = graphData.nodes.map((n) => {
+    if (n.data.nodeType !== 'KnowledgePoint') return n
+    const deg = degreeMap.get(n.id)
+    const pr = pagerankMap?.get(n.id)
+    const size = deg
+      ? linearMap(deg.totalDegree, minDegree, maxDegree, METRIC_SIZE_MIN, METRIC_SIZE_MAX)
+      : METRIC_SIZE_DEFAULT
+    const color = pr != null && allScores.length > 0
+      ? PAGERANK_COLORS[percentileIndex(pr, allScores, PAGERANK_COLORS.length)]
+      : n.data.color
+
+    return { ...n, data: { ...n.data, size, color } }
+  })
+
+  return { ...graphData, nodes: updatedNodes }
 }
