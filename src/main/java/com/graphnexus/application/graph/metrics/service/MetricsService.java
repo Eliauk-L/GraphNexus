@@ -32,6 +32,26 @@ public interface MetricsService {
     List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes);
 
     /**
+     * 查询 PageRank 值（带学科过滤）。
+     *
+     * @param nodeTypes   节点类型标签集合（空 = 全类型）
+     * @param edgeTypes   边类型集合（空 = 全类型）
+     * @param subjectName 可选学科名称，非空时仅返回该学科节点的指标
+     * @return 按值降序排列的 PageRank 结果
+     */
+    List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName);
+
+    /**
+     * 查询度中心性（带学科过滤）。
+     *
+     * @param nodeTypes   节点类型标签集合（空 = 全类型）
+     * @param edgeTypes   边类型集合（空 = 全类型）
+     * @param subjectName 可选学科名称，非空时仅返回该学科节点的指标
+     * @return 每个节点两条记录：inDegree + outDegree
+     */
+    List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName);
+
+    /**
      * 清空所有指标缓存（图谱变更时由事件监听器调用）。
      */
     void clearCache();

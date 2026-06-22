@@ -12,6 +12,7 @@ import com.graphnexus.infrastructure.neo4j.edge.EdgeType;
 import com.graphnexus.infrastructure.neo4j.gds.GdsAdapter;
 import com.graphnexus.infrastructure.neo4j.gds.model.GdsResult;
 import com.graphnexus.infrastructure.neo4j.node.NodeType;
+import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,7 @@ public class MetricsServiceImpl implements MetricsService {
 
     private final GdsAdapter gdsAdapter;
     private final MetricsProperties metricsProperties;
+    private final ConstructionGraphRepository constructionGraphRepository;
 
     private Cache<String, List<MetricResultBO>> cache;
 
@@ -98,6 +100,34 @@ public class MetricsServiceImpl implements MetricsService {
                 gdsAdapter.dropGraph(graphName);
             }
         });
+    }
+
+    @Override
+    public List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName) {
+        List<MetricResultBO> fullResults = queryPageRank(nodeTypes, edgeTypes);
+        return filterBySubject(fullResults, subjectName);
+    }
+
+    @Override
+    public List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName) {
+        List<MetricResultBO> fullResults = queryDegree(nodeTypes, edgeTypes);
+        return filterBySubject(fullResults, subjectName);
+    }
+
+    /**
+     * 按学科过滤指标结果 — ADR-033 结果层后置过滤。
+     */
+    private List<MetricResultBO> filterBySubject(List<MetricResultBO> fullResults, String subjectName) {
+        if (subjectName == null || subjectName.isBlank()) {
+            return fullResults;
+        }
+        Set<String> subjectKpIds = constructionGraphRepository.findKpIdsBySubject(subjectName);
+        if (subjectKpIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return fullResults.stream()
+                .filter(r -> subjectKpIds.contains(r.nodeId()))
+                .collect(Collectors.toList());
     }
 
     @Override

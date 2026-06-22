@@ -43,14 +43,16 @@ public class MetricsController {
             @Parameter(description = "中心节点类型列表（逗号分隔），仅允许 KnowledgePoint,Student。必填，Student 需同时含 KnowledgePoint", example = "KnowledgePoint", required = true)
             @RequestParam List<String> nodeTypes,
             @Parameter(description = "边类型列表（逗号分隔），与中心节点允许的边取交集。空 = 使用全部允许边", example = "PREREQUISITE_OF")
-            @RequestParam(required = false) List<String> edgeTypes) {
+            @RequestParam(required = false) List<String> edgeTypes,
+            @Parameter(description = "可选学科名称，传入后仅返回 BELONGS_TO_SUBJECT 指向该学科的节点指标", example = "数学")
+            @RequestParam(required = false) String subject) {
 
         MetricsQueryRequest request = new MetricsQueryRequest();
         request.setNodeTypes(nodeTypes);
         if (edgeTypes != null) request.setEdgeTypes(edgeTypes);
 
         List<MetricResultBO> results = metricsService.queryPageRank(
-                request.nodeTypeSet(), request.edgeTypeSet());
+                request.nodeTypeSet(), request.edgeTypeSet(), subject);
         List<MetricResultVO> vos = results.stream()
                 .map(MetricResultVO::from)
                 .toList();
@@ -71,14 +73,16 @@ public class MetricsController {
             @Parameter(description = "中心节点类型列表（逗号分隔），仅允许 KnowledgePoint,Student。必填，Student 需同时含 KnowledgePoint", example = "KnowledgePoint", required = true)
             @RequestParam List<String> nodeTypes,
             @Parameter(description = "边类型列表（逗号分隔），与中心节点允许的边取交集。空 = 使用全部允许边", example = "PREREQUISITE_OF")
-            @RequestParam(required = false) List<String> edgeTypes) {
+            @RequestParam(required = false) List<String> edgeTypes,
+            @Parameter(description = "可选学科名称，传入后仅返回 BELONGS_TO_SUBJECT 指向该学科的节点指标", example = "数学")
+            @RequestParam(required = false) String subject) {
 
         MetricsQueryRequest request = new MetricsQueryRequest();
         request.setNodeTypes(nodeTypes);
         if (edgeTypes != null) request.setEdgeTypes(edgeTypes);
 
         List<MetricResultBO> results = metricsService.queryDegree(
-                request.nodeTypeSet(), request.edgeTypeSet());
+                request.nodeTypeSet(), request.edgeTypeSet(), subject);
         List<MetricResultVO> vos = results.stream()
                 .map(MetricResultVO::from)
                 .toList();
