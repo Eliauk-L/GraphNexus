@@ -44,17 +44,17 @@ public class BusinessException extends RuntimeException {
     }
 
     /**
-     * 错误码 + 开发者描述，userTip 使用枚举默认值。
+     * 错误码 + 自定义描述（同时作为 userTip，因为自定义消息通常就是给用户看的）。
      *
      * @param errorCode    错误码枚举
-     * @param errorMessage 面向开发者的简要描述
+     * @param errorMessage 错误描述（同时作为面向开发者和用户的提示）
      */
     public BusinessException(ErrorCode errorCode, String errorMessage) {
         super(errorMessage);
         this.errorCode = errorCode.getErrorCode();
         this.httpStatus = errorCode.getHttpStatusCode();
         this.errorMessage = errorMessage;
-        this.userTip = errorCode.getDefaultUserTip();
+        this.userTip = errorMessage;
     }
 
     /**
