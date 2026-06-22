@@ -70,8 +70,10 @@ client.interceptors.response.use(
       !error.response ||
       error.code === 'ECONNREFUSED' ||
       error.code === 'ERR_BAD_RESPONSE' ||
-      error.code === 'ECONNABORTED' ||
       (error.response?.status && error.response.status >= 502)
+
+    // 请求超时：由调用方自己处理（如学情诊断大模型重试），不弹全局 toast
+    const isTimeout = error.code === 'ECONNABORTED'
 
     if (isServerDown) {
       const now = Date.now()
@@ -82,6 +84,8 @@ client.interceptors.response.use(
           closable: true,
         })
       }
+    } else if (isTimeout) {
+      // 超时由调用方处理（如学情诊断大模型重试），不弹全局 toast
     } else if (errorCode) {
       // 业务错误：优先用 userTip，回退到错误码映射
       const friendlyTip = errData?.userTip || FRIENDLY_TIPS[errorCode] || '操作失败，请稍后重试'

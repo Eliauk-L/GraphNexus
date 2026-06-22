@@ -24,9 +24,13 @@ export const useQueryStore = defineStore('query', () => {
     try {
       const result = await chat({ question })
       handleResult(result)
-    } catch (e) {
+    } catch (e: any) {
       status.value = 'failed'
-      errorMessage.value = '问答请求失败'
+      if (e?.code === 'ECONNABORTED') {
+        errorMessage.value = '分析请求超时，大模型可能正在处理中，请稍后重试'
+      } else {
+        errorMessage.value = '分析请求失败，请稍后重试'
+      }
     }
   }
 
@@ -48,23 +52,31 @@ export const useQueryStore = defineStore('query', () => {
   function startPolling(tid: string) {
     stopPolling()
     status.value = 'processing'
+    let retries = 0
+    const MAX_RETRIES = 3
     pollingTimer = setInterval(async () => {
       try {
         const result = await getResult(tid)
+        retries = 0 // 成功后重置
         if (result.status === 'COMPLETED') {
           stopPolling()
           handleResult(result)
         } else if (result.status === 'FAILED') {
           stopPolling()
           status.value = 'failed'
-          errorMessage.value = result.errorMessage
+          errorMessage.value = result.errorMessage || '分析失败，请稍后重试'
         }
+        // PENDING/PROCESSING 继续轮询
       } catch {
-        stopPolling()
-        status.value = 'failed'
-        errorMessage.value = '查询结果失败'
+        retries++
+        if (retries >= MAX_RETRIES) {
+          stopPolling()
+          status.value = 'failed'
+          errorMessage.value = '查询结果失败，请稍后重试'
+        }
+        // 否则继续轮询
       }
-    }, 1500)
+    }, 2000)
   }
 
   function stopPolling() {
