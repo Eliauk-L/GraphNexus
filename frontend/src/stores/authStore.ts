@@ -41,14 +41,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
-    if (refreshToken.value) {
-      try { await authApi.logout(refreshToken.value) } catch {}
-    }
+    // 先清除本地状态，确保页面立即重定向
+    const rt = refreshToken.value
     accessToken.value = null
     refreshToken.value = null
     userInfo.value = null
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
+    // 通知服务端登出（fire-and-forget，不阻塞跳转）
+    if (rt) {
+      authApi.logout(rt).catch(() => {})
+    }
   }
 
   function restoreSession() {

@@ -5,10 +5,9 @@ export function registerAuthGuard(router: Router) {
   router.beforeEach((to, _from, next) => {
     const authStore = useAuthStore()
 
-    // 恢复 session（页面刷新后从 localStorage 恢复 Token）
-    if (!authStore.isAuthenticated) {
-      authStore.restoreSession()
-    }
+    // 每次导航都从 localStorage 恢复，确保护栏看到的是最新状态
+    //（interceptor 清除了 localStorage 之后，store 需要同步）
+    authStore.restoreSession()
 
     // 已登录用户访问 /login → 跳首页
     if (to.meta.guest && authStore.isAuthenticated) {
