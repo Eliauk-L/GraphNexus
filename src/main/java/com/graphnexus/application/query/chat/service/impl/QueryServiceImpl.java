@@ -288,6 +288,14 @@ public class QueryServiceImpl implements QueryService {
                     + "。示例：分析学生张三的数学薄弱点 或 查询S2024001的数学掌握情况");
         }
 
+        // 校验提取的学科在系统中是否存在
+        if (entities.subject() != null && !subjects.contains(entities.subject())) {
+            throw new BusinessException(ErrorCode.A0019,
+                    "学科\"" + entities.subject() + "\"在系统中暂无数据，当前已有学科："
+                    + String.join("、", subjects)
+                    + "。请先导入对应学科的考试记录或文档图谱");
+        }
+
         log.info("chat 实体提取完成: studentName={}, studentNo={}, subject={}",
                 entities.studentName(), entities.studentNo(), entities.subject());
         return ask(question, entities.studentName(), entities.studentNo(), entities.subject());

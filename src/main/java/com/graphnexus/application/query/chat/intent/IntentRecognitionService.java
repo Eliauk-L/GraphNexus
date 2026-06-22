@@ -59,7 +59,7 @@ public class IntentRecognitionService {
         }
         log.warn("所有意图识别策略均失败，无法识别查询意图: question={}", question);
         throw new BusinessException(ErrorCode.A0019,
-                "无法识别查询意图，请更明确地描述问题。"
-                + "当前支持：学生薄弱点诊断（如\"分析学生张三的数学薄弱点\"）");
+                "暂不支持该类型的提问。当前仅支持学生薄弱点诊断，"
+                + "示例：\"分析学生张三的数学薄弱点\" 或 \"帮我看看李四数学怎么样\"");
     }
 }
