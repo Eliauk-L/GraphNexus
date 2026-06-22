@@ -41,6 +41,13 @@ cd frontend
 npx vue-tsc --noEmit
 ```
 
+## 清除缓存并运行
+```bash
+cd frontend
+rm -rf node_modules/.vite
+npx vite --host
+```
+
 ## 目录结构
 
 ```

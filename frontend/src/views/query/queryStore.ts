@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { chat, askAsync, getResult, getHistory, exportSingle, deleteHistory } from '@/api/query'
-import type { QueryAskResponse, QueryResultResponse, TokenUsageVO, HistoryRecordVO, HistoryQueryParams } from '@/api/types'
+import { getPrunedSubgraph } from '@/api/analysis'
+import type { QueryAskResponse, QueryResultResponse, TokenUsageVO, HistoryRecordVO, HistoryQueryParams, SubgraphResponse } from '@/api/types'
 
 export const useQueryStore = defineStore('query', () => {
   const currentQuestion = ref('')
@@ -15,6 +16,11 @@ export const useQueryStore = defineStore('query', () => {
   const history = ref<Array<{ question: string; answer: string; taskId: string }>>([])
 
   let pollingTimer: ReturnType<typeof setInterval> | null = null
+
+  // ── 子图可视化状态 ──
+  const subgraphData = ref<SubgraphResponse | null>(null)
+  const subgraphState = ref<'idle' | 'loading' | 'loaded' | 'error'>('idle')
+  const selectedKpNode = ref<{ id: string; label: string; weight?: number; examHistory?: string } | null>(null)
 
   // ── 历史记录状态 ──
   const historyRecords = ref<HistoryRecordVO[]>([])
@@ -96,7 +102,13 @@ export const useQueryStore = defineStore('query', () => {
     }
   }
 
+  function clearError() {
+    status.value = 'idle'
+    errorMessage.value = ''
+  }
+
   function handleResult(result: QueryAskResponse | QueryResultResponse) {
+    clearSubgraph()
     taskId.value = result.taskId
     answer.value = result.answer
     intent.value = result.intent
@@ -110,6 +122,26 @@ export const useQueryStore = defineStore('query', () => {
     })
     // 诊断完成，局部刷新历史记录列表（不阻塞 UI）
     loadHistory(1)
+  }
+
+  // ── 子图可视化方法 ──
+
+  async function loadSubgraph(taskId: string) {
+    subgraphState.value = 'loading'
+    try {
+      const result = await getPrunedSubgraph(taskId)
+      subgraphData.value = result
+      subgraphState.value = 'loaded'
+    } catch (e: any) {
+      subgraphState.value = 'error'
+      console.error('[queryStore] loadSubgraph failed:', taskId, e?.message || e)
+    }
+  }
+
+  function clearSubgraph() {
+    subgraphData.value = null
+    subgraphState.value = 'idle'
+    selectedKpNode.value = null
   }
 
   // ── 历史记录方法 ──
@@ -164,7 +196,7 @@ export const useQueryStore = defineStore('query', () => {
   return {
     currentQuestion, answer, taskId, intent, outputFormat, status, tokenUsage,
     errorMessage, history,
-    sendChat, sendAsync, stopPolling,
+    sendChat, sendAsync, stopPolling, clearError,
     // history
     historyRecords, historyTotal, historyLoading, historyPage, historyPageSize,
     historyFilters, loadHistory, resetHistoryFilters,

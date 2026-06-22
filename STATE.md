@@ -7,7 +7,7 @@
 ## 当前活动
 
 - **Change ID**: `user-auth-rbac`
-- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → UI-DESIGN（进行中）
+- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → UI-DESIGN ✅ → TASK（进行中）
 - **当前角色**: Architect
 - **最后更新**: 2026-06-22
 - **工件**: `@.specs/user-auth-rbac/CHANGE.md` + `REQUIREMENT.md` + `DESIGN.md` + `@.specs/adr/ADR-037-040-*.md` + `@.specs/CONTEXT.md`（已更新）
