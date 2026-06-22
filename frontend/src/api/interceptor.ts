@@ -33,7 +33,6 @@ function registerAuthInterceptors(instance: typeof axios | typeof client) {
   // Request: 注入 Authorization header
   instance.interceptors.request.use((config) => {
     const token = getToken()
-    console.log('[Interceptor] request:', config.url, { hasToken: !!token })
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -90,7 +89,6 @@ function registerAuthInterceptors(instance: typeof axios | typeof client) {
 }
 
 export function setupInterceptors() {
-  console.log('[Interceptor] setupInterceptors() called, registering on client + axios...')
   // 项目既有 API 请求走 client（axios.create），全局 axios 仅用于登录/刷新
   registerAuthInterceptors(client)
   registerAuthInterceptors(axios)
