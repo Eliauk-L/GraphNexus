@@ -136,11 +136,13 @@ async function createGraph() {
           endArrow: true,
           lineDash: (d: any) => {
             const ls = d.data?.lineStyle
-            return ls === 'dashed' ? [6, 4] : undefined
+            if (ls === 'dashed') return [8, 4]
+            if (ls === 'dotted') return [2, 4]
+            return undefined
           },
           labelText: (d: any) => d.data?.type ?? '',
-          labelFontSize: 9,
-          labelFill: '#666',
+          labelFontSize: 10,
+          labelFill: '#555',
           labelBackground: true,
           labelBackgroundFill: '#fff',
           labelBackgroundOpacity: 0.8,
@@ -217,18 +219,17 @@ async function updateData() {
 
 watch(
   () => props.data,
-  async (newData) => {
-    console.debug('[GraphCanvas] data changed:', newData?.nodes?.length ?? 0, 'nodes')
-    if (!newData) return
-    // 等 Vue DOM 更新（v-show 切换容器可见）后再初始化
+  async (newData, oldData) => {
+    console.debug('[GraphCanvas] data watch fired, nodes:', newData?.nodes?.length, 'old:', !!oldData)
+    if (!newData || newData.nodes.length === 0) return
     await nextTick()
+    console.debug('[GraphCanvas] container ref:', !!container.value, 'graph exists:', !!graph)
     if (!graph) {
       await createGraph()
     } else {
       await updateData()
     }
   },
-  { deep: true },
 )
 
 watch(
@@ -298,8 +299,8 @@ defineExpose({ getGraph: () => graph })
       <p class="supporting" style="color: var(--color-error)">{{ props.error }}</p>
     </div>
 
-    <!-- G6 画布 -->
-    <div v-show="props.data && !props.error" ref="container" class="graph-canvas" :style="canvasStyle" />
+    <!-- G6 画布：始终渲染，空态用绝对定位覆盖 -->
+    <div ref="container" class="graph-canvas" :style="canvasStyle" />
   </div>
 </template>
 

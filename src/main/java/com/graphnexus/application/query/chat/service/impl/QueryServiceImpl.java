@@ -16,6 +16,7 @@ import com.graphnexus.application.query.chat.service.QueryService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.common.PageResult;
+import com.graphnexus.application.graph.construction.model.GraphEdgeData;
 import com.graphnexus.application.graph.construction.model.GraphNodeData;
 import com.graphnexus.infrastructure.neo4j.node.StudentNode;
 import com.graphnexus.infrastructure.neo4j.repository.QueryGraphRepository;
@@ -558,13 +559,17 @@ public class QueryServiceImpl implements QueryService {
         sb.append("- 班级: ").append(student.getClassName() != null ? student.getClassName() : "未知").append("\n");
         sb.append("- 年级: ").append(student.getGrade() != null ? student.getGrade() : "未知").append("\n\n");
 
-        // 分类节点
+        // 节点索引
         var nodeMap = subgraph.nodes().stream()
                 .collect(Collectors.toMap(GraphNodeData::id, n -> n, (a, b) -> a));
-        var studentNode = subgraph.nodes().stream()
-                .filter(n -> "Student".equals(n.nodeType())).findFirst();
-        var kpNodes = subgraph.nodes().stream()
-                .filter(n -> !"Student".equals(n.nodeType())).collect(Collectors.toList());
+
+        // 计算每个节点的度中心性（子图内连接边数）
+        Map<String, Integer> degreeMap = new HashMap<>();
+        for (var edge : subgraph.edges()) {
+            degreeMap.merge(edge.sourceNodeId(), 1, Integer::sum);
+            degreeMap.merge(edge.targetNodeId(), 1, Integer::sum);
+        }
+        int maxDegree = degreeMap.values().stream().max(Integer::compareTo).orElse(1);
 
         // 薄弱知识点
         var mastersEdges = subgraph.edges().stream()
@@ -574,8 +579,12 @@ public class QueryServiceImpl implements QueryService {
 
         if (!mastersEdges.isEmpty()) {
             sb.append("## 知识点掌握度\n\n");
-            // 按 weight 升序排列（越弱越靠前）
-            mastersEdges.sort(Comparator.comparingDouble(e -> e.weight() != null ? e.weight() : 1.0));
+            // 按重要性排序：掌握度越低 + 度中心性越高 → 越靠前（优先保留）
+            mastersEdges.sort((a, b) -> {
+                double scoreA = importanceScore(a.targetNodeId(), a.weight(), degreeMap, maxDegree);
+                double scoreB = importanceScore(b.targetNodeId(), b.weight(), degreeMap, maxDegree);
+                return Double.compare(scoreB, scoreA); // 降序
+            });
             for (var edge : mastersEdges) {
                 var kpNode = nodeMap.get(edge.targetNodeId());
                 String kpName = kpNode != null ? extractKpName(kpNode) : edge.targetNodeId();
@@ -591,6 +600,12 @@ public class QueryServiceImpl implements QueryService {
         // 前置依赖关系
         if (!prereqEdges.isEmpty()) {
             sb.append("## 前置依赖关系\n\n");
+            // 按边两端节点的重要性排序
+            prereqEdges.sort((a, b) -> {
+                double scoreA = edgeImportance(a, degreeMap, maxDegree);
+                double scoreB = edgeImportance(b, degreeMap, maxDegree);
+                return Double.compare(scoreB, scoreA);
+            });
             for (var edge : prereqEdges) {
                 var fromNode = nodeMap.get(edge.sourceNodeId());
                 var toNode = nodeMap.get(edge.targetNodeId());
@@ -608,6 +623,24 @@ public class QueryServiceImpl implements QueryService {
             sb.append("⚠️ 以上掌握度为原始考试得分率（融合数据不可用），未做时间衰减加权。\n\n");
         }
         return sb.toString();
+    }
+
+    /**
+     * 节点重要性评分：掌握度越低 + 度中心性越高 → 分数越高（越应保留）。
+     * 度归一化到 [0,1) 区间避免覆盖 mastery 权重差异。
+     */
+    private double importanceScore(String nodeId, Double weight, Map<String, Integer> degreeMap, int maxDegree) {
+        double masteryFactor = weight != null ? (1.0 - weight) : 0.5; // 0~1，越高越薄弱
+        int degree = degreeMap.getOrDefault(nodeId, 0);
+        double degreeFactor = maxDegree > 0 ? (double) degree / (maxDegree + 1) : 0; // 归一化
+        return masteryFactor * 10.0 + degreeFactor; // mastery 权重主导，degree 微调
+    }
+
+    /** 边重要性：两端节点度中心性之和 */
+    private double edgeImportance(GraphEdgeData edge, Map<String, Integer> degreeMap, int maxDegree) {
+        int d1 = degreeMap.getOrDefault(edge.sourceNodeId(), 0);
+        int d2 = degreeMap.getOrDefault(edge.targetNodeId(), 0);
+        return maxDegree > 0 ? (double) (d1 + d2) / (maxDegree * 2 + 1) : 0;
     }
 
     // ======================== Token 预算控制 ========================

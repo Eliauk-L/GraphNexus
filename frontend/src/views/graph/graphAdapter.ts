@@ -4,6 +4,7 @@ import {
   NODE_SIZES,
   EDGE_COLORS,
   EDGE_LINE_STYLES,
+  EDGE_WIDTHS,
   DEFAULT_NODE_COLOR,
   DEFAULT_NODE_SIZE,
   DEFAULT_EDGE_COLOR,
@@ -59,11 +60,14 @@ export function toGraphData(
 // ── 文档子图转换（GraphSubgraphVO · 轻量）──
 
 /** 文档子图展示的节点类型 */
-const DOCUMENT_SUBGRAPH_NODE_TYPES = new Set(['Document', 'Entity', 'KnowledgePoint'])
+const DOCUMENT_SUBGRAPH_NODE_TYPES = new Set(['Entity', 'KnowledgePoint'])
 
 function transformDocumentSubgraph(vo: GraphSubgraphVO): G6GraphData {
-  // 只展示 Document / Entity / KnowledgePoint，过滤其余
-  const filteredNodes = vo.nodes.filter((n) => DOCUMENT_SUBGRAPH_NODE_TYPES.has(n.nodeType))
+  // 优先展示 Entity + KnowledgePoint，若过滤后为空则展示全部
+  let filteredNodes = vo.nodes.filter((n) => DOCUMENT_SUBGRAPH_NODE_TYPES.has(n.nodeType))
+  if (filteredNodes.length === 0) {
+    filteredNodes = vo.nodes
+  }
   const nodeIds = new Set(filteredNodes.map((n) => n.id))
 
   return {
@@ -87,7 +91,7 @@ function transformDocumentSubgraph(vo: GraphSubgraphVO): G6GraphData {
         data: {
           type: e.edgeType,
           color: EDGE_COLORS[e.edgeType] ?? DEFAULT_EDGE_COLOR,
-          width: DEFAULT_EDGE_WIDTH,
+          width: EDGE_WIDTHS[e.edgeType] ?? DEFAULT_EDGE_WIDTH,
           lineStyle: EDGE_LINE_STYLES[e.edgeType] ?? 'solid' as const,
         },
       })),

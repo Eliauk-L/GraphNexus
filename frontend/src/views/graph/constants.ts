@@ -28,25 +28,45 @@ export const NODE_SIZES: Record<string, number> = {
 // ── 边颜色（按 edgeType）──
 
 export const EDGE_COLORS: Record<string, string> = {
+  ALIGNED_TO: '#F97316',       // 橙 — 实体对齐到知识点
   PREREQUISITE_OF: '#3B82F6',  // 蓝 — 前置依赖
-  ALIGNED_TO: '#F97316',       // 橙 — 实体对齐
+  BELONGS_TO: '#10B981',       // 绿 — 类别归属
+  CHILD_OF: '#EAB308',         // 黄 — 层级
   MASTERS: '#EC4899',          // 粉 — 掌握度
   TESTED: '#8B5CF6',           // 紫 — 考试考查
-  CHILD_OF: '#EAB308',         // 黄 — 层级归属
-  BELONGS_TO: '#9CA3AF',       // 灰 — 学科归属
   REFERENCES: '#9CA3AF',       // 灰 — 引用
+  EXTRACTS: '#EF4444',         // 红 — 文档抽取
+  DERIVES: '#EF4444',          // 红 — 推导
+  CONTAINS: '#EF4444',         // 红 — 包含
 }
 
 // ── 边线型（按 edgeType）──
 
-export const EDGE_LINE_STYLES: Record<string, 'solid' | 'dashed'> = {
-  PREREQUISITE_OF: 'solid',
+export const EDGE_LINE_STYLES: Record<string, 'solid' | 'dashed' | 'dotted'> = {
   ALIGNED_TO: 'solid',
+  PREREQUISITE_OF: 'dashed',
+  BELONGS_TO: 'dotted',
+  CHILD_OF: 'dotted',
   MASTERS: 'solid',
-  TESTED: 'solid',
-  CHILD_OF: 'dashed',
-  BELONGS_TO: 'dashed',
-  REFERENCES: 'dashed',
+  TESTED: 'dashed',
+  REFERENCES: 'dotted',
+  EXTRACTS: 'solid',
+  DERIVES: 'dashed',
+  CONTAINS: 'dashed',
+}
+
+/** 边宽度（按 edgeType · px），增强区分度 */
+export const EDGE_WIDTHS: Record<string, number> = {
+  ALIGNED_TO: 2.5,
+  PREREQUISITE_OF: 2,
+  BELONGS_TO: 1.5,
+  CHILD_OF: 1.5,
+  MASTERS: 3,
+  TESTED: 2,
+  REFERENCES: 1,
+  EXTRACTS: 2.5,
+  DERIVES: 2,
+  CONTAINS: 2,
 }
 
 // ── 交互态参数 ──
@@ -67,10 +87,10 @@ export const SELECTED_BORDER_WIDTH = 3
 export const HOVER_SCALE = 1.1
 
 /** 默认边宽度 px */
-export const DEFAULT_EDGE_WIDTH = 1.5
+export const DEFAULT_EDGE_WIDTH = 2
 
 /** 默认边透明度 */
-export const DEFAULT_EDGE_OPACITY = 0.6
+export const DEFAULT_EDGE_OPACITY = 0.85
 
 /** 节点默认大小（兜底） */
 export const DEFAULT_NODE_SIZE = 28

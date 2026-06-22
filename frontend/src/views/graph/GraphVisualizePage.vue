@@ -27,6 +27,7 @@ const isFullscreen = ref(false)
 function refreshGraphData() {
   if (store.currentGraph) {
     graphData.value = toGraphData(store.currentGraph)
+    console.debug('[GraphViz] graphData:', graphData.value.nodes.length, 'nodes,', graphData.value.edges.length, 'edges')
   } else {
     graphData.value = null
   }

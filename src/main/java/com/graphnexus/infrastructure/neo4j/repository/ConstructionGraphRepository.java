@@ -127,20 +127,27 @@ public class ConstructionGraphRepository {
     // ======================== 文档子图查询 ========================
 
     /**
-     * 按 documentId 查询该文档关联的所有节点。
+     * 从文档节点出发做图遍历，查询关联的 Entity 和 KnowledgePoint 节点。
      */
     public List<GraphNode> findByDocumentId(String documentId) {
         try {
             Collection<Map<String, Object>> rows = neo4jClient.query(
-                    "MATCH (n {documentId: $docId}) RETURN n ORDER BY n.nodeType"
+                    "MATCH (d {id: $docId}) " +
+                    "OPTIONAL MATCH (d)-[:EXTRACTS]->(e:Entity) " +
+                    "OPTIONAL MATCH (e)-[:ALIGNED_TO]->(kp:KnowledgePoint) " +
+                    "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
+                    "WITH collect(d) + collect(e) + collect(kp) + collect(nextKp) AS allNodes " +
+                    "UNWIND allNodes AS n " +
+                    "WITH DISTINCT n WHERE n IS NOT NULL " +
+                    "RETURN n ORDER BY labels(n)[0]"
             ).bindAll(Map.of("docId", documentId)).fetch().all();
             List<GraphNode> nodes = new ArrayList<>();
             for (Map<String, Object> row : rows) {
                 org.neo4j.driver.types.Node n = (org.neo4j.driver.types.Node) row.get("n");
                 SimpleGraphNode node = new SimpleGraphNode();
                 node.setId(n.get("id").asString());
-                node.setNodeType(n.get("nodeType").asString());
-                node.setDocumentId(n.get("documentId").asString());
+                node.setNodeType(n.labels().iterator().next());
+                node.setDocumentId(n.containsKey("documentId") ? n.get("documentId").asString() : documentId);
                 try { node.setCreatedAt(java.time.LocalDateTime.parse(n.get("createdAt").asString())); }
                 catch (Exception e) { node.setCreatedAt(null); }
                 // 提取所有 Neo4j 节点属性（name, description 等）
@@ -155,14 +162,19 @@ public class ConstructionGraphRepository {
     }
 
     /**
-     * 按 documentId 查询该文档关联的所有边。
+     * 查询图遍历结果中的边：文档→实体→知识点之间的所有关系。
      */
     public List<GraphEdge> findEdgesByDocumentId(String documentId) {
         try {
             Collection<Map<String, Object>> result = neo4jClient.query(
-                    "MATCH (a)-[r]->(b) " +
-                    "WHERE a.documentId = $docId OR b.documentId = $docId " +
-                    "RETURN a.id AS sourceNodeId, b.id AS targetNodeId, type(r) AS edgeType"
+                    "MATCH (d {id: $docId}) " +
+                    "OPTIONAL MATCH (d)-[r1:EXTRACTS]->(e:Entity) " +
+                    "OPTIONAL MATCH (e)-[r2:ALIGNED_TO]->(kp:KnowledgePoint) " +
+                    "OPTIONAL MATCH (kp)-[r3:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
+                    "WITH collect(r1) + collect(r2) + collect(r3) AS allRels " +
+                    "UNWIND allRels AS r " +
+                    "WITH DISTINCT r WHERE r IS NOT NULL " +
+                    "RETURN startNode(r).id AS sourceNodeId, endNode(r).id AS targetNodeId, type(r) AS edgeType"
             ).bindAll(Map.of("docId", documentId)).fetch().all();
             return result.stream().map(row -> {
                 SimpleGraphEdge edge = new SimpleGraphEdge();
