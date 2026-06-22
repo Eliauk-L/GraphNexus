@@ -118,7 +118,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             kpNameMap.putIfAbsent(toKpId, toKpName);
         }
 
-        // Step 4: 补全前置 KP 的掌握度
+        // Step 4: 补全前置 KP 的掌握度（同时补全可能缺失的名称）
         if (!preKpIds.isEmpty()) {
             List<String> preKpIdList = new ArrayList<>(preKpIds);
             var preMasters = queryGraphRepository.findMastersByStudentAndKpIds(studentNodeId, preKpIdList);
@@ -126,6 +126,11 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
                 String kpId = (String) row.get("kpId");
                 double weight = ((Number) row.get("weight")).doubleValue();
                 kpMasteryMap.putIfAbsent(kpId, weight);
+                // 补全可能缺失的 KP 名称（来自 findMastersByStudentAndKpIds 的 kpName 列）
+                String kpName = (String) row.get("kpName");
+                if (kpName != null) {
+                    kpNameMap.putIfAbsent(kpId, kpName);
+                }
             }
         }
 
@@ -263,9 +268,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
     }
 
     private GraphNodeData buildKpNode(String id, String name, String subject) {
-        // name 可能为 null（kpNameMap 未覆盖），用 id 截断作为兜底标签
-        String label = (name != null && !name.isBlank()) ? name : id;
-        KnowledgePointNode kp = new KnowledgePointNode(label);
+        KnowledgePointNode kp = new KnowledgePointNode(name);
         kp.setId(id);
         return GraphDataConverter.toNodeData(kp);
     }

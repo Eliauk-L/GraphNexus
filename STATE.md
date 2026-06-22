@@ -7,7 +7,7 @@
 ## 当前活动
 
 - **Change ID**: `diagnosis-history-export`
-- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN
+- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → TASK ✅ → DEV (Wave 1)
 - **当前角色**: Architect（需求分析师）
 - **最后更新**: 2026-06-22
 - **路径建议**: 完整（`REQUIREMENT → DESIGN → TASK → DEV → TEST → REVIEW → INTEGRATION`）

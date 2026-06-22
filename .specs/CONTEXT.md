@@ -197,8 +197,10 @@
 | 策略路由注册机制 | `PruningStrategyRegistry`（Map<String, SubgraphPruningStrategy>）按意图名路由策略。`QueryServiceImpl` 注入 Registry 替代直接注入 `StudentDiagnosisStrategy`。新增意图只需实现接口 + `@Component` 注册，不改 `QueryServiceImpl` | 2026-06-22 | `llm-intent-recognition` REQUIREMENT（US-4） |
 | 前端 HTML/SVG 安全渲染 | 新增 `HtmlSvgViewer.vue` 组件，用 DOMPurify 白名单净化后 `v-html` 渲染。白名单：HTML 结构标签 + SVG 图形标签 + MathML 标签；阻断 script/foreignObject/事件属性/xlink:href。后端 `outputFormat` 字段驱动 `IntelligentQAPage.vue` 选择 `HtmlSvgViewer` 或 `MarkdownViewer` | 2026-06-22 | `llm-intent-recognition` CHANGE |
 | 事务边界策略 | ① 状态更新 = 独立短事务立即提交（前端轮询可见中间态）；② 慢操作（LLM/MinerU/MinIO）= 无事务；③ Neo4j = 独立 `Neo4jTransactionManager`（不与 JPA 嵌套）；④ 事件 = 事务外发布（消除 afterCommit）；⑤ `@EventListener` 不标注 `@Transactional`（委托 Service）；⑥ 跨存储失败 → MySQL 状态回退 + failReason 补偿 | 2026-06-22 | `transaction-management-refactor` REQUIREMENT |
-| 诊断历史记录导出上限 | 批量 Excel 导出单次上限 5000 条，超出返回 HTTP 400 + 错误码 A0022，提示用户缩小筛选范围 | 2026-06-22 | `diagnosis-history-export` REQUIREMENT |
-| 诊断报告导出格式 | 单条导出：Markdown 原文件（`.md`），Content-Type `text/markdown`；批量导出：Excel（`.xlsx`），不含 answer 正文列 | 2026-06-22 | `diagnosis-history-export` REQUIREMENT |
+| 诊断历史记录导出上限 | 批量 Excel 导出单次上限 5000 条，超出返回 HTTP 400 + 错误码 A0023，提示用户缩小筛选范围 | 2026-06-22 | `diagnosis-history-export` REQUIREMENT |
+| JPA 动态条件查询方案 | 多可选筛选参数的 Repository 查询使用 `JpaSpecificationExecutor` + Service 层 `Specification` 动态 where 链构建，替代 `@Query` JPQL 拼接或方法名派生。项目首次引入，`QueryTaskRepository` 为首个实现 | 2026-06-22 | `diagnosis-history-export` DESIGN ADR-030 |
+| 诊断报告导出格式 v2 | 单条：原样输出 `answer` HTML/Markdown，Content-Type 按首字符判定（`<` → text/html，`#` → text/markdown），文件名后缀随之；批量：SXSSFWorkbook 流式写 `.xlsx`，9 列不含 answer 正文。文件下载统一 `StreamingResponseBody` | 2026-06-22 | `diagnosis-history-export` DESIGN ADR-031 |
+| 文件下载响应模式 | 项目首次文件下载 API：Controller 返回 `ResponseEntity<StreamingResponseBody>`，设置 `Content-Type` + `Content-Disposition: attachment`，异步写 `ServletOutputStream` | 2026-06-22 | `diagnosis-history-export` DESIGN D4 |
 
 ## 默认行为
 
