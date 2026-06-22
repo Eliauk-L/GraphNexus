@@ -204,8 +204,6 @@ function formatValue(value: unknown): string {
   font-family: var(--font-mono);
 }
 
-.detail-empty {
-
 /* slide transition */
 .slide-enter-active,
 .slide-leave-active {
