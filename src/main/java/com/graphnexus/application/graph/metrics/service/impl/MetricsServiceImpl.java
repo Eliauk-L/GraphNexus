@@ -62,11 +62,12 @@ public class MetricsServiceImpl implements MetricsService {
     public List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes) {
         Set<String> normalizedNodes = validateAndConstrainNodes(nodeTypes);
         Set<String> normalizedEdges = constrainEdgeTypes(normalizedNodes, edgeTypes);
+        Set<String> allNodes = expandNodeTypesForProjection(normalizedNodes, normalizedEdges);
 
-        MetricsQuery query = new MetricsQuery(normalizedNodes, normalizedEdges, "pagerank");
+        MetricsQuery query = new MetricsQuery(allNodes, normalizedEdges, "pagerank");
         return cache.get(query.toCacheKey(), key -> {
-            log.debug("缓存未命中，执行 PageRank 计算（nodeTypes={}, edgeTypes={}）", normalizedNodes, normalizedEdges);
-            String graphName = gdsAdapter.projectGraph(normalizedNodes, normalizedEdges);
+            log.debug("缓存未命中，执行 PageRank 计算（nodeTypes={}, edgeTypes={}）", allNodes, normalizedEdges);
+            String graphName = gdsAdapter.projectGraph(allNodes, normalizedEdges);
             try {
                 return gdsAdapter.runPageRank(graphName).stream()
                         .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), "pagerank", r.score()))
@@ -82,11 +83,12 @@ public class MetricsServiceImpl implements MetricsService {
     public List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes) {
         Set<String> normalizedNodes = validateAndConstrainNodes(nodeTypes);
         Set<String> normalizedEdges = constrainEdgeTypes(normalizedNodes, edgeTypes);
+        Set<String> allNodes = expandNodeTypesForProjection(normalizedNodes, normalizedEdges);
 
-        MetricsQuery query = new MetricsQuery(normalizedNodes, normalizedEdges, "degree");
+        MetricsQuery query = new MetricsQuery(allNodes, normalizedEdges, "degree");
         return cache.get(query.toCacheKey(), key -> {
-            log.debug("缓存未命中，执行度中心性计算（nodeTypes={}, edgeTypes={}）", normalizedNodes, normalizedEdges);
-            String graphName = gdsAdapter.projectGraph(normalizedNodes, normalizedEdges);
+            log.debug("缓存未命中，执行度中心性计算（nodeTypes={}, edgeTypes={}）", allNodes, normalizedEdges);
+            String graphName = gdsAdapter.projectGraph(allNodes, normalizedEdges);
             try {
                 List<MetricResultBO> results = new ArrayList<>();
                 results.addAll(gdsAdapter.runDegreeStream(graphName, "NATURAL").stream()
@@ -207,6 +209,36 @@ public class MetricsServiceImpl implements MetricsService {
     }
 
     /**
+     * GDS 投影所需的全量节点类型——不仅包含中心节点，还包含边连接的目标节点。
+     * 例如 KP 的 CHILD_OF 连到 KnowledgeCategory，GDS 需要 Category 也在投影中。
+     */
+    private Set<String> expandNodeTypesForProjection(Set<String> centerNodes, Set<String> edgeTypes) {
+        Set<String> allNodes = new HashSet<>(centerNodes);
+        for (String et : edgeTypes) {
+            switch (et) {
+                case "CHILD_OF":
+                    allNodes.add(NodeType.KNOWLEDGE_CATEGORY.getLabel());
+                    break;
+                case "BELONGS_TO_SUBJECT":
+                    allNodes.add("Subject");
+                    break;
+                case "ALIGNED_TO":
+                    allNodes.add(NodeType.ENTITY.getLabel());
+                    break;
+                case "MASTERS":
+                    allNodes.add(NodeType.STUDENT.getLabel());
+                    break;
+                case "TESTED":
+                    allNodes.add(NodeType.EXAM.getLabel());
+                    break;
+                default:
+                    break;
+            }
+        }
+        return allNodes;
+    }
+
+    /**
      * 按中心节点类型收敛边类型——仅保留与中心语义匹配的边。
      *
      * <p>收敛规则：</p>
@@ -220,7 +252,15 @@ public class MetricsServiceImpl implements MetricsService {
     private Set<String> constrainEdgeTypes(Set<String> normalizedNodes, Set<String> edgeTypes) {
         Set<String> allowed = new HashSet<>();
         if (normalizedNodes.contains(KP_LABEL)) {
+            // KP 连接多种节点：PREREQUISITE_OF(KP→KP), CHILD_OF(KP→Category),
+            // BELONGS_TO_SUBJECT(KP→Subject), ALIGNED_TO(Entity→KP),
+            // MASTERS(Student→KP), TESTED(Exam→KP)
             allowed.add(EdgeType.PREREQUISITE_OF.getRelationshipType());
+            allowed.add(EdgeType.CHILD_OF.getRelationshipType());
+            allowed.add(EdgeType.BELONGS_TO_SUBJECT.getRelationshipType());
+            allowed.add(EdgeType.ALIGNED_TO.getRelationshipType());
+            allowed.add(EdgeType.MASTERS.getRelationshipType());
+            allowed.add(EdgeType.TESTED.getRelationshipType());
         }
         if (normalizedNodes.contains(STUDENT_LABEL)) {
             allowed.add(EdgeType.MASTERS.getRelationshipType());
