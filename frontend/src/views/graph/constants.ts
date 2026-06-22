@@ -12,6 +12,7 @@ export const NODE_COLORS: Record<string, string> = {
   Exam: '#8B5CF6',             // 紫 — 考试
   KnowledgeCategory: '#EAB308',// 黄 — 知识分类
   Document: '#10B981',         // 绿 — 源文档
+  Subject: '#06B6D4',          // 青 — 学科
 }
 
 // ── 节点大小（按 nodeType · px）──
@@ -23,6 +24,7 @@ export const NODE_SIZES: Record<string, number> = {
   KnowledgeCategory: 38,
   Document: 32,
   Entity: 28,
+  Subject: 36,
 }
 
 // ── 边颜色（按 edgeType）──
@@ -31,6 +33,7 @@ export const EDGE_COLORS: Record<string, string> = {
   ALIGNED_TO: '#F97316',       // 橙 — 实体对齐到知识点
   PREREQUISITE_OF: '#3B82F6',  // 蓝 — 前置依赖
   BELONGS_TO: '#10B981',       // 绿 — 类别归属
+  BELONGS_TO_SUBJECT: '#06B6D4', // 青 — 学科归属
   CHILD_OF: '#EAB308',         // 黄 — 层级
   MASTERS: '#EC4899',          // 粉 — 掌握度
   TESTED: '#8B5CF6',           // 紫 — 考试考查
@@ -46,6 +49,7 @@ export const EDGE_LINE_STYLES: Record<string, 'solid' | 'dashed' | 'dotted'> = {
   ALIGNED_TO: 'solid',
   PREREQUISITE_OF: 'dashed',
   BELONGS_TO: 'dotted',
+  BELONGS_TO_SUBJECT: 'dotted',
   CHILD_OF: 'dotted',
   MASTERS: 'solid',
   TESTED: 'dashed',
@@ -60,6 +64,7 @@ export const EDGE_WIDTHS: Record<string, number> = {
   ALIGNED_TO: 2.5,
   PREREQUISITE_OF: 2,
   BELONGS_TO: 1.5,
+  BELONGS_TO_SUBJECT: 1.5,
   CHILD_OF: 1.5,
   MASTERS: 3,
   TESTED: 2,
