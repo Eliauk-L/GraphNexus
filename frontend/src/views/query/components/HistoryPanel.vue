@@ -2,7 +2,7 @@
 import { ref, watch, h, computed } from 'vue'
 import {
   NCollapse, NCollapseItem, NInput, NSelect, NDatePicker,
-  NButton, NTag, NSpin, NEmpty, NSpace, NPopconfirm, NModal, NPopover
+  NButton, NTag, NSpin, NEmpty, NSpace, NPopconfirm, NModal
 } from 'naive-ui'
 import { Search, FileDown, Trash2, Eye } from '@lucide/vue'
 import { useQueryStore } from '../queryStore'
@@ -90,10 +90,10 @@ const columns: DataTableColumns<HistoryRecordVO> = [
       }, { default: () => row.status === 'COMPLETED' ? '完成' : '失败' })
 
       if (row.status === 'FAILED' && row.errorMessage) {
-        return h(NPopover, { trigger: 'hover', placement: 'top' }, {
-          trigger: () => tag,
-          default: () => h('div', { style: 'max-width: 300px; word-break: break-word;' }, row.errorMessage),
-        })
+        return h('span', {
+          title: row.errorMessage,
+          style: 'cursor: help; border-bottom: 1px dotted var(--color-error);',
+        }, [tag])
       }
       return tag
     },
