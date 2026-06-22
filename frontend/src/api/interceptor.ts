@@ -29,6 +29,7 @@ export function setupInterceptors() {
   // Request: 注入 Authorization header（直接读 localStorage，避免 Pinia 时序问题）
   axios.interceptors.request.use((config) => {
     const token = getToken()
+    console.log('[Interceptor] request:', config.url, { hasToken: !!token })
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }

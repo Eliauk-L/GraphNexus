@@ -7,7 +7,8 @@
 ## 当前活动
 
 - **Change ID**: `user-auth-rbac`
-- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → UI-DESIGN ✅ → TASK（进行中）
+- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → UI-DESIGN ✅ → TASK ✅ → DEV ✅ → 下一步 TEST/REVIEW
+- **当前角色**: Dev
 - **当前角色**: Architect
 - **最后更新**: 2026-06-22
 - **工件**: `@.specs/user-auth-rbac/CHANGE.md` + `REQUIREMENT.md` + `DESIGN.md` + `@.specs/adr/ADR-037-040-*.md` + `@.specs/CONTEXT.md`（已更新）
@@ -31,22 +32,9 @@
 ## 上一个活动
 
 - **Change ID**: `diagnosis-subgraph-viz`
-- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN → 等待用户确认
-- **当前角色**: Architect
-- **最后更新**: 2026-06-22
-- **用户决策**: Q1 子图布局→A 上下分区 | Q2 度量展示→A 仅 MASTERS 权重映射 | Q3 多次考试→C 详情面板+趋势折线图
-- **工件**: `@.specs/diagnosis-subgraph-viz/CHANGE.md` + `REQUIREMENT.md` + `DESIGN.md` + `@.specs/adr/034-diagnosis-subgraph-svg.md` + `@.specs/adr/035-masters-exam-history-data-flow.md` + `@.specs/adr/036-diagnosis-component-isolation.md`
-- **关键设计决策 (D1–D8)**:
-  - D1 渲染方案: **纯 SVG**（非 G6 v5），轻量力导向布局，≤30 节点场景更合适
-  - D2 布局算法: 简单力导向 + 层级约束，Student 固定居中上方
-  - D3 颜色映射: **四档离散色阶**（红/橙/黄/绿），非连续 HSL 插值
-  - D4 大小映射: 连续线性 `radius = 12 + weight * 28` → [12, 40]px
-  - D5 趋势图: 纯 SVG 折线图，不引入图表库
-  - D6 数据加载: **异步非阻塞**，LLM 报告先渲染，子图随后加载
-  - D7 MASTERS 数据透传: 考试历史 JSON 走 KP 节点 `properties.examHistory`（非边 description），零 API 契约变更
-  - D8 画布尺寸: 宽 100% + 高 400px 固定，viewBox="0 0 600 400"
-- **ADR**: ADR-034（纯 SVG 渲染方案）+ ADR-035（examHistory 节点属性传递）+ ADR-036（组件隔离策略）
-- **下一步**: 用户确认 DESIGN.md 后进入 `@flow-kit/prompts/2a-ui-design.md`（前端项目必须走 UI-DESIGN）
+- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → UI-DESIGN ✅ → TASK ✅ → DEV ✅ → 下一步 TEST/REVIEW
+- **DEV 执行记录**: 7 任务 · 1 提交 `277f49e`
+- **工件**: `@.specs/diagnosis-subgraph-viz/` 全部 6 份工件 + ADR 034-036
 - **关键设计决策 (D1–D9)**:
   - D1 学科全景图 API 端点: `GET /api/v1/graph/construction/subject/{subjectName}`
   - D2 学科列表 API: `GET /api/v1/graph/subjects`

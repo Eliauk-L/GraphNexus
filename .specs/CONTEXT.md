@@ -242,7 +242,10 @@
 - Git禁止提交.specs/下的内容
 - Git提交时禁止提交非本次任务修改的内容
 - **字段冗余策略**：非频繁修改 + 非唯一索引 + 非 varchar 超长字段允许适当冗余，避免每次查询 JOIN 统计
-- **本地开发环境**：所有基础设施组件（Neo4j 5.x / MySQL 8.0 / MinIO / Redis 7.x / RabbitMQ 3.x）通过 podman 容器化部署，`application-dev.yml` 中配置的连接参数可直接使用。集成测试使用 `@SpringBootTest` + `@ActiveProfiles("dev")` 直连 podman 中的真实组件，不需要 Testcontainers 或 @MockBean 替代
+- **本地开发环境**：所有基础设施组件（Neo4j 5.x / MySQL 8.0 / MinIO / Redis 7.x / RabbitMQ 3.x）通过 podman 容器化部署，`application-dev.yml` 中配置的连接参数可直接使用。集成测试使用 `@SpringBootTest` + `@ActiveProfiles("dev")` 直连 podman 中的真实组件，不需要 Testcontainers 或 @MockBean 替代。
+  - **数据库操作必须通过 podman exec 进入容器执行**，本地不安装 mysql 客户端。示例：`podman exec -i graphnexus-mysql mysql -u graphnexus -pgraphnexus123 graphnexus -e "SELECT ..."`
+  - **Redis 操作**：`podman exec -i graphnexus-redis redis-cli`
+  - **容器命名规范**：MySQL → `graphnexus-mysql`、Neo4j → `graphnexus-neo4j`、Redis → `graphnexus-redis`、MinIO → `graphnexus-minio`
 - 当有新的sql文件产生时，需要将其同步到resources/db/init.sql中
 - **后端异常定位路径**：前端响应返回 traceId → 后端用 traceId 在 `logs/graphnexus-error.log`（或控制台）grep → 读完整堆栈定位出错类与行，无需复现
 - **认证上下文注入**：Controller/Service 通过 `SecurityContextHolder.getContext().getAuthentication()` 获取当前用户信息；也可通过自定义 `@CurrentUser` 注解直接注入 `UserPrincipal`（含 userId/username/roles）。禁止在方法参数中手动解析 JWT

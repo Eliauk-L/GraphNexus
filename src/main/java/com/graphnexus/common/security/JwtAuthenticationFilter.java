@@ -39,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
+        System.out.println(token);
         if (token == null) {
             filterChain.doFilter(request, response);
             return;
@@ -111,6 +112,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private String extractToken(HttpServletRequest request) {
         String header = request.getHeader(AUTH_HEADER);
+        log.info("JWT Filter: path={}, Authorization={}",
+                request.getServletPath(),
+                header != null ? header.substring(0, Math.min(header.length(), 60)) : "NULL");
         if (StringUtils.hasText(header) && header.startsWith(BEARER_PREFIX)) {
             return header.substring(BEARER_PREFIX.length());
         }

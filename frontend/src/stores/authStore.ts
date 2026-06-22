@@ -27,7 +27,6 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('accessToken', d.accessToken)
     localStorage.setItem('refreshToken', d.refreshToken)
     saveUserInfo(d.userInfo)
-    saveUserInfo(d.userInfo)
     return d
   }
 
