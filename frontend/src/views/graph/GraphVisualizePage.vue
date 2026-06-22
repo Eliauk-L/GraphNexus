@@ -299,8 +299,7 @@ onBeforeUnmount(() => {
 .graph-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  height: calc(100dvh - 112px);
 }
 
 .graph-body {
@@ -395,21 +394,6 @@ onBeforeUnmount(() => {
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100vw;
-}
-
-.graph-page:fullscreen .graph-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.graph-page:fullscreen .graph-canvas-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+  height: 100dvh;
 }
 </style>

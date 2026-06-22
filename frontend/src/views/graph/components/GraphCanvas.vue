@@ -3,7 +3,7 @@
  * GraphCanvas — G6 v5 图谱渲染组件。
  * 管理 G6 Graph 实例生命周期：创建 → render（异步）→ setData+draw（增量）→ destroy。
  */
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 import { Graph } from '@antv/g6'
 import type { G6GraphData } from '../graphAdapter'
 import {
@@ -28,6 +28,17 @@ const emit = defineEmits<{
 }>()
 
 const container = ref<HTMLDivElement>()
+const wrapperStyle = computed(() => ({
+  flex: '1',
+  position: 'relative' as const,
+  minHeight: '300px',
+  width: '100%',
+}))
+
+const canvasStyle = computed(() => ({
+  position: 'absolute' as const,
+  inset: '0',
+}))
 let graph: Graph | null = null
 let lastNodeCount = 0
 const LOADING_STYLE_ID = 'g6-loading-overlay'
@@ -229,15 +240,24 @@ watch(
 
 watch(
   () => props.fullscreen,
-  () => {
-    // 全屏切换后等 DOM 更新完，触发 G6 重新适配
-    nextTick(() => {
-      setTimeout(() => {
-        if (graph) {
-          try { graph.render() } catch { /* ignore */ }
+  async () => {
+    await nextTick()
+    setTimeout(async () => {
+      if (!graph || !container.value) return
+      try {
+        const rect = container.value.getBoundingClientRect()
+        console.debug('[GraphCanvas] fullscreen resize:', rect.width, 'x', rect.height)
+        await graph.setSize(rect.width, rect.height)
+        await graph.render()
+      } catch (e) {
+        console.warn('[GraphCanvas] fullscreen resize failed, recreating:', e)
+        graph?.destroy()
+        graph = null
+        if (props.data && props.data.nodes.length > 0) {
+          await createGraph()
         }
-      }, 200)
-    })
+      }
+    }, 400)
   },
 )
 
@@ -261,7 +281,7 @@ defineExpose({ getGraph: () => graph })
 </script>
 
 <template>
-  <div class="graph-canvas-wrapper" :class="{ 'fullscreen-wrapper': props.fullscreen }">
+  <div class="graph-canvas-wrapper" :style="wrapperStyle">
     <!-- 空态 -->
     <div v-if="!props.data && !props.loading" class="graph-empty">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" stroke-width="1.5" stroke-linecap="round">
@@ -279,25 +299,16 @@ defineExpose({ getGraph: () => graph })
     </div>
 
     <!-- G6 画布 -->
-    <div v-show="props.data && !props.error" ref="container" class="graph-canvas" />
+    <div v-show="props.data && !props.error" ref="container" class="graph-canvas" :style="canvasStyle" />
   </div>
 </template>
 
 <style scoped>
 .graph-canvas-wrapper {
-  position: relative;
   width: 100%;
-  height: 500px;
-}
-
-.fullscreen-wrapper {
-  flex: 1;
-  height: auto;
 }
 
 .graph-canvas {
-  width: 100%;
-  height: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--rounded-md);
   overflow: hidden;
@@ -306,12 +317,12 @@ defineExpose({ getGraph: () => graph })
 
 .graph-empty,
 .graph-error {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--rounded-md);
   background: var(--color-surface);
