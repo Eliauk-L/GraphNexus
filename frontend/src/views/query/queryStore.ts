@@ -108,6 +108,8 @@ export const useQueryStore = defineStore('query', () => {
       answer: result.answer,
       taskId: result.taskId,
     })
+    // 诊断完成，局部刷新历史记录列表（不阻塞 UI）
+    loadHistory(1)
   }
 
   // ── 历史记录方法 ──
