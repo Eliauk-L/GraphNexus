@@ -236,6 +236,7 @@ watch(
   () => props.loading,
   (v) => {
     if (v) showLoading()
+    else hideLoading()
   },
 )
 

@@ -262,9 +262,13 @@ public class ConstructionServiceImpl implements ConstructionService {
     @Override
     @Transactional(readOnly = true)
     public GraphSubgraphBO getSubjectGraph(String subjectName) {
+        long start = System.currentTimeMillis();
         List<GraphNode> nodes = constructionGraphRepository.findBySubject(subjectName);
+        long nodeMs = System.currentTimeMillis() - start;
         List<GraphEdge> edges = constructionGraphRepository.findEdgesBySubject(subjectName);
-        log.info("学科全景图查询完成：subjectName={}, nodes={}, edges={}", subjectName, nodes.size(), edges.size());
+        long edgeMs = System.currentTimeMillis() - start - nodeMs;
+        log.info("学科全景图查询完成：subjectName={}, nodes={}, edges={}, nodeMs={}, edgeMs={}",
+                subjectName, nodes.size(), edges.size(), nodeMs, edgeMs);
         return buildSubgraphResult(nodes, edges);
     }
 
