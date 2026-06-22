@@ -102,7 +102,7 @@ public class QueryGraphRepository {
             return new ArrayList<>(neo4jClient.query(
                     "MATCH (s:Student {id: $sid})-[m:MASTERS]->(kp:KnowledgePoint) " +
                     "WHERE kp.id IN $kpIds " +
-                    "RETURN kp.id AS kpId, COALESCE(kp.name, '未命名知识点') AS kpName, m.weight AS weight"
+                    "RETURN kp.id AS kpId, COALESCE(kp.name, '未命名知识点') AS kpName, m.weight AS weight, m.description AS description"
             ).bindAll(Map.of("sid", studentNodeId, "kpIds", kpIds)).fetch().all());
         } catch (Exception e) {
             log.warn("查询指定 KP 的 MASTERS 边失败: sid={}, {}", studentNodeId, e.getMessage());

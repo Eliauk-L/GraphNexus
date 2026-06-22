@@ -24,10 +24,11 @@ function handleSend(question: string) {
       @send="handleSend"
     />
 
-    <!-- 处理中 -->
+    <<!-- 处理中 -->
     <div v-if="store.status === 'processing' || store.status === 'pending'" class="loading-state">
       <Loader2 :size="24" class="spin" color="var(--color-brand)" />
       <span class="body">分析中，请稍候...</span>
+      <p class="loading-hint supporting">正在同步分析，请勿离开或刷新页面</p>
     </div>
 
     <!-- 失败 -->
@@ -58,10 +59,16 @@ function handleSend(question: string) {
 
 .loading-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-2xl) 0;
   justify-content: center;
+}
+
+.loading-hint {
+  color: var(--color-text-tertiary);
+  margin-top: var(--spacing-xs);
 }
 
 .error-state {

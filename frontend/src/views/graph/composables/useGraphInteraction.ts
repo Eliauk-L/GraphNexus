@@ -43,6 +43,25 @@ export function useGraphInteraction(
     return [...new Set(data.edges.map((e) => e.data.type))]
   })
 
+  const stats = computed(() => {
+    const data = graphData()
+    if (!data) return null
+    const nodeCounts: Record<string, number> = {}
+    const edgeCounts: Record<string, number> = {}
+    for (const n of data.nodes) {
+      nodeCounts[n.data.nodeType] = (nodeCounts[n.data.nodeType] ?? 0) + 1
+    }
+    for (const e of data.edges) {
+      edgeCounts[e.data.type] = (edgeCounts[e.data.type] ?? 0) + 1
+    }
+    return {
+      totalNodes: data.nodes.length,
+      totalEdges: data.edges.length,
+      nodeCounts,
+      edgeCounts,
+    }
+  })
+
   // ── 搜索 ──
 
   function search(query: string): { id: string; label: string; nodeType: string }[] {
@@ -232,6 +251,7 @@ export function useGraphInteraction(
     state,
     allNodeTypes,
     allEdgeTypes,
+    stats,
     search,
     highlightNode,
     clearHighlight,

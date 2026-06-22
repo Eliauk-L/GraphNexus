@@ -72,17 +72,24 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
 
         Map<String, Double> kpMasteryMap;      // kpId → mastery weight
         Map<String, String> kpNameMap;         // kpId → kpName
+        Map<String, String> kpExamHistoryMap;  // kpId → MASTERS description JSON
         List<String> weakKpIds;
 
         if (mastersAvailable) {
             kpMasteryMap = new HashMap<>();
             kpNameMap = new HashMap<>();
+            kpExamHistoryMap = new HashMap<>();
             for (var row : mastersRows) {
                 String kpId = (String) row.get("kpId");
                 String kpName = (String) row.get("kpName");
                 double weight = ((Number) row.get("weight")).doubleValue();
                 kpMasteryMap.put(kpId, weight);
                 kpNameMap.put(kpId, kpName);
+                // MASTERS 边的 description 存储考试历史 JSON（TimeDecayStrategy 生成）
+                Object descObj = row.get("description");
+                if (descObj != null) {
+                    kpExamHistoryMap.put(kpId, descObj.toString());
+                }
             }
             weakKpIds = kpMasteryMap.entrySet().stream()
                     .filter(e -> e.getValue() < weakThreshold)
@@ -93,6 +100,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             var testedKps = queryGraphRepository.findTestedKpsByStudentAndSubject(studentNo, subject);
             kpMasteryMap = new HashMap<>();
             kpNameMap = new HashMap<>();
+            kpExamHistoryMap = new HashMap<>(); // 降级路径无考试历史
             for (var row : testedKps) {
                 String kpId = (String) row.get("kpId");
                 String kpName = (String) row.get("kpName");
@@ -131,11 +139,16 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
                 if (kpName != null) {
                     kpNameMap.putIfAbsent(kpId, kpName);
                 }
+                // 补全可能缺失的考试历史（来自 MASTERS 边 description）
+                Object descObj = row.get("description");
+                if (descObj != null && !kpExamHistoryMap.containsKey(kpId)) {
+                    kpExamHistoryMap.put(kpId, descObj.toString());
+                }
             }
         }
 
         // 组装结果
-        return buildResult(studentNode, kpMasteryMap, kpNameMap,
+        return buildResult(studentNode, kpMasteryMap, kpNameMap, kpExamHistoryMap,
                 weakKpIds, preKpIds, prereqRows, mastersAvailable,
                 weakThreshold, maxHops, subject);
     }
@@ -200,6 +213,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             StudentNode studentNode,
             Map<String, Double> kpMasteryMap,
             Map<String, String> kpNameMap,
+            Map<String, String> kpExamHistoryMap,
             List<String> weakKpIds,
             Set<String> preKpIds,
             List<Map<String, Object>> prereqRows,
@@ -219,7 +233,9 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         // 弱掌握 KP 节点 + MASTERS 边
         for (String kpId : weakKpIds) {
             if (seenNodeIds.add(kpId)) {
-                nodes.add(buildKpNode(kpId, kpNameMap.get(kpId), subject));
+                var kpNode = buildKpNode(kpId, kpNameMap.get(kpId), subject);
+                enrichKpNodeProperties(kpNode, kpMasteryMap, kpExamHistoryMap, kpId);
+                nodes.add(kpNode);
             }
             Double weight = kpMasteryMap.get(kpId);
             if (weight != null) {
@@ -231,7 +247,9 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         for (String kpId : preKpIds) {
             if (!seenNodeIds.contains(kpId)) {
                 if (seenNodeIds.add(kpId)) {
-                    nodes.add(buildKpNode(kpId, kpNameMap.get(kpId), subject));
+                    var kpNode = buildKpNode(kpId, kpNameMap.get(kpId), subject);
+                    enrichKpNodeProperties(kpNode, kpMasteryMap, kpExamHistoryMap, kpId);
+                    nodes.add(kpNode);
                 }
                 // 前置 KP 的 MASTERS 边
                 Double weight = kpMasteryMap.get(kpId);
@@ -246,7 +264,9 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             String toKpId = toKpIdObj.toString();
             // 确保目标节点在 nodes 中
             if (seenNodeIds.add(toKpId)) {
-                nodes.add(buildKpNode(toKpId, kpNameMap.get(toKpId), subject));
+                var kpNode = buildKpNode(toKpId, kpNameMap.get(toKpId), subject);
+                enrichKpNodeProperties(kpNode, kpMasteryMap, kpExamHistoryMap, toKpId);
+                nodes.add(kpNode);
             }
             edges.add(new GraphEdgeData(
                     (String) row.get("fromKpId"), toKpId, "PREREQUISITE_OF", 1.0, null));
@@ -271,6 +291,25 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         KnowledgePointNode kp = new KnowledgePointNode(name);
         kp.setId(id);
         return GraphDataConverter.toNodeData(kp);
+    }
+
+    /**
+     * 将 MASTERS 掌握度 weight 和考试历史 description 注入 KP 节点的 properties，
+     * 供前端诊断子图可视化和详情面板使用（见 ADR-035）。
+     */
+    private void enrichKpNodeProperties(
+            GraphNodeData kpNode,
+            Map<String, Double> kpMasteryMap,
+            Map<String, String> kpExamHistoryMap,
+            String kpId) {
+        Double weight = kpMasteryMap.get(kpId);
+        if (weight != null) {
+            kpNode.properties().put("weight", weight);
+        }
+        String examHistory = kpExamHistoryMap.get(kpId);
+        if (examHistory != null && !examHistory.isEmpty()) {
+            kpNode.properties().put("examHistory", examHistory);
+        }
     }
 
     private double getParam(Map<String, Object> params, String key, double defaultValue) {

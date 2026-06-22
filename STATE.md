@@ -6,12 +6,47 @@
 
 ## 当前活动
 
-- **Change ID**: `knowledge-graph-viz-enhance`
+- **Change ID**: `user-auth-rbac`
+- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → 等待用户确认（下一步 UI-DESIGN）
+- **当前角色**: Architect
+- **最后更新**: 2026-06-22
+- **工件**: `@.specs/user-auth-rbac/CHANGE.md` + `REQUIREMENT.md` + `DESIGN.md` + `@.specs/adr/ADR-037-040-*.md` + `@.specs/CONTEXT.md`（已更新）
+- **关键设计决策 (D1–D12)**:
+  - D1: JWT → jjwt 0.12.x / HS256 / Access Token 30min + Refresh Token UUID 7d
+  - D2: Access Token payload: `{sub, userId, roles, iat, exp}`
+  - D3: SecurityFilterChain → 单一链 + JwtAuthenticationFilter 插在 UsernamePasswordAuthenticationFilter 前
+  - D4: 密码 → BCryptPasswordEncoder(10)
+  - D5: 角色模型 → role 表预置 5 行 / 不允许运行时增删角色
+  - D6: ADMIN 继承 TEACHER → UserPrincipal 构建时自动追加 ROLE_TEACHER
+  - D7: Refresh Token → UUID + Redis 存储 + 滚动刷新
+  - D8: Redis 缓存 → StringRedisTemplate 手动管理 / key `user:auth:<userId>` / TTL 30min / 降级查 MySQL
+  - D9: Redis 不可用 → WARN 日志 + 降级直查 MySQL（Refresh 强依赖 Redis 无法降级）
+  - D10: 权限注解 → Controller 类级 @PreAuthorize + 方法级覆盖
+  - D11: 测试 → JwtTestHelper + TestSecurityConfig 覆盖类
+  - D12: 前端 Token 存储 → localStorage
+- **ADR**: ADR-037（JWT 双 Token 滚动刷新）+ ADR-038（RBAC 角色权限模型）+ ADR-039（Redis 用户缓存与降级）+ ADR-040（全端点权限收敛方案）
+
+---
+
+## 上一个活动
+
+- **Change ID**: `diagnosis-subgraph-viz`
 - **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN → 等待用户确认
 - **当前角色**: Architect
 - **最后更新**: 2026-06-22
-- **用户决策**: Q1 学科入口→A 现有页面加学科选择器 | Q2 度量展示→C 视觉映射+排行面板 | Q3 度量范围→A 仅当前学科 | PageRank 可选展示
-- **工件**: `@.specs/knowledge-graph-viz-enhance/CHANGE.md` + `REQUIREMENT.md` + `DESIGN.md` + `@.specs/adr/032-subject-graph-api.md` + `@.specs/adr/033-metrics-subject-filter.md`
+- **用户决策**: Q1 子图布局→A 上下分区 | Q2 度量展示→A 仅 MASTERS 权重映射 | Q3 多次考试→C 详情面板+趋势折线图
+- **工件**: `@.specs/diagnosis-subgraph-viz/CHANGE.md` + `REQUIREMENT.md` + `DESIGN.md` + `@.specs/adr/034-diagnosis-subgraph-svg.md` + `@.specs/adr/035-masters-exam-history-data-flow.md` + `@.specs/adr/036-diagnosis-component-isolation.md`
+- **关键设计决策 (D1–D8)**:
+  - D1 渲染方案: **纯 SVG**（非 G6 v5），轻量力导向布局，≤30 节点场景更合适
+  - D2 布局算法: 简单力导向 + 层级约束，Student 固定居中上方
+  - D3 颜色映射: **四档离散色阶**（红/橙/黄/绿），非连续 HSL 插值
+  - D4 大小映射: 连续线性 `radius = 12 + weight * 28` → [12, 40]px
+  - D5 趋势图: 纯 SVG 折线图，不引入图表库
+  - D6 数据加载: **异步非阻塞**，LLM 报告先渲染，子图随后加载
+  - D7 MASTERS 数据透传: 考试历史 JSON 走 KP 节点 `properties.examHistory`（非边 description），零 API 契约变更
+  - D8 画布尺寸: 宽 100% + 高 400px 固定，viewBox="0 0 600 400"
+- **ADR**: ADR-034（纯 SVG 渲染方案）+ ADR-035（examHistory 节点属性传递）+ ADR-036（组件隔离策略）
+- **下一步**: 用户确认 DESIGN.md 后进入 `@flow-kit/prompts/2a-ui-design.md`（前端项目必须走 UI-DESIGN）
 - **关键设计决策 (D1–D9)**:
   - D1 学科全景图 API 端点: `GET /api/v1/graph/construction/subject/{subjectName}`
   - D2 学科列表 API: `GET /api/v1/graph/subjects`

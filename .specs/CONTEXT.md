@@ -200,6 +200,9 @@
 | SVG 内容范围 | LLM 生成自包含 SVG（含 `xmlns` + `viewBox`，不依赖外部 JS/CSS），涵盖三种：① 数据图表（柱状图/雷达图，用于掌握度分布）；② 知识图谱子图（circle+line+text 拓扑图，用于依赖链可视化）；③ 数学公式（MathML 或纯 SVG 路径）。前端仅做渲染不做计算。v1 每图表最多 10 个数据点、最大画布 800×600 | 2026-06-22 | `llm-intent-recognition` CHANGE（Q3） |
 | 策略路由注册机制 | `PruningStrategyRegistry`（Map<String, SubgraphPruningStrategy>）按意图名路由策略。`QueryServiceImpl` 注入 Registry 替代直接注入 `StudentDiagnosisStrategy`。新增意图只需实现接口 + `@Component` 注册，不改 `QueryServiceImpl` | 2026-06-22 | `llm-intent-recognition` REQUIREMENT（US-4） |
 | 前端 HTML/SVG 安全渲染 | 新增 `HtmlSvgViewer.vue` 组件，用 DOMPurify 白名单净化后 `v-html` 渲染。白名单：HTML 结构标签 + SVG 图形标签 + MathML 标签；阻断 script/foreignObject/事件属性/xlink:href。后端 `outputFormat` 字段驱动 `IntelligentQAPage.vue` 选择 `HtmlSvgViewer` 或 `MarkdownViewer` | 2026-06-22 | `llm-intent-recognition` CHANGE |
+| JWT 认证方案 | Access Token（HS256，30min，含 userId/username/roles）+ Refresh Token（UUID，7d，Redis 校验），双 Token 滚动刷新；`JwtAuthenticationFilter` + `@PreAuthorize` 方法级注解 | 2026-06-22 | `user-auth-rbac` REQUIREMENT |
+| 角色模型 | 5 类角色 code：ADMIN / TEACHER / STUDENT / OPS_STAFF / OPS_MANAGER；ADMIN 泛化继承 TEACHER 全部端点；角色预置不支持运行时新增/删除；用户-角色多对多 | 2026-06-22 | `user-auth-rbac` REQUIREMENT |
+| Redis 用户缓存策略 | Key `user:auth:<userId>`，JSON 值，TTL 30min 可配；用户禁用/角色变更主动 DEL key；Redis 不可用降级直查 MySQL + WARN 日志 | 2026-06-22 | `user-auth-rbac` REQUIREMENT |
 | 事务边界策略 | ① 状态更新 = 独立短事务立即提交（前端轮询可见中间态）；② 慢操作（LLM/MinerU/MinIO）= 无事务；③ Neo4j = 独立 `Neo4jTransactionManager`（不与 JPA 嵌套）；④ 事件 = 事务外发布（消除 afterCommit）；⑤ `@EventListener` 不标注 `@Transactional`（委托 Service）；⑥ 跨存储失败 → MySQL 状态回退 + failReason 补偿 | 2026-06-22 | `transaction-management-refactor` REQUIREMENT |
 | JPA 动态条件查询方案 | 多可选筛选参数的 Repository 查询使用 `JpaSpecificationExecutor` + Service 层 `Specification` 动态 where 链构建，替代 `@Query` JPQL 拼接或方法名派生。项目首次引入，`QueryTaskRepository` 为首个实现 | 2026-06-22 | `diagnosis-history-export` DESIGN ADR-030 |
 | 诊断报告导出格式 v2 | 单条：HTML 格式（`.html`），Content-Type `text/html; charset=UTF-8`，文件名 `diagnosis-{taskId前8位}.html`，`StreamingResponseBody` 流式下载 | 2026-06-22 | `diagnosis-history-export` DESIGN |
@@ -209,6 +212,10 @@
 | 指标 API 学科过滤 | `GET /api/v1/graph/metrics/{pagerank,degree}` 新增可选 `subject` 查询参数，按 BELONGS_TO_SUBJECT 边过滤结果仅含指定学科的节点。不传时行为不变（返回全图结果）。缓存 key 加入 subject Hash 以区分不同学科的缓存条目 | 2026-06-22 | `knowledge-graph-viz-enhance` REQUIREMENT |
 | 度量视觉映射方案 | 前端：节点半径 = f（总度数），始终生效。节点颜色 = g（PageRank 百分位），由 PageRank 开关控制（默认 OFF，开启后从冷色到暖色映射；关闭时使用统一默认主题色）。图例 + 排行面板提供文字数值确保仅凭颜色/大小不丢失信息 | 2026-06-22 | `knowledge-graph-viz-enhance` REQUIREMENT |
 | 图谱视图模式互斥 | 学科全景图与文档子图两种模式互斥：选中学科 → 清空文档选择器和文档图；选中文档 → 清空学科选择器和学科图。同一时刻图谱只展示一种视图 | 2026-06-22 | `knowledge-graph-viz-enhance` REQUIREMENT |
+| 诊断子图布局 | 学情诊断结果页采用上下分区：LLM 文本报告在上，剪枝子图可视化在下，同一页面纵向滚动，无需 Tab 切换即可对照阅读 | 2026-06-22 | `diagnosis-subgraph-viz` REQUIREMENT |
+| 掌握度颜色映射阈值 | 四档暖色梯度：weight < 0.4 → 红，0.4~0.6 → 橙，0.6~0.8 → 黄，≥ 0.8 → 绿。无 MASTERS 边的节点使用中性灰。节点大小同步按 weight 线性映射 | 2026-06-22 | `diagnosis-subgraph-viz` REQUIREMENT |
+| 诊断子图渲染方案 | DESIGN 阶段从 AntV G6 v5（已有依赖，WebGL 渲染）和纯 SVG（轻量，≤30 节点场景更合适）中选型 | 2026-06-22 | `diagnosis-subgraph-viz` CHANGE |
+| MASTERS description 透传 | `StudentDiagnosisStrategy.buildResult()` 当前 MASTERS 边 description 传 null，需补齐为 TimeDecayStrategy 生成的考试历史 JSON，使前端可消费历次考试数据 | 2026-06-22 | `diagnosis-subgraph-viz` CHANGE |
 
 ## 默认行为
 
@@ -238,6 +245,10 @@
 - **本地开发环境**：所有基础设施组件（Neo4j 5.x / MySQL 8.0 / MinIO / Redis 7.x / RabbitMQ 3.x）通过 podman 容器化部署，`application-dev.yml` 中配置的连接参数可直接使用。集成测试使用 `@SpringBootTest` + `@ActiveProfiles("dev")` 直连 podman 中的真实组件，不需要 Testcontainers 或 @MockBean 替代
 - 当有新的sql文件产生时，需要将其同步到resources/db/init.sql中
 - **后端异常定位路径**：前端响应返回 traceId → 后端用 traceId 在 `logs/graphnexus-error.log`（或控制台）grep → 读完整堆栈定位出错类与行，无需复现
+- **认证上下文注入**：Controller/Service 通过 `SecurityContextHolder.getContext().getAuthentication()` 获取当前用户信息；也可通过自定义 `@CurrentUser` 注解直接注入 `UserPrincipal`（含 userId/username/roles）。禁止在方法参数中手动解析 JWT
+- **密码安全**：所有密码使用 BCrypt 加密存储（`BCryptPasswordEncoder`，strength ≥ 10）；密码不出现在日志、响应体或异常信息中；用户创建/密码修改后的密码通过安全信道传输（HTTPS）
+- **端点保护默认值**：新增 Controller 若未标注 `@PreAuthorize`，默认仅 ADMIN 可访问（通过类级别 `@PreAuthorize("hasRole('ADMIN')")` 或 SecurityFilterChain 全局配置 `denyAll` 兜底）
+- **前端 Token 存储**：Access Token 和 Refresh Token 存 `localStorage`（非 sessionStorage，避免关闭标签页后丢失；非 Cookie，避免 CSRF）。每次页面加载从 localStorage 恢复 Token 到 axios 默认 header
 
 ## 全局删除约束
 
@@ -326,6 +337,48 @@
 | **历史诊断记录** | 学情诊断页面中用户发起的每次问答的持久化记录，存储在 `query_task` 表中。支持按学生/学科/状态/时间范围筛选分页查询，默认按时间倒序 | `diagnosis-history-export` REQUIREMENT |
 | **诊断报告导出** | 将单条诊断记录导出为 HTML 文件（`.html`）的功能。下载完整的 LLM 分析报告原文，Content-Type `text/html; charset=UTF-8` | `diagnosis-history-export` REQUIREMENT |
 | **HistoryPanel** | 学情诊断页面中 ChatInput 下方的可折叠历史记录面板组件。含筛选栏（学生/学科/状态/时间范围）、分页列表（时间/问题摘要/学生/学科/状态）、单条展开详情（复用 MarkdownReport/HtmlSvgViewer）、单条导出按钮 | `diagnosis-history-export` REQUIREMENT |
+| **诊断子图可视化** | 在学情诊断结果页（IntelligentQAPage）LLM 文本报告下方内嵌展示剪枝子图（Student → 薄弱KP → 前置依赖KP），节点按 MASTERS 掌握度着色+缩放，点击节点弹出考试历史详情 + 趋势折线图。区别于 GraphVisualizePage（全屏图编辑），诊断子图为只读紧凑展示 | `diagnosis-subgraph-viz` REQUIREMENT |
+| **掌握度颜色映射** | 将 MASTERS weight (0~1) 映射为四档节点填充色：<0.4 红（严重薄弱）、0.4~0.6 橙（需关注）、0.6~0.8 黄（一般）、≥0.8 绿（良好）。无 MASTERS 边的纯前置依赖 KP 使用中性灰色。节点大小同步按 weight 线性映射（weight 越大半径越大），确保颜色+大小双重编码 | `diagnosis-subgraph-viz` REQUIREMENT |
+| **考试趋势图** | KP 节点详情面板内嵌的微型 SVG 折线图（~280×140px）。x 轴 = 考试日期（时间升序），y 轴 = 得分率（0.0~1.0），数据点标注数值。数据来源：MASTERS description JSON 的 details 数组（`{examDate, scoreRate, decayWeight}`）。≥2 次考试时渲染，否则降级隐藏 | `diagnosis-subgraph-viz` REQUIREMENT |
+| **DiagnosisSubgraph.vue** | 诊断子图可视化组件，负责：① 调用 `GET /api/v1/analysis/subgraph/{taskId}` 加载子图数据；② 将 SubgraphResponse 转换为图渲染数据（复用 graphAdapter.ts 的 `transformPruningSubgraph()`）；③ 渲染只读图（节点+边+图例）；④ 处理节点点击→详情面板事件。渲染方案由 DESIGN 阶段从 G6 v5 / 纯 SVG 中选型 | `diagnosis-subgraph-viz` REQUIREMENT |
+| **ExamTrendChart.vue** | 微型考试趋势折线图组件，纯 SVG 实现（无外部图表库依赖）。Props：`details: Array<{examDate: string, scoreRate: number}>`。尺寸紧凑适配 320px 宽面板。≥2 个数据点时渲染折线+数据点+标注；<2 个时返回空 | `diagnosis-subgraph-viz` REQUIREMENT |
+| `api/auth/controller/AuthController.java` | 认证 API 控制器（L1） | `POST /api/v1/auth/login`（登录）+ `POST /refresh`（刷新 Token）+ `POST /logout`（登出）+ `GET|POST /users`（用户 CRUD）+ `PUT /users/{id}`（编辑用户）+ `GET /roles`（角色列表） |
+| `application/auth/service/AuthService.java` | 认证业务接口（L2），含 `login`/`createUser`/`updateUser`/`getUsers`/`getRoles` | 用户身份校验 + 用户CRUD编排 |
+| `application/auth/service/TokenService.java` | Token 管理服务（L2），含 `generateAccessToken`/`generateRefreshToken`/`validateRefreshToken`/`revokeRefreshToken` | JWT 生成/验证/刷新/撤销 |
+| `infrastructure/mysql/auth/entity/UserAccountDO.java` | 用户账号 DO（L3），表 `user_account` | 用户身份持久化 |
+| `infrastructure/mysql/auth/entity/RoleDO.java` | 角色 DO（L3），表 `role`，预置数据 | 角色定义持久化 |
+| `infrastructure/mysql/auth/entity/UserRoleDO.java` | 用户-角色关联 DO（L3），表 `user_role` | 多对多关联持久化 |
+| `api/auth/dto/LoginRequest.java` | 登录请求 DTO | `{username, password}` |
+| `api/auth/dto/LoginResponse.java` | 登录响应 VO | `{accessToken, refreshToken, expiresIn, userInfo}` |
+| `api/auth/dto/CreateUserRequest.java` | 创建用户请求 DTO | `{username, password, realName, roles[]}` |
+| `common/config/JwtProperties.java` | JWT 配置属性类 | 绑定 `jwt.*` yml 配置 |
+| `common/config/SecurityConfig.java` | Spring Security 配置类 | SecurityFilterChain + PasswordEncoder bean + CORS 配置 |
+| `common/config/RedisConfig.java` | Redis 配置类 | RedisTemplate + 序列化配置 |
+| `common/security/JwtAuthenticationFilter.java` | JWT 认证过滤器 | OncePerRequestFilter，提取/验证 JWT → 写入 SecurityContext |
+| `common/security/JwtTokenProvider.java` | JWT Token 工具类 | 生成/解析/验证 Access Token |
+| `common/security/UserPrincipal.java` | 认证主体 BO | 实现 UserDetails，含 userId/username/roles |
+| `frontend/src/views/auth/LoginPage.vue` | 登录页面组件 | 居中卡片表单，极简风格 |
+| `frontend/src/views/auth/UserManagePage.vue` | 用户管理页面组件 | 用户列表+创建+编辑+禁用 |
+| `frontend/src/router/authGuard.ts` | 路由守卫 | beforeEach：Token校验+角色权限判断+redirect参数处理 |
+| `frontend/src/api/auth.ts` | 认证 API 模块 | `login`/`refresh`/`logout`/`getUsers`/`createUser`/`updateUser`/`getRoles` |
+| `frontend/src/stores/authStore.ts` | 认证状态管理（Pinia） | 用户信息+Token+登录状态+角色权限判断方法 |
+
+| **RBAC** | Role-Based Access Control，基于角色的访问控制模型。用户 → 角色（多对多）→ 权限。本系统 5 类角色：ADMIN / TEACHER / STUDENT / OPS_STAFF / OPS_MANAGER，ADMIN 泛化继承 TEACHER 全部用例。权限粒度为 API/页面级（非按钮/字段级） | `user-auth-rbac` REQUIREMENT |
+| **JWT 双 Token** | Access Token（短期 30min，HS256 签名，含 userId + username + roles）+ Refresh Token（长期 7d，UUID 格式，存 Redis 校验）。Access Token 过期后用 Refresh Token 无感刷新；Refresh Token 过期需重新登录。Refresh Token 支持滚动刷新（每次刷新颁发新 Refresh Token 并使旧的失效） | `user-auth-rbac` REQUIREMENT |
+| **user_account** | MySQL 用户账号表（DO）。字段：`id`、`username`（唯一）、`password`（BCrypt 加密）、`real_name`、`status`（ENABLED/DISABLED）、`create_time`、`update_time`。不设逻辑删除（删除即物理删除）。`textbook.uploaded_by` 预留 FK→`user_account.id` | `user-auth-rbac` REQUIREMENT |
+| **role** | MySQL 角色定义表。字段：`id`、`code`（如 `ADMIN`，唯一）、`name`（中文名如"超级管理员"）、`description`。预置 5 条角色记录（ADMIN/TEACHER/STUDENT/OPS_STAFF/OPS_MANAGER），不支持运行时新增/删除角色 | `user-auth-rbac` REQUIREMENT |
+| **user_role** | MySQL 用户-角色关联表（多对多）。字段：`id`、`user_id`（FK→user_account.id）、`role_id`（FK→role.id）。联合唯一索引 `(user_id, role_id)` | `user-auth-rbac` REQUIREMENT |
+| **Redis 用户缓存** | Key 模式 `user:auth:<userId>`，Value 为 JSON（username/realName/status/roles[]），TTL 30min（可配）。用途：权限校验免查 MySQL。用户禁用/角色变更时主动 DEL key + 通知"该用户所有现存 Token 下次请求被拒"。Redis 不可用时降级直查 MySQL + WARN 日志 | `user-auth-rbac` REQUIREMENT |
+| **Spring Security 过滤器链** | 自定义 `JwtAuthenticationFilter`（OncePerRequestFilter，在 SecurityContext 之前执行：提取 Header `Authorization: Bearer <token>` → 验证签名/有效期 → 查 Redis 缓存或 MySQL → 构建 `UsernamePasswordAuthenticationToken` → 写入 SecurityContext）+ 方法级 `@PreAuthorize("hasAnyRole('ADMIN','TEACHER')")` 注解。`/api/v1/auth/login` 和 `/api/v1/auth/refresh` 在 SecurityFilterChain 中配置为 permitAll | `user-auth-rbac` REQUIREMENT |
+| **前端认证闭环** | 登录页（`/login`）+ vue-router `beforeEach` 守卫（检查 localStorage Token → 无 Token 跳转 `/login` → 有 Token 但无目标页权限跳 403）+ axios response interceptor（收到 401 + errorCode=A0102（过期）→ 调 `/api/v1/auth/refresh` → 重放原请求 → refresh 也失败则清 Token 跳 `/login`） | `user-auth-rbac` REQUIREMENT |
+| **角色标识符** | 5 类角色使用英文 code：`ADMIN`（超级管理员）、`TEACHER`（教师）、`STUDENT`（学生）、`OPS_STAFF`（运维人员）、`OPS_MANAGER`（运营人员）。Spring Security `hasAnyRole()` 自动加 `ROLE_` 前缀 | `user-auth-rbac` REQUIREMENT |
+| **端点-角色映射** | v1 按用例视图 §2 的用例分配映射 API 权限：ADMIN 继承 TEACHER 所有端点。详见 `@.specs/user-auth-rbac/REQUIREMENT.md` 矩阵表。认证端点（`/api/v1/auth/login|refresh`）对所有角色开放 | `user-auth-rbac` REQUIREMENT |
+| **测试携带 Token** | 全端点权限收敛后，所有现有集成测试需携带有效 JWT。方案：新增 `JwtTestHelper` 工具类（按需生成测试用 Token，支持指定角色）+ `@WithMockJwt` 自定义注解。由 DESIGN 阶段确定具体实现方式 | `user-auth-rbac` REQUIREMENT |
+| **AuthController** | L1 认证 API 控制器，端点：`POST /api/v1/auth/login`（登录）、`POST /api/v1/auth/refresh`（刷新 Token）、`POST /api/v1/auth/logout`（登出）、`GET /api/v1/auth/users`（用户列表，ADMIN）、`POST /api/v1/auth/users`（创建用户，ADMIN）、`PUT /api/v1/auth/users/{id}`（编辑用户，ADMIN）、`GET /api/v1/auth/roles`（角色列表，ADMIN）。位于 `api/auth/controller/` | `user-auth-rbac` REQUIREMENT |
+| **AuthService** | L2 认证业务接口（`application/auth/service/AuthService`），编排：登录校验（查 MySQL `user_account` + BCrypt 密码比对）→ 生成 JWT → 写 Redis 缓存 → 返回 Token；用户 CRUD；角色查询。实现类 `AuthServiceImpl` 同包。refresh/logout 独立为 `TokenService` | `user-auth-rbac` REQUIREMENT |
+| **auth 模块包结构** | 新增 `api/auth/`（controller + dto）+ `application/auth/`（service + model）+ `infrastructure/mysql/auth/`（entity/UserAccountDO + entity/RoleDO + entity/UserRoleDO + repository）。遵循四层架构 L1→L2→L3 分层 | `user-auth-rbac` REQUIREMENT |
+| **LoginPage.vue** | 前端登录页面组件，路由 `/login`。极简风格（对齐项目 Linear/Vercel/Stripe 调性）：居中卡片式表单（username + password + 登录按钮），背景浅灰，无导航栏/侧边栏。登录失败时表单下方显示红色错误提示；登录成功跳转 redirect 参数目标页或默认首页。不设"记住我"复选框（v1） | `user-auth-rbac` REQUIREMENT |
+| **UserManagePage.vue** | 前端用户管理页面组件，路由 `/settings/users`（仅 ADMIN 可见）。功能：用户列表（分页，显示用户名/真实姓名/角色标签/状态/创建时间）+ 顶部搜索（按用户名模糊）+ 新建用户按钮（弹窗：用户名/真实姓名/密码/角色多选）+ 行内操作（编辑角色/启用禁用）。极简表格风格，角色用彩色 Tag 展示 | `user-auth-rbac` REQUIREMENT |
 
 ## 禁动清单
 
