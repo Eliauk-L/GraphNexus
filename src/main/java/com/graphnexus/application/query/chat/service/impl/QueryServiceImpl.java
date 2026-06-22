@@ -702,11 +702,17 @@ public class QueryServiceImpl implements QueryService {
 
     String extractKpName(GraphNodeData node) {
         // KnowledgePointNode 的 name 属性在 properties Map 中
-        if (node.properties() != null && node.properties().containsKey("name")) {
+        if (node.properties() != null) {
+            // 优先取 name
             Object name = node.properties().get("name");
-            return name != null ? name.toString() : node.id();
+            if (name != null && !name.toString().isBlank()) return name.toString();
+            // 其次取 label
+            Object label = node.properties().get("label");
+            if (label != null && !label.toString().isBlank()) return label.toString();
         }
-        return node.id();
+        // 最后兜底：截取 id 前 8 位
+        String id = node.id();
+        return id != null && id.length() > 8 ? id.substring(0, 8) + "..." : (id != null ? id : "未知知识点");
     }
 
     TokenUsage parseTokenUsage(String json) {

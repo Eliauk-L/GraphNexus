@@ -263,7 +263,9 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
     }
 
     private GraphNodeData buildKpNode(String id, String name, String subject) {
-        KnowledgePointNode kp = new KnowledgePointNode(name);
+        // name 可能为 null（kpNameMap 未覆盖），用 id 截断作为兜底标签
+        String label = (name != null && !name.isBlank()) ? name : id;
+        KnowledgePointNode kp = new KnowledgePointNode(label);
         kp.setId(id);
         return GraphDataConverter.toNodeData(kp);
     }
