@@ -54,11 +54,17 @@ export const useGraphStore = defineStore('graph', () => {
     currentSubject.value = subjectName
     setViewMode('subject')
     try {
-      currentGraph.value = await getSubjectGraph(subjectName)
+      const result = await getSubjectGraph(subjectName)
+      // 防止旧请求返回覆盖已切换的状态
+      if (currentSubject.value !== subjectName) return
+      currentGraph.value = result
     } catch (e: any) {
+      if (currentSubject.value !== subjectName) return
       error.value = e?._backendMessage ?? '加载学科全景图失败'
     } finally {
-      loading.value = false
+      if (currentSubject.value === subjectName) {
+        loading.value = false
+      }
     }
   }
 
@@ -76,6 +82,7 @@ export const useGraphStore = defineStore('graph', () => {
     currentDocId.value = null
     currentSubject.value = null
     viewMode.value = 'document'
+    loading.value = false
   }
 
   return {
