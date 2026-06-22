@@ -6,6 +6,7 @@ import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.infrastructure.neo4j.gds.GdsAdapter;
 import com.graphnexus.infrastructure.neo4j.gds.config.MetricsProperties;
 import com.graphnexus.infrastructure.neo4j.gds.model.GdsResult;
+import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,9 @@ class MetricsServiceTest {
     @Mock
     private GdsAdapter gdsAdapter;
 
+    @Mock
+    private ConstructionGraphRepository constructionGraphRepository;
+
     private MetricsService service;
 
     @BeforeEach
@@ -42,7 +46,7 @@ class MetricsServiceTest {
         MetricsProperties props = new MetricsProperties();
         props.setCache(new MetricsProperties.Cache(5, 50));
         props.setPageRank(new MetricsProperties.PageRank(20, 0.85));
-        service = new MetricsServiceImpl(gdsAdapter, props);
+        service = new MetricsServiceImpl(gdsAdapter, props, constructionGraphRepository);
         ((MetricsServiceImpl) service).initCache();
     }
 

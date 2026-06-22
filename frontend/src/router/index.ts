@@ -46,6 +46,23 @@ const router = createRouter({
       name: 'settings-metrics',
       component: () => import('@/views/metrics/MetricsDashboardPage.vue'),
     },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/auth/LoginPage.vue'),
+      meta: { guest: true },
+    },
+    {
+      path: '/403',
+      name: 'forbidden',
+      component: () => import('@/views/auth/ForbiddenPage.vue'),
+    },
+    {
+      path: '/settings/users',
+      name: 'settings-users',
+      component: () => import('@/views/auth/UserManagePage.vue'),
+      meta: { roles: ['ADMIN'] },
+    },
   ],
 })
 

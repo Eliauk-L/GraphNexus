@@ -19,6 +19,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * 教材处理 REST API 控制器 — 仅教材文件（PDF/TXT）。
  *
@@ -33,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/file/textbooks")
 @RequiredArgsConstructor
 @Tag(name = "教材处理", description = "教材上传解析管理（PDF/TXT）")
+@PreAuthorize("hasRole('TEACHER')")
 public class TextbookController {
 
     private final TextbookService textBookService;
@@ -77,6 +80,7 @@ public class TextbookController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @PostMapping("/parse/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResult<TextbookParseResultVO> parse(
             @PathVariable @Parameter(description = "教材 ID", required = true, example = "1") Long id) {
         ParseResult result = textBookService.parse(id);

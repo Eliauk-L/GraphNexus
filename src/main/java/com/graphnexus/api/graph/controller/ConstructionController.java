@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * 图谱构建 REST API 控制器 — 两阶段流水线（构建→图谱融合）。
  *
@@ -26,6 +28,7 @@ import java.util.List;
 @RequestMapping("/api/v1/graph/construction")
 @RequiredArgsConstructor
 @Tag(name = "图谱构建", description = "文档知识图谱抽取、文档子图查询 — 两阶段流水线（构建→图谱融合），跨文档实体对齐由融合隐式完成")
+@PreAuthorize("hasRole('TEACHER')")
 public class ConstructionController {
 
     private final ConstructionService constructionService;
@@ -41,6 +44,7 @@ public class ConstructionController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常 / C0001 LLM API 调用失败")
     })
     @PostMapping("/extract/{documentId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResult<ExtractionResultVO> extract(
             @Parameter(description = "文档 ID", required = true, example = "1")
             @PathVariable Long documentId) {

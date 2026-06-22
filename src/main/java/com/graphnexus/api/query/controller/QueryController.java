@@ -25,6 +25,8 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * 智能问答 REST API 控制器。
  *
@@ -35,6 +37,7 @@ import java.time.LocalDateTime;
 @RequestMapping("/api/v1/query")
 @RequiredArgsConstructor
 @Tag(name = "智能问答", description = "自然语言问答 — 图剪枝驱动 LLM 分析诊断")
+@PreAuthorize("hasRole('TEACHER')")
 public class QueryController {
 
     private final QueryService queryService;

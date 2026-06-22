@@ -16,6 +16,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * 宽图谱融合 REST API 控制器。
  *
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/analysis/fusion")
 @RequiredArgsConstructor
 @Tag(name = "宽图谱融合", description = "知识点（KP）融合合并与 MASTERS 掌握度聚合计算")
+@PreAuthorize("hasAnyRole('ADMIN','OPS_STAFF')")
 public class FusionController {
 
     private final FusionService fusionService;
@@ -87,6 +90,7 @@ public class FusionController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @PostMapping("/rollback/{fusionLogId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResult<FusionRollbackVO> rollback(
             @Parameter(description = "融合日志 ID", required = true, example = "1")
             @PathVariable Long fusionLogId) {

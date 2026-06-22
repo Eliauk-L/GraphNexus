@@ -81,6 +81,30 @@ public enum ErrorCode {
     /** 考试编号已存在，拒绝重复上传 */
     A0022("A0022", HttpStatus.CONFLICT, "考试编号已存在，请先删除该考试再重新上传"),
 
+    /** 用户名或密码错误 */
+    A0023("A0023", HttpStatus.UNAUTHORIZED, "用户名或密码错误"),
+
+    /** 账号已被禁用 */
+    A0024("A0024", HttpStatus.FORBIDDEN, "账号已被禁用，请联系管理员"),
+
+    /** 未登录或 Token 已过期 */
+    A0025("A0025", HttpStatus.UNAUTHORIZED, "未登录或 Token 已过期，请重新登录"),
+
+    /** Token 无效（签名/格式错误） */
+    A0026("A0026", HttpStatus.UNAUTHORIZED, "Token 无效"),
+
+    /** Refresh Token 已过期或不存在 */
+    A0027("A0027", HttpStatus.UNAUTHORIZED, "登录已过期，请重新登录"),
+
+    /** 用户名已存在 */
+    A0028("A0028", HttpStatus.CONFLICT, "用户名已存在"),
+
+    /** 用户不存在 */
+    A0029("A0029", HttpStatus.NOT_FOUND, "用户不存在"),
+
+    /** 角色权限不足 */
+    A0030("A0030", HttpStatus.FORBIDDEN, "权限不足，无法访问此资源"),
+
     // ======================== B · 系统错误 ========================
 
     /** 系统内部错误（兜底） */

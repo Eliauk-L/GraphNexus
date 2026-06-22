@@ -22,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * 成绩处理 REST API 控制器 — 上传/条件查询/删除。
  *
@@ -32,6 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/file/grades")
 @RequiredArgsConstructor
 @Tag(name = "成绩管理", description = "CSV/Excel 成绩上传、条件查询与删除管理")
+@PreAuthorize("hasRole('TEACHER')")
 public class GradeController {
 
     private final GradeService gradeService;

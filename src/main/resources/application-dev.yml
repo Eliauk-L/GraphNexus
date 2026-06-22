@@ -49,7 +49,14 @@ spring:
       max-request-size: 55MB
 
   # ---------------------------------------------------------------------------
-    virtual-host: graphnexus
+  # Redis 缓存（user-auth-rbac）
+  # ---------------------------------------------------------------------------
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: graphnexus123
+      database: 0
 
   # ---------------------------------------------------------------------------
   # DeepSeek API（Spring AI OpenAI starter，兼容 OpenAI 协议）
@@ -169,6 +176,14 @@ query:
   timeout:
     sync-timeout-seconds: 30
   output-format: html-svg  # html-svg | markdown
+
+# ---------------------------------------------------------------------------
+# JWT 开发环境配置
+# ---------------------------------------------------------------------------
+jwt:
+  secret: graphnexus-jwt-secret-key-dev-only
+  access-token-ttl: 30m
+  refresh-token-ttl: 7d
 
 # ---------------------------------------------------------------------------
 # 日志

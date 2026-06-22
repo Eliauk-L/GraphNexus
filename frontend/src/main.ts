@@ -2,10 +2,23 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import { registerAuthGuard } from './router/authGuard'
+import { setupInterceptors } from './api/interceptor'
 import './assets/tokens.css'
 import './assets/global.css'
 
 const app = createApp(App)
+
+// Pinia 必须先安装（拦截器和守卫依赖 store）
+const pinia = createPinia()
+app.use(pinia)
+app.use(router)
+
+// 注册 axios 拦截器（401 自动刷新 · 直接读 localStorage 不依赖 Pinia）
+setupInterceptors()
+
+// 注册路由守卫（认证 + 权限）
+registerAuthGuard(router)
 
 app.config.errorHandler = (err, instance, info) => {
   console.error('[Vue Error]', err)

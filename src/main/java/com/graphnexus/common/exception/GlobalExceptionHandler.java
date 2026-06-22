@@ -5,9 +5,16 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 
 import java.util.stream.Collectors;
 
@@ -77,15 +84,53 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
         log.warn("权限不足 errorCode={} message={}",
-                ErrorCode.A0003.getErrorCode(), ex.getMessage());
+                ErrorCode.A0030.getErrorCode(), ex.getMessage());
         ErrorResponse body = new ErrorResponse(
-                ErrorCode.A0003.getErrorCode(),
+                ErrorCode.A0030.getErrorCode(),
                 "权限不足: " + ex.getMessage(),
-                ErrorCode.A0003.getDefaultUserTip(),
+                ErrorCode.A0030.getDefaultUserTip(),
                 getTraceId(),
                 java.time.LocalDateTime.now()
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    /**
+     * 认证失败处理（BadCredentials / AuthenticationException）。
+     *
+     * @param ex 认证异常
+     * @return 401
+     */
+    @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(Exception ex) {
+        log.warn("认证失败 errorCode={} message={}",
+                ErrorCode.A0023.getErrorCode(), ex.getMessage());
+        ErrorResponse body = ErrorResponse.fromErrorCode(ErrorCode.A0023, getTraceId());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
+    /**
+     * 账号被禁用处理。
+     *
+     * @param ex 禁用异常
+     * @return 403
+     */
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<ErrorResponse> handleDisabledException(DisabledException ex) {
+        log.warn("账号已禁用 errorCode={} message={}",
+                ErrorCode.A0024.getErrorCode(), ex.getMessage());
+        ErrorResponse body = ErrorResponse.fromErrorCode(ErrorCode.A0024, getTraceId());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    /**
+     * JWT 签名/格式/过期异常处理。
+     */
+    @ExceptionHandler({SignatureException.class, MalformedJwtException.class, ExpiredJwtException.class})
+    public ResponseEntity<ErrorResponse> handleJwtException(Exception ex) {
+        log.debug("JWT 校验失败 type={} message={}", ex.getClass().getSimpleName(), ex.getMessage());
+        ErrorResponse body = ErrorResponse.fromErrorCode(ErrorCode.A0026, getTraceId());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
     }
 
     /**

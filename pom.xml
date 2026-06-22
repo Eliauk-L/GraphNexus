@@ -21,6 +21,7 @@
         <java.version>17</java.version>
         <langchain4j.version>1.0.0-beta1</langchain4j.version>
         <lombok.version>1.18.34</lombok.version>
+        <jjwt.version>0.12.6</jjwt.version>
         <testcontainers.version>1.19.8</testcontainers.version>
         <archunit.version>1.3.0</archunit.version>
         <logstash-logback.version>7.4</logstash-logback.version>
@@ -71,6 +72,31 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- JWT -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- LLM / AI — LangChain4j 替代 Spring AI -->

@@ -21,8 +21,8 @@ spring:
   autoconfigure:
     exclude:
       # Neo4j — 已激活（knowledge-graph-extraction）
-      # Security（本次不配置安全规则，所有端点开放）
-      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      # Redis — 已激活（user-auth-rbac）
+      # Security（user-auth-rbac 已启用 · JWT 无状态认证）
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
       - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
       # 基础设施健康检查（已在 management.health 中逐一禁用，此处 double check）
@@ -57,3 +57,17 @@ logging:
     com.graphnexus: INFO
     org.springframework.web: INFO
     org.springframework.data.neo4j: WARN
+
+# =============================================================================
+# JWT 认证配置（user-auth-rbac）
+# =============================================================================
+jwt:
+  secret: ${JWT_SECRET:}
+  access-token-ttl: 30m
+  refresh-token-ttl: 7d
+
+# =========================================================================
+  # Spring 缓存类型（Redis 仅手动操作，不注册为 CacheManager）
+  # =========================================================================
+  cache:
+    type: none

@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * LLM 调试接口 — 直接调用 LlmGateway 返回原始响应，用于排查 LLM 连接问题。
  *
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/llm")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','OPS_STAFF')")
 public class LlmController {
 
     private final LlmGateway llmGateway;

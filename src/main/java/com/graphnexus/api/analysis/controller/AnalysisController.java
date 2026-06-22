@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.stream.Collectors;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * 图分析 REST API 控制器 — 子图查询等分析端点。
  *
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/analysis")
 @RequiredArgsConstructor
 @Tag(name = "图分析", description = "剪枝子图可视化数据查询（含节点、边、剪枝元信息）")
+@PreAuthorize("hasRole('TEACHER')")
 public class AnalysisController {
 
     private final QueryService queryService;
@@ -39,6 +42,7 @@ public class AnalysisController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @GetMapping("/subgraph/{taskId}")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
     public ApiResult<SubgraphResponse> getSubgraph(
             @Parameter(description = "问答任务 ID（UUID 格式）", required = true, example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String taskId) {

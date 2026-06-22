@@ -60,4 +60,21 @@ public record ErrorResponse(
                 LocalDateTime.now()
         );
     }
+
+    /**
+     * 从 ErrorCode 枚举快捷构造。
+     *
+     * @param errorCode 错误码枚举
+     * @param traceId   全链路追踪 ID
+     * @return ErrorResponse
+     */
+    public static ErrorResponse fromErrorCode(ErrorCode errorCode, String traceId) {
+        return new ErrorResponse(
+                errorCode.getErrorCode(),
+                errorCode.getDefaultUserTip(),
+                errorCode.getDefaultUserTip(),
+                traceId,
+                LocalDateTime.now()
+        );
+    }
 }

@@ -1,30 +1,48 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, RouterView, RouterLink } from 'vue-router'
+import { useRoute, RouterView, RouterLink, useRouter } from 'vue-router'
 import {
   BookOpen, GitGraph, GraduationCap, MessageCircle,
-  Settings, GitMerge, BarChart3, User,
+  Settings, GitMerge, BarChart3, Users, LogOut,
 } from '@lucide/vue'
+import { NPopover } from 'naive-ui'
+import { useAuthStore } from '@/stores/authStore'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 const navItems = [
-  { path: '/materials', label: '教材管理', icon: BookOpen },
-  { path: '/knowledge-graph', label: '知识点可视化', icon: GitGraph },
-  { path: '/grades', label: '学生成绩管理', icon: GraduationCap },
-  { path: '/diagnosis', label: '学情诊断', icon: MessageCircle },
+  { path: '/materials', label: '教材管理', icon: BookOpen, roles: ['ADMIN', 'TEACHER'] },
+  { path: '/knowledge-graph', label: '知识点可视化', icon: GitGraph, roles: ['ADMIN', 'TEACHER', 'OPS_MANAGER'] },
+  { path: '/grades', label: '学生成绩管理', icon: GraduationCap, roles: ['ADMIN', 'TEACHER'] },
+  { path: '/diagnosis', label: '学情诊断', icon: MessageCircle, roles: ['ADMIN', 'TEACHER', 'STUDENT'] },
 ]
 
 const settingsItems = [
-  { path: '/settings/fusion', label: '融合管理', icon: GitMerge },
-  { path: '/settings/metrics', label: '图指标', icon: BarChart3 },
+  { path: '/settings/fusion', label: '融合管理', icon: GitMerge, roles: ['ADMIN', 'OPS_STAFF'] },
+  { path: '/settings/metrics', label: '图指标', icon: BarChart3, roles: ['ADMIN', 'OPS_STAFF', 'OPS_MANAGER'] },
+  { path: '/settings/users', label: '用户管理', icon: Users, roles: ['ADMIN'] },
 ]
 
-const allItems = [...navItems, ...settingsItems]
+// 按角色过滤
+const visibleNavItems = computed(() =>
+  navItems.filter(i => i.roles.some(r => authStore.hasRole(r)))
+)
+const visibleSettingsItems = computed(() =>
+  settingsItems.filter(i => i.roles.some(r => authStore.hasRole(r)))
+)
+
+const allItems = [...visibleNavItems.value, ...visibleSettingsItems.value]
 
 const currentTitle = computed(() => {
   return allItems.find((i) => route.path.startsWith(i.path))?.label ?? 'GraphNexus'
 })
+
+function handleLogout() {
+  authStore.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -36,7 +54,7 @@ const currentTitle = computed(() => {
       </div>
       <nav class="sidebar__nav">
         <RouterLink
-          v-for="item in navItems"
+          v-for="item in visibleNavItems"
           :key="item.path"
           :to="item.path"
           class="sidebar__item"
@@ -50,7 +68,7 @@ const currentTitle = computed(() => {
       <!-- 系统设置（左下角弱化） -->
       <div class="sidebar__bottom">
         <RouterLink
-          v-for="item in settingsItems"
+          v-for="item in visibleSettingsItems"
           :key="item.path"
           :to="item.path"
           class="sidebar__item sidebar__item--muted"
@@ -67,9 +85,37 @@ const currentTitle = computed(() => {
       <header class="topbar">
         <h2 class="title" style="margin: 0">{{ currentTitle }}</h2>
         <div class="topbar__user">
-          <div class="avatar">
-            <User :size="18" />
-          </div>
+          <template v-if="authStore.isAuthenticated">
+            <NPopover trigger="click" placement="bottom-end">
+              <template #trigger>
+                <div class="topbar__user-trigger">
+                  <div class="avatar" :style="{ background: 'var(--color-brand-veil)' }">
+                    <span class="label" style="color: var(--color-brand)">{{ authStore.userInitial }}</span>
+                  </div>
+                  <span class="supporting">{{ authStore.userName }}</span>
+                </div>
+              </template>
+              <div style="padding: var(--spacing-sm); min-width: 160px">
+                <div class="supporting" style="padding: 4px 8px">{{ authStore.userName }}</div>
+                <div class="supporting" style="padding: 4px 8px; color: var(--color-text-tertiary); font-size: 12px">
+                  {{ authStore.userInfo?.roles?.join(', ') }}
+                </div>
+                <div
+                  style="margin-top: var(--spacing-sm); padding: 6px 8px; cursor: pointer;
+                         border-radius: var(--rounded-sm); color: var(--color-text-secondary);
+                         display: flex; align-items: center; gap: 6px"
+                  class="logout-btn"
+                  @click="handleLogout"
+                >
+                  <LogOut :size="14" />
+                  <span class="supporting">登出</span>
+                </div>
+              </div>
+            </NPopover>
+          </template>
+          <template v-else>
+            <div class="avatar"><User :size="18" /></div>
+          </template>
         </div>
       </header>
       <main class="content">
@@ -192,6 +238,13 @@ const currentTitle = computed(() => {
 .topbar__user {
   display: flex;
   align-items: center;
+}
+
+.topbar__user-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
 }
 
 .avatar {

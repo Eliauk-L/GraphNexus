@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * 图指标查询 API 控制器（L1）— PageRank 与度中心性端点。
  *
@@ -25,6 +27,7 @@ import java.util.List;
 @RequestMapping("/api/v1/graph/metrics")
 @RequiredArgsConstructor
 @Tag(name = "图指标", description = "Neo4j GDS 图算法 — PageRank 节点重要性与度中心性查询")
+@PreAuthorize("hasAnyRole('ADMIN','OPS_STAFF','OPS_MANAGER')")
 public class MetricsController {
 
     private final MetricsService metricsService;
