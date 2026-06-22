@@ -8,8 +8,10 @@ import {
   NODE_COLORS,
   EDGE_COLORS,
   EDGE_LINE_STYLES,
+  EDGE_WIDTHS,
   DEFAULT_NODE_COLOR,
   DEFAULT_EDGE_COLOR,
+  DEFAULT_EDGE_WIDTH,
 } from '../constants'
 
 const props = defineProps<{
@@ -60,8 +62,12 @@ function edgeColor(type: string) {
   return EDGE_COLORS[type] ?? DEFAULT_EDGE_COLOR
 }
 
-function edgeDash(type: string) {
-  return EDGE_LINE_STYLES[type] === 'dashed'
+function edgeLineStyle(type: string): string {
+  return EDGE_LINE_STYLES[type] ?? 'solid'
+}
+
+function edgeWidth(type: string): number {
+  return EDGE_WIDTHS[type] ?? DEFAULT_EDGE_WIDTH
 }
 </script>
 
@@ -101,8 +107,9 @@ function edgeDash(type: string) {
         <span
           class="legend-edge-swatch"
           :style="{
-            background: edgeColor(type),
-            borderStyle: edgeDash(type) ? 'dashed' : 'solid',
+            borderTopColor: edgeColor(type),
+            borderTopWidth: edgeWidth(type) + 'px',
+            borderTopStyle: edgeLineStyle(type),
           }"
         />
         <span class="legend-name">{{ type }}</span>
@@ -180,9 +187,8 @@ function edgeDash(type: string) {
 
 .legend-edge-swatch {
   width: 16px;
-  height: 2px;
+  height: 0;
   flex-shrink: 0;
-  border-top-width: 2px;
 }
 
 .legend-name {
