@@ -362,14 +362,14 @@ onBeforeUnmount(() => {
 }
 
 .graph-body {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
 .graph-canvas-area {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -437,14 +437,14 @@ onBeforeUnmount(() => {
 }
 
 .graph-page:fullscreen .graph-body {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
 .graph-page:fullscreen .graph-canvas-area {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-height: 0;

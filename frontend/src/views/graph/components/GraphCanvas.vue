@@ -29,10 +29,11 @@ const emit = defineEmits<{
 
 const container = ref<HTMLDivElement>()
 const wrapperStyle = computed(() => ({
-  flex: '1',
+  flex: '1 1 0',
   position: 'relative' as const,
   minHeight: '300px',
   width: '100%',
+  overflow: 'hidden',
 }))
 
 const canvasStyle = computed(() => ({
