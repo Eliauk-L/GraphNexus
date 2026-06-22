@@ -275,5 +275,6 @@ export interface HistoryRecordVO {
   intent: string
   tokenUsage: TokenUsageVO | null
   elapsedMs: number
+  errorMessage: string | null
   createTime: string
 }

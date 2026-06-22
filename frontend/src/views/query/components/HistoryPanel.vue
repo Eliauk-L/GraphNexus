@@ -2,7 +2,7 @@
 import { ref, watch, h, computed } from 'vue'
 import {
   NCollapse, NCollapseItem, NInput, NSelect, NDatePicker,
-  NButton, NTag, NSpin, NEmpty, NSpace, NPopconfirm, NModal
+  NButton, NTag, NSpin, NEmpty, NSpace, NPopconfirm, NModal, NTooltip
 } from 'naive-ui'
 import { Search, FileDown, Trash2, Eye, X } from '@lucide/vue'
 import { useQueryStore } from '../queryStore'
@@ -26,6 +26,7 @@ const previewAnswer = ref('')
 const previewFormat = ref('markdown')
 const previewLoading = ref(false)
 const previewTokenUsage = ref<any>(null)
+const previewError = ref('')
 
 // ── 学科选项 ──
 const subjectOptions = computed(() => {
@@ -82,11 +83,19 @@ const columns: DataTableColumns<HistoryRecordVO> = [
   {
     title: '状态', key: 'status', width: 80,
     render(row) {
-      return h(NTag, {
+      const tag = h(NTag, {
         type: row.status === 'COMPLETED' ? 'success' : 'error',
         size: 'small',
         bordered: false,
       }, { default: () => row.status === 'COMPLETED' ? '完成' : '失败' })
+
+      if (row.status === 'FAILED' && row.errorMessage) {
+        return h(NTooltip, { placement: 'top' }, {
+          trigger: () => tag,
+          default: () => row.errorMessage,
+        })
+      }
+      return tag
     },
   },
   {
@@ -127,14 +136,19 @@ async function openPreview(taskId: string, question: string) {
   previewFormat.value = 'markdown'
   previewAnswer.value = ''
   previewTokenUsage.value = null
+  previewError.value = ''
   previewLoading.value = true
   try {
     const result = await getResult(taskId) as QueryResultResponse
-    previewAnswer.value = result.answer || ''
-    previewFormat.value = result.outputFormat || 'markdown'
-    previewTokenUsage.value = result.tokenUsage
+    if (result.status === 'FAILED') {
+      previewError.value = result.errorMessage || '未知错误'
+    } else {
+      previewAnswer.value = result.answer || ''
+      previewFormat.value = result.outputFormat || 'markdown'
+      previewTokenUsage.value = result.tokenUsage
+    }
   } catch {
-    previewAnswer.value = '加载详情失败'
+    previewError.value = '加载详情失败'
   } finally {
     previewLoading.value = false
   }
@@ -238,7 +252,13 @@ function handlePageChange(page: number) {
       </template>
 
       <NSpin :show="previewLoading" size="medium">
-        <div v-if="previewAnswer" class="preview-content">
+        <!-- 失败记录：显示错误原因 -->
+        <div v-if="previewError" class="preview-error">
+          <div class="preview-error-label body-lead">诊断失败</div>
+          <div class="preview-error-msg supporting">{{ previewError }}</div>
+        </div>
+        <!-- 成功记录：渲染报告 -->
+        <div v-else-if="previewAnswer" class="preview-content">
           <HtmlSvgViewer
             v-if="previewFormat === 'html-svg'"
             :content="previewAnswer"
@@ -252,7 +272,7 @@ function handlePageChange(page: number) {
             <TokenUsageBar :token-usage="previewTokenUsage" />
           </div>
         </div>
-        <NEmpty v-else-if="!previewLoading" description="暂无报告内容" />
+        <NEmpty v-else description="暂无报告内容" />
       </NSpin>
     </NModal>
   </div>
@@ -274,6 +294,21 @@ function handlePageChange(page: number) {
 
 .preview-content {
   min-height: 200px;
+}
+
+.preview-error {
+  padding: var(--spacing-lg);
+}
+
+.preview-error-label {
+  color: var(--color-error);
+  margin-bottom: var(--spacing-sm);
+}
+
+.preview-error-msg {
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .preview-token {

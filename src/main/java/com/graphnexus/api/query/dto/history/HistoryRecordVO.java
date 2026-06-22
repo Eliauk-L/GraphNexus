@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
  * @param intent      识别意图
  * @param tokenUsage  Token 用量（prunedNodes/prunedEdges/estimatedTokens）
  * @param elapsedMs   耗时（毫秒）
+ * @param errorMessage 失败原因（仅 FAILED 状态有值）
  * @param createTime  创建时间
  * @author Jay
  * @date 2026/06/22
@@ -33,6 +34,7 @@ public record HistoryRecordVO(
         String intent,
         QueryAskResponse.TokenUsageVO tokenUsage,
         Long elapsedMs,
+        String errorMessage,
         LocalDateTime createTime
 ) {
 
@@ -48,6 +50,7 @@ public record HistoryRecordVO(
                 task.getIntent(),
                 parseTokenUsage(task.getTokenUsageJson()),
                 task.getElapsedMs(),
+                task.getErrorMessage(),
                 task.getCreateTime()
         );
     }
