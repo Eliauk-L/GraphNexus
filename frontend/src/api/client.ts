@@ -88,14 +88,18 @@ client.interceptors.response.use(
     } else if (isTimeout) {
       // 超时由调用方处理（如学情诊断大模型重试），不弹全局 toast
     } else if (errorCode) {
-      // 业务错误：优先用 userTip，回退到错误码映射
-      const friendlyTip = errData?.userTip || FRIENDLY_TIPS[errorCode] || '操作失败，请稍后重试'
+      // 业务错误：优先用后端 userTip，其次用 errorMessage，回退到错误码映射
+      const friendlyTip = errData?.userTip || errData?.errorMessage || FRIENDLY_TIPS[errorCode] || '操作失败，请稍后重试'
       showErrorToast(friendlyTip, errorCode)
+      // 将后端错误信息注入 rejected error，供调用方（如 queryStore）展示详情
+      error._backendMessage = friendlyTip
+      error._backendCode = errorCode
     } else {
       // 其他 HTTP 错误
       const status = error.response.status
       const tip = HTTP_STATUS_TIPS[status] ?? `请求失败（HTTP ${status}）`
       showErrorToast(tip, `HTTP_${status}`)
+      error._backendMessage = tip
     }
 
     // 控制台完整日志（含 traceId 便于排查）

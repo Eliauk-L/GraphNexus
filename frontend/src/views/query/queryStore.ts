@@ -36,6 +36,8 @@ export const useQueryStore = defineStore('query', () => {
       status.value = 'failed'
       if (e?.code === 'ECONNABORTED') {
         errorMessage.value = '分析请求超时，大模型可能正在处理中，请稍后重试'
+      } else if (e?._backendMessage) {
+        errorMessage.value = e._backendMessage
       } else {
         errorMessage.value = '分析请求失败，请稍后重试'
       }

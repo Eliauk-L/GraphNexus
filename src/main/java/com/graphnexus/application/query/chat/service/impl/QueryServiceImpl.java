@@ -521,6 +521,8 @@ public class QueryServiceImpl implements QueryService {
             sb.append("⚠️ 以上掌握度为原始考试得分率（融合数据不可用），未做时间衰减加权。\n\n");
         }
 
+        log.info(sb.toString());
+
         return sb.toString();
     }
 
