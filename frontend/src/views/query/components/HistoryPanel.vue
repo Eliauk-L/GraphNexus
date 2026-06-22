@@ -286,6 +286,15 @@ function handlePageChange(page: number) {
   background: #fff;
 }
 
+/* 修复 NModal card 内部宽度不一致 */
+:deep(.n-card__content) {
+  width: 100%;
+}
+
+:deep(.n-spin-container) {
+  width: 100%;
+}
+
 .preview-content {
   width: 100%;
   min-height: 200px;
