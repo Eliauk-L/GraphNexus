@@ -4,6 +4,8 @@ import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.analysis.model.PruningRequest;
 import com.graphnexus.application.query.chat.intent.IntentRecognitionService;
 import com.graphnexus.application.query.chat.registry.PruningStrategyRegistry;
+import com.graphnexus.api.query.dto.history.HistoryQueryRequest;
+import com.graphnexus.api.query.dto.history.HistoryRecordVO;
 import com.graphnexus.common.LlmGateway;
 import com.graphnexus.application.query.chat.config.QueryProperties;
 import com.graphnexus.application.query.chat.model.QueryIntent;
@@ -13,6 +15,7 @@ import com.graphnexus.application.query.prompt.service.PromptTemplateService;
 import com.graphnexus.application.query.chat.service.QueryService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
+import com.graphnexus.common.PageResult;
 import com.graphnexus.application.graph.construction.model.GraphNodeData;
 import com.graphnexus.infrastructure.neo4j.node.StudentNode;
 import com.graphnexus.infrastructure.neo4j.repository.QueryGraphRepository;
@@ -24,10 +27,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.criteria.Predicate;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -744,5 +753,91 @@ public class QueryServiceImpl implements QueryService {
         } catch (Exception e) {
             return "{}";
         }
+    }
+
+    // ======================== 历史查询与导出 ========================
+
+    @Override
+    public PageResult<HistoryRecordVO> queryHistory(HistoryQueryRequest req) {
+        Specification<QueryTaskDO> spec = buildHistorySpec(req);
+        PageRequest pageable = PageRequest.of(req.pageNum() - 1, req.pageSize());
+        Page<QueryTaskDO> page = queryTaskRepository.findAll(spec, pageable);
+
+        List<HistoryRecordVO> records = page.getContent().stream()
+                .map(HistoryRecordVO::from)
+                .collect(Collectors.toList());
+
+        return new PageResult<>(records, page.getTotalElements(),
+                page.getNumber() + 1, page.getSize());
+    }
+
+    @Override
+    public QueryTaskDO exportSingle(String taskId) {
+        // UUID 格式校验（防路径遍历）
+        if (taskId == null || !taskId.matches("^[0-9a-fA-F-]{36}$")) {
+            throw new BusinessException(ErrorCode.A0021, "任务不存在: " + taskId);
+        }
+        return queryTaskRepository.findByTaskId(taskId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.A0021, "问答任务不存在: " + taskId));
+    }
+
+    @Override
+    public List<QueryTaskDO> exportBatch(HistoryQueryRequest req) {
+        Specification<QueryTaskDO> spec = buildHistorySpec(req);
+        long count = queryTaskRepository.count(spec);
+
+        if (count > 5_000) {
+            log.info("批量导出超限: count={}, filters={}", count, req);
+            throw new BusinessException(ErrorCode.A0023,
+                    "导出记录数超过上限（5000 条），当前匹配 " + count + " 条，请缩小筛选范围");
+        }
+
+        if (count == 0) {
+            return Collections.emptyList();
+        }
+
+        return queryTaskRepository.findAll(spec);
+    }
+
+    /**
+     * 根据筛选请求构建 JPA Specification 动态 where 链。
+     *
+     * <p>所有筛选参数可选；未传则不加该条件。按 createTime 降序排列。</p>
+     */
+    private Specification<QueryTaskDO> buildHistorySpec(HistoryQueryRequest req) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (req.studentName() != null && !req.studentName().isBlank()) {
+                predicates.add(cb.like(root.get("studentName"),
+                        "%" + req.studentName() + "%"));
+            }
+            if (req.studentNo() != null && !req.studentNo().isBlank()) {
+                predicates.add(cb.equal(root.get("studentNo"), req.studentNo()));
+            }
+            if (req.subject() != null && !req.subject().isBlank()) {
+                predicates.add(cb.equal(root.get("subject"), req.subject()));
+            }
+            if (req.status() != null && !req.status().isBlank()) {
+                try {
+                    QueryTaskStatus status = QueryTaskStatus.valueOf(req.status().toUpperCase());
+                    predicates.add(cb.equal(root.get("status"), status));
+                } catch (IllegalArgumentException ignored) {
+                    // 无效状态值：不加条件，查询返回空（因无匹配 status）
+                    predicates.add(cb.isNull(root.get("status")));
+                }
+            }
+            if (req.startDate() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createTime"),
+                        req.startDate().atStartOfDay()));
+            }
+            if (req.endDate() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("createTime"),
+                        req.endDate().atTime(LocalTime.MAX)));
+            }
+
+            query.orderBy(cb.desc(root.get("createTime")));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 }

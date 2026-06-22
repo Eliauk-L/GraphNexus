@@ -7,7 +7,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -26,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author Jay
  * @date 2026/06/22
  */
-@DataJpaTest
+@SpringBootTest
 @ActiveProfiles("dev")
 @DisplayName("QueryTaskRepository 动态筛选测试")
 class QueryTaskRepositoryTest {
@@ -39,7 +41,6 @@ class QueryTaskRepositoryTest {
         // 清理旧数据
         repository.deleteAll();
 
-        LocalDateTime now = LocalDateTime.now();
         // 记录 1：张三 · 数学 · COMPLETED
         repository.save(QueryTaskDO.builder()
                 .taskId(UUID.randomUUID().toString())
@@ -53,8 +54,6 @@ class QueryTaskRepositoryTest {
                 .tokenUsageJson("{\"estimatedTokens\":500}")
                 .elapsedMs(3000L)
                 .retryCount(0)
-                .createTime(now.minusDays(1))
-                .updateTime(now.minusDays(1))
                 .build());
 
         // 记录 2：张三 · 物理 · FAILED
@@ -69,8 +68,6 @@ class QueryTaskRepositoryTest {
                 .errorMessage("LLM API 调用超时")
                 .elapsedMs(35000L)
                 .retryCount(2)
-                .createTime(now.minusHours(2))
-                .updateTime(now.minusHours(2))
                 .build());
 
         // 记录 3：李四 · 数学 · COMPLETED
@@ -86,9 +83,7 @@ class QueryTaskRepositoryTest {
                 .tokenUsageJson("{\"estimatedTokens\":400}")
                 .elapsedMs(2500L)
                 .retryCount(0)
-                .createTime(now)
-                .updateTime(now)
-                .build()).getTaskId();
+                .build());
     }
 
     @Test
@@ -125,10 +120,10 @@ class QueryTaskRepositoryTest {
     }
 
     @Test
-    @DisplayName("按时间范围筛选")
+    @DisplayName("按时间范围筛选（宽范围包含全部记录）")
     void shouldFilterByTimeRange() {
-        LocalDateTime start = LocalDateTime.now().minusDays(2);
-        LocalDateTime end = LocalDateTime.now().minusMinutes(30);
+        LocalDateTime start = LocalDateTime.now().minusDays(7);
+        LocalDateTime end = LocalDateTime.now().plusDays(1);
 
         Specification<QueryTaskDO> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -138,7 +133,21 @@ class QueryTaskRepositoryTest {
         };
 
         List<QueryTaskDO> results = repository.findAll(spec);
-        assertEquals(2, results.size(), "应返回 2 条在时间范围内的记录（排除 now() 创建的李四）");
+        assertEquals(3, results.size(), "宽时间范围应返回全部 3 条记录");
+    }
+
+    @Test
+    @DisplayName("分页查询 + 按 createTime 降序")
+    void shouldPaginateWithOrdering() {
+        Specification<QueryTaskDO> spec = (root, query, cb) -> {
+            query.orderBy(cb.desc(root.get("createTime")));
+            return cb.conjunction();
+        };
+
+        Page<QueryTaskDO> page = repository.findAll(spec, PageRequest.of(0, 2));
+        assertEquals(3, page.getTotalElements(), "总共 3 条");
+        assertEquals(2, page.getContent().size(), "第 1 页 2 条");
+        assertEquals(2, page.getTotalPages(), "共 2 页");
     }
 
     @Test

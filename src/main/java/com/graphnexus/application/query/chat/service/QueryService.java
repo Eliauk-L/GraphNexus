@@ -1,7 +1,13 @@
 package com.graphnexus.application.query.chat.service;
 
+import com.graphnexus.api.query.dto.history.HistoryQueryRequest;
+import com.graphnexus.api.query.dto.history.HistoryRecordVO;
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.query.chat.model.QueryResultBO;
+import com.graphnexus.common.PageResult;
+import com.graphnexus.infrastructure.mysql.query.entity.QueryTaskDO;
+
+import java.util.List;
 
 /**
  * 智能问答服务接口 — 编排意图识别、图剪枝、Prompt 组装、LLM 调用的完整链路。
@@ -53,4 +59,30 @@ public interface QueryService {
      * @return 问答结果（含 LLM 答案或错误信息）
      */
     QueryResultBO chat(String question);
+
+    /**
+     * 分页查询历史诊断记录。
+     *
+     * @param req 筛选条件 + 分页参数（所有筛选字段可选）
+     * @return 分页结果（不含 answer 正文，见 DESIGN §2.4）
+     */
+    PageResult<HistoryRecordVO> queryHistory(HistoryQueryRequest req);
+
+    /**
+     * 导出单条诊断报告 — 返回完整 QueryTaskDO（含 answer），由 Controller 流式写响应。
+     *
+     * @param taskId 任务 UUID
+     * @return QueryTaskDO（含 answer）
+     * @throws com.graphnexus.common.exception.BusinessException A0021 任务不存在
+     */
+    QueryTaskDO exportSingle(String taskId);
+
+    /**
+     * 批量导出查询 — 按筛选条件返回全部匹配记录（不分页），由 Controller 写 Excel。
+     *
+     * @param req 筛选条件（不含分页参数）
+     * @return 匹配记录列表（不含 answer 正文列）
+     * @throws com.graphnexus.common.exception.BusinessException A0023 记录数超上限
+     */
+    List<QueryTaskDO> exportBatch(HistoryQueryRequest req);
 }
