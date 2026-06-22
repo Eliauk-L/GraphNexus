@@ -3,6 +3,7 @@ package com.graphnexus.application.graph.construction.model;
 import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
 import com.graphnexus.infrastructure.neo4j.node.GraphNode;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -16,9 +17,13 @@ public final class GraphDataConverter {
     private GraphDataConverter() {}
 
     public static GraphNodeData toNodeData(GraphNode node) {
-        Map<String, Object> properties = node.getProperties() != null
-                ? node.getProperties() : node.toProperties();
-        System.out.println(properties.toString());
+        // toProperties() 包含所有类型化字段（name/description/gradeLevel 等），
+        // getProperties() 是动态扩展字段容器（GraphNode 构造器初始化为空 HashMap）。
+        // 必须合并两者，否则只取 getProperties() 会丢失核心字段。
+        Map<String, Object> properties = new HashMap<>(node.toProperties());
+        if (node.getProperties() != null && !node.getProperties().isEmpty()) {
+            properties.putAll(node.getProperties());
+        }
         String label = extractLabel(node, properties);
         return new GraphNodeData(
                 node.getId(),
