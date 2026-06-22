@@ -32,18 +32,15 @@ const columns: DataTableColumns<TextbookVO> = [
     render(row) { return h(StatusPipeline, { status: row.status, failReason: row.failReason }) },
   },
   {
-    title: '上传时间', key: 'createTime', width: 160,
+    title: '上传时间', key: 'createTime', width: 140,
     render(row) { return formatTime(row.createTime) },
   },
   {
-    title: '操作', key: 'actions', width: 160,
+    title: '操作', key: 'actions', width: 140,
     render(row) {
       return h(NSpace, { size: 'small' }, () => [
         row.status === 'UPLOADED' || row.status === 'FAILED'
           ? h(BaseButton, { size: 'small', onClick: () => handleParse(row.documentId) }, () => '解析')
-          : null,
-        row.status === 'PARSED' || row.status === 'EXTRACTED' || row.status === 'COMPLETED'
-          ? h(BaseButton, { size: 'small', onClick: () => handleExtract(row.documentId) }, () => '图谱构建')
           : null,
         h(BaseButton, {
           variant: 'danger' as const, size: 'small',
@@ -78,15 +75,6 @@ async function handleParse(id: number) {
   try {
     await store.parse(id)
     message.success('已触发解析')
-  } catch {
-    // handled by store
-  }
-}
-
-async function handleExtract(id: number) {
-  try {
-    await store.extract(id)
-    message.success('已触发图谱构建')
   } catch {
     // handled by store
   }
