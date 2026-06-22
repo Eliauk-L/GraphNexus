@@ -10,6 +10,9 @@ const INTERMEDIATE_STATES: FileStatus[] = ['PARSING', 'EXTRACTING', 'FUSING']
 /** 最大轮询时长（毫秒），超时强制停止，防止异常情况空转 */
 const MAX_POLLING_DURATION = 5 * 60 * 1000 // 5 分钟
 
+/** 最小轮询窗口（毫秒），桥接 UPLOADED→PARSING 和 PARSED→EXTRACTING 等过渡间隙 */
+const MIN_POLLING_DURATION = 30 * 1000 // 30 秒
+
 export const useFileStore = defineStore('file', () => {
   const files = ref<TextbookVO[]>([])
   const total = ref(0)
@@ -123,13 +126,15 @@ export const useFileStore = defineStore('file', () => {
     isPolling.value = true
     pollingStartTime = Date.now()
     pollingTimer = setInterval(async () => {
+      const elapsed = pollingStartTime ? Date.now() - pollingStartTime : 0
       // 超过最大轮询时长 → 强制停止
-      if (pollingStartTime && Date.now() - pollingStartTime > MAX_POLLING_DURATION) {
+      if (elapsed > MAX_POLLING_DURATION) {
         stopPolling()
         return
       }
-      // 无活跃处理态文件 → 停止轮询
-      if (!hasIntermediateFiles.value) {
+      // 最小窗口内持续轮询，桥接 UPLOADED→PARSING / PARSED→EXTRACTING 过渡间隙
+      const inMinWindow = elapsed < MIN_POLLING_DURATION
+      if (!inMinWindow && !hasIntermediateFiles.value) {
         stopPolling()
         return
       }
