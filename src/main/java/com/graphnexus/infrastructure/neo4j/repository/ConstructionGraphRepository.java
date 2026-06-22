@@ -283,10 +283,11 @@ public class ConstructionGraphRepository {
     // ======================== 学科全景图查询 ========================
 
     /**
-     * 按学科查询知识图谱子图 — 返回该学科下所有 KnowledgePoint 及其依赖关系。
+     * 按学科查询知识图谱子图 — 返回该学科下 KnowledgePoint + Entity + Document 及依赖关系。
      *
-     * <p>Cypher 策略（ADR-032 D3）：从 Subject 节点出发，沿 BELONGS_TO_SUBJECT 反向
-     * 收集 KP，再 OPTIONAL MATCH PREREQUISITE_OF + CHILD_OF 扩展，DISTINCT 去重。</p>
+     * <p>从 Subject 节点出发，沿 BELONGS_TO_SUBJECT 收集 KP，再扩展：
+     * PREREQUISITE_OF（KP 依赖链）、CHILD_OF（分类层级）、
+     * ALIGNED_TO（实体对齐）、EXTRACTS（文档来源）。</p>
      */
     public List<GraphNode> findBySubject(String subjectName) {
         try {
@@ -295,7 +296,10 @@ public class ConstructionGraphRepository {
                     "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
                     "OPTIONAL MATCH (kp)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
                     "OPTIONAL MATCH (cat)-[:CHILD_OF]->(parentCat:KnowledgeCategory) " +
-                    "WITH collect(DISTINCT kp) + collect(DISTINCT nextKp) + collect(DISTINCT cat) + collect(DISTINCT parentCat) AS allNodes " +
+                    "OPTIONAL MATCH (kp)<-[:ALIGNED_TO]-(entity:Entity) " +
+                    "OPTIONAL MATCH (entity)<-[:EXTRACTS]-(doc) " +
+                    "WITH collect(DISTINCT kp) + collect(DISTINCT nextKp) + collect(DISTINCT cat) " +
+                    "   + collect(DISTINCT parentCat) + collect(DISTINCT entity) + collect(DISTINCT doc) AS allNodes " +
                     "UNWIND allNodes AS n " +
                     "WITH DISTINCT n WHERE n IS NOT NULL " +
                     "RETURN n ORDER BY labels(n)[0] " +
@@ -323,7 +327,7 @@ public class ConstructionGraphRepository {
     }
 
     /**
-     * 查询学科全景图的边 — BELONGS_TO_SUBJECT + PREREQUISITE_OF + CHILD_OF。
+     * 查询学科全景图的边 — PREREQUISITE_OF + CHILD_OF + ALIGNED_TO + EXTRACTS。
      */
     public List<GraphEdge> findEdgesBySubject(String subjectName) {
         try {
@@ -332,7 +336,10 @@ public class ConstructionGraphRepository {
                     "OPTIONAL MATCH (kp)-[r1:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
                     "OPTIONAL MATCH (kp)-[r2:CHILD_OF]->(cat:KnowledgeCategory) " +
                     "OPTIONAL MATCH (cat)-[r3:CHILD_OF]->(parentCat:KnowledgeCategory) " +
-                    "WITH collect(DISTINCT r1) + collect(DISTINCT r2) + collect(DISTINCT r3) AS allRels " +
+                    "OPTIONAL MATCH (kp)<-[r4:ALIGNED_TO]-(entity:Entity) " +
+                    "OPTIONAL MATCH (entity)<-[r5:EXTRACTS]-(doc) " +
+                    "WITH collect(DISTINCT r1) + collect(DISTINCT r2) + collect(DISTINCT r3) " +
+                    "   + collect(DISTINCT r4) + collect(DISTINCT r5) AS allRels " +
                     "UNWIND allRels AS r " +
                     "WITH DISTINCT r WHERE r IS NOT NULL " +
                     "RETURN startNode(r).id AS sourceNodeId, endNode(r).id AS targetNodeId, type(r) AS edgeType"

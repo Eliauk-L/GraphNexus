@@ -42,7 +42,9 @@ export function listSubjects(): Promise<string[]> {
   return client.get('/graph/construction/subjects')
 }
 
-/** 学科全景图 */
+/** 学科全景图（数据量大，单独设长超时） */
 export function getSubjectGraph(subjectName: string): Promise<GraphSubgraphVO> {
-  return client.get(`/graph/construction/subject/${encodeURIComponent(subjectName)}`)
+  return client.get(`/graph/construction/subject/${encodeURIComponent(subjectName)}`, {
+    timeout: 30000,
+  })
 }

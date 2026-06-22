@@ -65,12 +65,12 @@ export function toGraphData(
 
 // ── 文档子图转换（GraphSubgraphVO · 轻量）──
 
-/** 文档子图展示的节点类型 */
-const DOCUMENT_SUBGRAPH_NODE_TYPES = new Set(['Document', 'Entity', 'KnowledgePoint'])
+/** 子图展示的节点类型（文档子图和学科全景图通用） */
+const SUBGRAPH_NODE_TYPES = new Set(['Document', 'Entity', 'KnowledgePoint', 'KnowledgeCategory'])
 
 function transformDocumentSubgraph(vo: GraphSubgraphVO): G6GraphData {
   // 优先展示 Entity + KnowledgePoint，若过滤后为空则展示全部
-  let filteredNodes = vo.nodes.filter((n) => DOCUMENT_SUBGRAPH_NODE_TYPES.has(n.nodeType))
+  let filteredNodes = vo.nodes.filter((n) => SUBGRAPH_NODE_TYPES.has(n.nodeType))
   if (filteredNodes.length === 0) {
     filteredNodes = vo.nodes
   }
