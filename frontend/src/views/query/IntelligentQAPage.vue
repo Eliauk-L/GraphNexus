@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useQueryStore } from './queryStore'
 import ChatInput from './components/ChatInput.vue'
 import MarkdownReport from './components/MarkdownReport.vue'
 import TokenUsageBar from './components/TokenUsageBar.vue'
 import HistoryPanel from './components/HistoryPanel.vue'
+import DiagnosisSubgraph from './components/DiagnosisSubgraph.vue'
+import DiagnosisNodeDetail from './components/DiagnosisNodeDetail.vue'
 import { Loader2, AlertCircle, X } from '@lucide/vue'
 
 const store = useQueryStore()
@@ -14,6 +16,13 @@ function handleSend(question: string) {
 }
 
 const showErrorDetail = ref(false)
+
+// 诊断完成后自动加载子图
+watch(() => store.status, (newStatus) => {
+  if (newStatus === 'completed' && store.taskId) {
+    store.loadSubgraph(store.taskId)
+  }
+})
 </script>
 
 <template>
@@ -61,11 +70,24 @@ const showErrorDetail = ref(false)
         </div>
         <MarkdownReport :content="item.answer" :output-format="store.outputFormat" />
         <TokenUsageBar :token-usage="store.tokenUsage" />
+        <!-- 子图可视化：仅在最后一条诊断完成时展示 -->
+        <DiagnosisSubgraph
+          v-if="idx === store.history.length - 1 && store.status === 'completed' && store.taskId"
+          :task-id="store.taskId"
+          @node-click="(node) => store.selectedKpNode = node"
+        />
       </div>
     </div>
 
     <!-- 历史记录面板 -->
     <HistoryPanel />
+
+    <!-- 子图节点详情面板 -->
+    <DiagnosisNodeDetail
+      :node="store.selectedKpNode"
+      :visible="store.selectedKpNode !== null"
+      @close="store.selectedKpNode = null"
+    />
   </div>
 </template>
 

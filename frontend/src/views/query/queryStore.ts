@@ -197,6 +197,9 @@ export const useQueryStore = defineStore('query', () => {
     currentQuestion, answer, taskId, intent, outputFormat, status, tokenUsage,
     errorMessage, history,
     sendChat, sendAsync, stopPolling, clearError,
+    // subgraph visualization
+    subgraphData, subgraphState, selectedKpNode,
+    loadSubgraph, clearSubgraph,
     // history
     historyRecords, historyTotal, historyLoading, historyPage, historyPageSize,
     historyFilters, loadHistory, resetHistoryFilters,
