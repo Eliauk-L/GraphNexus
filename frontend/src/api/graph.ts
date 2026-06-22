@@ -12,17 +12,27 @@ export function getDocumentSubgraph(documentId: number): Promise<GraphSubgraphVO
 }
 
 /** 查询 PageRank */
-export function queryPageRank(nodeTypes?: string[], edgeTypes?: string[]): Promise<MetricResultVO[]> {
+export function queryPageRank(nodeTypes?: string[], edgeTypes?: string[], subject?: string): Promise<MetricResultVO[]> {
   return client.get('/graph/metrics/pagerank', {
-    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(',') },
+    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(','), subject },
     paramsSerializer: { indexes: null },
   })
 }
 
 /** 查询度中心性 */
-export function queryDegree(nodeTypes?: string[], edgeTypes?: string[]): Promise<MetricResultVO[]> {
+export function queryDegree(nodeTypes?: string[], edgeTypes?: string[], subject?: string): Promise<MetricResultVO[]> {
   return client.get('/graph/metrics/degree', {
-    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(',') },
+    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(','), subject },
     paramsSerializer: { indexes: null },
   })
+}
+
+/** 学科列表 */
+export function listSubjects(): Promise<string[]> {
+  return client.get('/graph/construction/subjects')
+}
+
+/** 学科全景图 */
+export function getSubjectGraph(subjectName: string): Promise<GraphSubgraphVO> {
+  return client.get(`/graph/construction/subject/${encodeURIComponent(subjectName)}`)
 }
