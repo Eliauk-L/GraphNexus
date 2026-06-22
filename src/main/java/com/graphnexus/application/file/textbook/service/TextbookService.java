@@ -40,4 +40,15 @@ public interface TextbookService {
      * @param filePath   文件在 MinIO 中的完整访问路径
      */
     void finalizeDeletion(Long documentId, String filePath);
+
+    /**
+     * 保存图谱构建/抽取失败原因到文档记录。
+     *
+     * <p>从 {@code TextbookParsedEventListener} 中抽取为独立 {@code @Transactional} 方法，
+     * 消除监听器内 {@code @Transactional} 自调用穿透问题（ADR-028 规则 5+6）。</p>
+     *
+     * @param documentId  文档 ID
+     * @param errorMessage 失败原因（会自动截断）
+     */
+    void saveFailReason(Long documentId, String errorMessage);
 }

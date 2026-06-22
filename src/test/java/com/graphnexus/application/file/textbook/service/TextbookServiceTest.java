@@ -15,18 +15,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
@@ -37,12 +37,13 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * TextbookService 单元测试（V3 — 事件通过 TransactionSynchronization.afterCommit 发布）。
+ * TextbookService 单元测试（V4 — ADR-028 短事务 + 事务外事件，移除 afterCommit 回调）。
  *
  * @author Jay
- * @date 2026/06/12
+ * @date 2026/06/22
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("TextbookService 业务逻辑")
 class TextbookServiceTest {
 
@@ -70,6 +71,12 @@ class TextbookServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private PlatformTransactionManager txManager;
+
+    @Mock
+    private TransactionStatus txStatus;
+
     @InjectMocks
     private TextbookServiceImpl fileService;
 
@@ -89,6 +96,9 @@ class TextbookServiceTest {
                 .pageCount(5)
                 .status(FileStatus.UPLOADED)
                 .build();
+
+        // 使 TransactionTemplate 可在单元测试中工作（mock 事务管理器为 no-op）
+        when(txManager.getTransaction(any())).thenReturn(txStatus);
     }
 
     // ======================== 上传测试 ========================
@@ -132,46 +142,35 @@ class TextbookServiceTest {
         assertEquals("A0004", ex.getErrorCode());
     }
 
-    // ======================== 解析测试 ========================
+    // ======================== 解析测试（ADR-028：短事务→无事务→短事务→事务外事件） ========================
 
     @Test
-    @DisplayName("解析成功：从 MinIO 读取 → 解析 → 入库，通过 TransactionSynchronization 发布事件")
+    @DisplayName("解析成功：短事务(PARSING)→无事务(MinIO+解析)→短事务(PARSED)→事务外事件")
     void parseShouldSucceed() {
+        // 阶段 1 findById + save (短事务内)
         when(textbookRepository.findById(1L)).thenReturn(Optional.of(sampleDoc));
+        // 阶段 2 findById for file metadata
         when(fileStorageService.extractObjectKey(anyString())).thenReturn("textbooks/abc123.pdf");
         when(fileStorageService.getFile(anyString())).thenReturn(new ByteArrayInputStream("content".getBytes()));
         when(fileParserRegistry.getParsers(anyString(), eq("TEXTBOOK")))
                 .thenReturn(List.of(pdfBoxTextbookParser));
         when(pdfBoxTextbookParser.parse(any(byte[].class)))
                 .thenReturn(new ParseResult("parsed text", 10));
-        when(textbookRepository.saveAndFlush(any())).thenReturn(sampleDoc);
+        when(textbookRepository.save(any())).thenReturn(sampleDoc);
 
-        // Mock TransactionSynchronizationManager to simulate active transaction
-        try (MockedStatic<TransactionSynchronizationManager> tsMock =
-                     mockStatic(TransactionSynchronizationManager.class)) {
-            tsMock.when(TransactionSynchronizationManager::isSynchronizationActive).thenReturn(true);
-            ArgumentCaptor<TransactionSynchronization> syncCaptor =
-                    ArgumentCaptor.forClass(TransactionSynchronization.class);
+        ParseResult result = fileService.parse(1L);
 
-            ParseResult result = fileService.parse(1L);
+        assertNotNull(result);
+        assertEquals("parsed text", result.textContent());
+        assertEquals(10, result.pageCount());
+        verify(fileStorageService).getFile("textbooks/abc123.pdf");
+        verify(pdfBoxTextbookParser).parse(any(byte[].class));
 
-            assertNotNull(result);
-            assertEquals("parsed text", result.textContent());
-            assertEquals(10, result.pageCount());
-            verify(fileStorageService).getFile("textbooks/abc123.pdf");
-            verify(pdfBoxTextbookParser).parse(any(byte[].class));
-
-            // 验证 TransactionSynchronization 已注册
-            tsMock.verify(() ->
-                    TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
-
-            // 模拟 afterCommit → 事件应发布
-            syncCaptor.getValue().afterCommit();
-            verify(eventPublisher).publishEvent(argThat(e ->
-                    e instanceof com.graphnexus.application.file.textbook.event.TextbookParsedEvent
-                    && ((com.graphnexus.application.file.textbook.event.TextbookParsedEvent) e)
-                            .getDocumentId().equals(1L)));
-        }
+        // 事件直接在事务外发布（不再经过 afterCommit · AC-5）
+        verify(eventPublisher).publishEvent(argThat(e ->
+                e instanceof com.graphnexus.application.file.textbook.event.TextbookParsedEvent
+                && ((com.graphnexus.application.file.textbook.event.TextbookParsedEvent) e)
+                        .getDocumentId().equals(1L)));
     }
 
     @Test
@@ -196,19 +195,14 @@ class TextbookServiceTest {
                 .thenThrow(new RuntimeException("MinerU failed"));
         when(pdfBoxTextbookParser.parse(any(byte[].class)))
                 .thenReturn(new ParseResult("fallback text", 5));
-        when(textbookRepository.saveAndFlush(any())).thenReturn(sampleDoc);
+        when(textbookRepository.save(any())).thenReturn(sampleDoc);
 
-        try (MockedStatic<TransactionSynchronizationManager> tsMock =
-                     mockStatic(TransactionSynchronizationManager.class)) {
-            tsMock.when(TransactionSynchronizationManager::isSynchronizationActive).thenReturn(true);
+        ParseResult result = fileService.parse(1L);
 
-            ParseResult result = fileService.parse(1L);
-
-            assertNotNull(result);
-            assertEquals("fallback text", result.textContent());
-            verify(minerUTextbookParser).parse(any(byte[].class));
-            verify(pdfBoxTextbookParser).parse(any(byte[].class));
-        }
+        assertNotNull(result);
+        assertEquals("fallback text", result.textContent());
+        verify(minerUTextbookParser).parse(any(byte[].class));
+        verify(pdfBoxTextbookParser).parse(any(byte[].class));
     }
 
     @Test
@@ -250,39 +244,29 @@ class TextbookServiceTest {
         assertEquals("A0006", ex.getErrorCode());
     }
 
-    // ======================== 删除测试（事件通过 TransactionSynchronization 发布） ========================
+    // ======================== 删除测试（ADR-028：短事务→事务外事件） ========================
 
     @Test
-    @DisplayName("删除：进入 DELETING 状态并通过 TransactionSynchronization.afterCommit 发布事件")
-    void deleteShouldMarkDeletingAndRegisterSynchronization() {
+    @DisplayName("删除：短事务(DELETING)→事务外直接发布事件（AC-4）")
+    void deleteShouldMarkDeletingAndPublishEvent() {
         when(textbookRepository.findById(1L)).thenReturn(Optional.of(sampleDoc));
-        when(textbookRepository.saveAndFlush(any(TextbookDO.class))).thenReturn(sampleDoc);
+        when(textbookRepository.save(any(TextbookDO.class))).thenReturn(sampleDoc);
 
-        try (MockedStatic<TransactionSynchronizationManager> tsMock =
-                     mockStatic(TransactionSynchronizationManager.class)) {
-            tsMock.when(TransactionSynchronizationManager::isSynchronizationActive).thenReturn(true);
-            ArgumentCaptor<TransactionSynchronization> syncCaptor =
-                    ArgumentCaptor.forClass(TransactionSynchronization.class);
+        assertDoesNotThrow(() -> fileService.deleteTextBook(1L));
 
-            assertDoesNotThrow(() -> fileService.deleteTextBook(1L));
+        // 验证 DELETING 状态已设置（在短事务内通过 save 持久化）
+        assertEquals(FileStatus.DELETING, sampleDoc.getStatus());
+        verify(textbookRepository).save(sampleDoc);
 
-            // 验证 DELETING 状态已设置
-            assertEquals(FileStatus.DELETING, sampleDoc.getStatus());
+        // 事件在事务外直接发布（不再经过 afterCommit · AC-5）
+        verify(eventPublisher).publishEvent(argThat(e ->
+                e instanceof com.graphnexus.application.file.textbook.event.TextbookDeletedEvent
+                && ((com.graphnexus.application.file.textbook.event.TextbookDeletedEvent) e)
+                        .getDocumentId().equals(1L)));
 
-            // 验证 TransactionSynchronization 已注册
-            tsMock.verify(() ->
-                    TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
-
-            // 模拟 afterCommit → 事件应发布
-            syncCaptor.getValue().afterCommit();
-            verify(eventPublisher).publishEvent(argThat(e ->
-                    e instanceof com.graphnexus.application.file.textbook.event.TextbookDeletedEvent
-                    && ((com.graphnexus.application.file.textbook.event.TextbookDeletedEvent) e)
-                            .getDocumentId().equals(1L)));
-        }
-
-        // 级联操作（MinIO、Neo4j、物理删除）由监听器完成，service 层不再直接调用
+        // 级联操作由监听器完成
         verify(textbookRepository, never()).delete(any());
+        // 不再使用 TransactionSynchronizationManager（AC-5）
     }
 
     @Test
@@ -300,12 +284,12 @@ class TextbookServiceTest {
     void deleteAlreadyDeletingShouldBeIdempotent() {
         sampleDoc.setStatus(FileStatus.DELETING);
         when(textbookRepository.findById(1L)).thenReturn(Optional.of(sampleDoc));
+        when(textbookRepository.save(any(TextbookDO.class))).thenReturn(sampleDoc);
 
         fileService.deleteTextBook(1L);
 
-        // 不应再次 saveAndFlush
-        verify(textbookRepository, never()).saveAndFlush(any());
-        // 不应与 TransactionSynchronizationManager 交互（提前返回）
+        // 不应发布事件（DELETING 已存在）
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     // ======================== finalizeDeletion 测试 ========================
@@ -320,9 +304,7 @@ class TextbookServiceTest {
 
         fileService.finalizeDeletion(1L, sampleDoc.getFilePath());
 
-        // MinIO 文件已删除（最后引用）
         verify(fileStorageService).deleteFile("textbooks/abc123.pdf");
-        // MySQL 物理删除
         verify(textbookRepository).delete(sampleDoc);
     }
 
@@ -331,9 +313,9 @@ class TextbookServiceTest {
     void finalizeDeletionShouldSkipWhenDocNotFound() {
         when(textbookRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertDoesNotThrow(() -> fileService.finalizeDeletion(1L, "http://localhost:9000/bucket/textbooks/abc123.pdf"));
+        assertDoesNotThrow(() ->
+                fileService.finalizeDeletion(1L, "http://localhost:9000/bucket/textbooks/abc123.pdf"));
 
-        // 不应尝试删除 MinIO 文件或 MySQL 记录
         verify(fileStorageService, never()).deleteFile(anyString());
         verify(textbookRepository, never()).delete(any());
     }
@@ -344,13 +326,11 @@ class TextbookServiceTest {
         when(textbookRepository.findById(1L)).thenReturn(Optional.of(sampleDoc));
         when(fileStorageService.extractObjectKey(anyString())).thenReturn("textbooks/abc123.pdf");
         when(textbookRepository.countByFilePathAndStatusNot(anyString(), eq(FileStatus.DELETING)))
-                .thenReturn(3L); // 包括当前记录还有 2 条其他引用
+                .thenReturn(3L);
 
         fileService.finalizeDeletion(1L, sampleDoc.getFilePath());
 
-        // 不应删除 MinIO 文件（有其他引用）
         verify(fileStorageService, never()).deleteFile(anyString());
-        // 仍应执行 MySQL 物理删除
         verify(textbookRepository).delete(sampleDoc);
     }
 }

@@ -14,11 +14,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.neo4j.core.transaction.Neo4jTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
@@ -28,6 +34,7 @@ import static org.mockito.Mockito.when;
  * @date 2026/06/20
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("ConstructionService 业务校验测试")
 class ConstructionServiceTest {
 
@@ -43,6 +50,15 @@ class ConstructionServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private PlatformTransactionManager txManager;
+
+    @Mock
+    private Neo4jTransactionManager neo4jTransactionManager;
+
+    @Mock
+    private TransactionStatus txStatus;
+
     @InjectMocks
     private ConstructionServiceImpl constructionService;
 
@@ -52,6 +68,9 @@ class ConstructionServiceTest {
 
     @BeforeEach
     void setUp() {
+        // 使 TransactionTemplate 可在单元测试中工作（mock 事务管理器为 no-op · ADR-028）
+        when(txManager.getTransaction(any())).thenReturn(txStatus);
+
         completedDoc = new TextbookDO();
         completedDoc.setId(1L);
         completedDoc.setName("test.pdf");

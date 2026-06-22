@@ -22,8 +22,11 @@ import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepositor
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.neo4j.core.transaction.Neo4jTransactionManager;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -37,8 +40,14 @@ import java.util.stream.Collectors;
  * {@code redirectEdges} 会把所有 {@code ALIGNED_TO} 边（Entity→KP）自动重定向到规范 KP，
  * 因此无需独立的跨文档对齐阶段。单文档内 Entity→KP 对齐由 LLM 抽取产出。</p>
  *
- * <p>Neo4j 写入不在 Spring {@code @Transactional} 范围内。
- * 阶段二融合原子性由融合服务内部 Neo4j 事务保证（见 ADR-020）。</p>
+ * <p><b>事务策略（ADR-028）</b>：
+ * <ul>
+ *   <li>MySQL 状态变更：短事务（{@link TransactionTemplate} + JPA TM）</li>
+ *   <li>LLM 抽取：无事务（ADR-028 规则 2）</li>
+ *   <li>Neo4j 写入：独立 {@link TransactionTemplate} + {@link Neo4jTransactionManager}（ADR-028 规则 3）</li>
+ *   <li>事件发布：事务外（ADR-028 规则 4）</li>
+ *   <li>Neo4j 失败补偿：短事务回退 MySQL 状态（ADR-029）</li>
+ * </ul>
  *
  * @author Jay
  * @date 2026/06/20
@@ -52,60 +61,105 @@ public class ConstructionServiceImpl implements ConstructionService {
     private final ExtractionService extractionService;
     private final ConstructionGraphRepository constructionGraphRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final PlatformTransactionManager txManager;
+    private final Neo4jTransactionManager neo4jTransactionManager;
 
     /**
      * 执行两阶段流水线：图谱构建 → 图谱融合。
+     *
+     * <p>事务拆分（ADR-028）：短事务(EXTRACTING) → 无事务(LLM) → Neo4j Tx(构建) → 短事务(EXTRACTED) → 事务外事件。</p>
      */
     @Override
-    @Transactional
     public ExtractionResultBO extract(Long documentId) {
-        TextbookDO doc = textbookRepository.findByIdAndStatusNot(documentId, FileStatus.DELETING)
-                .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: " + documentId));
+        // ===== 阶段 1：短事务 — 校验 + 状态→EXTRACTING（ADR-028 规则 1）=====
 
-        validateDocStatus(doc);
-        doc.setStatus(FileStatus.EXTRACTING);
-        textbookRepository.saveAndFlush(doc);
+        TransactionTemplate jpaTx = new TransactionTemplate(txManager);
+        String subjectName = jpaTx.execute(status -> {
+            TextbookDO doc = textbookRepository.findByIdAndStatusNot(documentId, FileStatus.DELETING)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
+                            "文档不存在: " + documentId));
+
+            validateDocStatus(doc);
+            doc.setStatus(FileStatus.EXTRACTING);
+            textbookRepository.save(doc);
+            log.info("extract 触发: id={}, status→EXTRACTING", documentId);
+            return doc.getSubject();
+        });
+        // EXTRACTING 已提交 → 前端轮询可见
+
+        // ===== 阶段 2：无事务 — LLM 抽取（ADR-028 规则 2）=====
+
+        TextbookDO docMeta = textbookRepository.findByIdAndStatusNot(documentId, FileStatus.DELETING)
+                .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
+                        "文档不存在: " + documentId));
 
         String neo4jDocumentId = String.valueOf(documentId);
-        String subjectName = doc.getSubject();
 
-        // LLM 抽取（含单文档内 Entity→KP 的 ALIGNED_TO 边）
-        ExtractionService.ExtractionResult extracted = extractionService.extract(
-                doc.getTextContent(), doc.getName(), subjectName,
-                doc.getPageCount(), neo4jDocumentId);
+        ExtractionService.ExtractionResult extracted;
+        try {
+            extracted = extractionService.extract(
+                    docMeta.getTextContent(), docMeta.getName(), subjectName,
+                    docMeta.getPageCount(), neo4jDocumentId);
+        } catch (Exception e) {
+            log.error("LLM 抽取失败: documentId={}, {}", documentId, e.getMessage());
+            failExtraction(documentId, "LLM抽取失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.B0001, "LLM 抽取失败: " + e.getMessage());
+        }
 
-        SubjectNode subjectNode = constructionGraphRepository.findOrCreateSubject(subjectName);
+        // ===== 阶段 3：Neo4j 独立事务 — 阶段一构建（ADR-028 规则 3 + D10）=====
 
-        // ==================== 阶段一：图谱构建 ====================
-        ExtractionResultBO result = phase1_build(doc, extracted, subjectNode, neo4jDocumentId);
+        TransactionTemplate neo4jTx = new TransactionTemplate(neo4jTransactionManager);
+        ExtractionResultBO result;
+        try {
+            result = neo4jTx.execute(status -> {
+                SubjectNode subjectNode = constructionGraphRepository.findOrCreateSubject(subjectName);
+                return phase1_build(neo4jDocumentId, subjectName, subjectNode, extracted);
+            });
+        } catch (Exception e) {
+            log.error("Neo4j 图谱构建失败: documentId={}, {}", documentId, e.getMessage());
+            failExtraction(documentId, "图谱构建失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.B0001, "图谱构建失败: " + e.getMessage());
+        }
 
-        // 图结构已变更（新节点/边已写入 Neo4j），发布事件触发指标缓存失效
+        // ===== 阶段 4：短事务 — 状态→EXTRACTED（ADR-028 规则 1）=====
+
+        completeExtraction(documentId, result);
+
+        // ===== 阶段 5：事务外发布事件（ADR-028 规则 4）=====
+
         eventPublisher.publishEvent(new GraphChangedEvent(this));
 
-        // ==================== 阶段二：图谱融合（事件驱动） ====================
-        // 跨文档实体对齐由融合隐式完成：KP 合并时 ALIGNED_TO 边自动重定向到规范 KP
         List<String> affectedKpNames = extracted.knowledgePoints().stream()
                 .map(kp -> kp.getName())
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        // 发布 GraphConstructedEvent（替代直接调用融合服务 · DESIGN D5/D11）
         eventPublisher.publishEvent(new GraphConstructedEvent(
                 this, GraphConstructedEvent.SOURCE_DOCUMENT, GraphConstructedEvent.MODE_INCREMENTAL,
-                doc.getSubject(), affectedKpNames, documentId, null));
-        // 重读文档状态（监听器同 tx JPA 一级缓存，同一托管实例 · D3）
-        if (doc.getStatus() == FileStatus.EXTRACTED && doc.getFailReason() != null) {
-            result.setFusionWarning(doc.getFailReason());
+                subjectName, affectedKpNames, documentId, null));
+
+        // 重读文档状态（GraphConstructedEventListener 可能已修改 · 事务外）
+        TextbookDO finalDoc = textbookRepository.findById(documentId).orElse(null);
+        if (finalDoc != null && finalDoc.getStatus() == FileStatus.EXTRACTED
+                && finalDoc.getFailReason() != null) {
+            result.setFusionWarning(finalDoc.getFailReason());
         }
 
         return result;
     }
 
     /**
-     * 阶段一：图谱构建 — 单文档内节点/边 + SubjectNode 写入 Neo4j。
+     * 阶段一：图谱构建 — 单文档内节点/边 + SubjectNode 写入 Neo4j（在 Neo4j 事务内执行）。
      */
-    private ExtractionResultBO phase1_build(TextbookDO doc, ExtractionService.ExtractionResult extracted,
-                                            SubjectNode subjectNode, String neo4jDocumentId) {
+    private ExtractionResultBO phase1_build(String neo4jDocumentId, String subjectName,
+                                            SubjectNode subjectNode,
+                                            ExtractionService.ExtractionResult extracted) {
+        // Re-fetch doc for name/pageCount (inside Neo4j tx, no JPA tx context)
+        TextbookDO doc = textbookRepository.findByIdAndStatusNot(
+                Long.parseLong(neo4jDocumentId), FileStatus.DELETING)
+                .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
+                        "文档不存在: " + neo4jDocumentId));
+
         FileNode documentNode = new FileNode(doc.getName(), doc.getPageCount(), neo4jDocumentId);
 
         constructionGraphRepository.deleteByDocumentId(neo4jDocumentId);
@@ -137,9 +191,35 @@ public class ConstructionServiceImpl implements ConstructionService {
         log.info("阶段一[图谱构建]完成：docId={}, entities={}, kp={}, edges={}",
                 doc.getId(), result.getEntityCount(), result.getKnowledgePointCount(), result.getEdgeCount());
 
-        doc.setStatus(FileStatus.EXTRACTED);
-        textbookRepository.saveAndFlush(doc);
         return result;
+    }
+
+    /**
+     * 短事务：抽取失败 → 回退状态到 PARSED + failReason（ADR-029 跨存储补偿）。
+     */
+    private void failExtraction(Long documentId, String reason) {
+        TransactionTemplate jpaTx = new TransactionTemplate(txManager);
+        jpaTx.executeWithoutResult(status -> {
+            textbookRepository.findById(documentId).ifPresent(doc -> {
+                doc.setStatus(FileStatus.PARSED);
+                doc.setFailReason(truncate(reason, 300));
+                textbookRepository.save(doc);
+                log.info("抽取失败，状态回退 PARSED: id={}, reason={}", documentId, reason);
+            });
+        });
+    }
+
+    /**
+     * 短事务：图谱构建完成 → 状态 EXTRACTED（ADR-028 规则 1）。
+     */
+    private void completeExtraction(Long documentId, ExtractionResultBO result) {
+        TransactionTemplate jpaTx = new TransactionTemplate(txManager);
+        jpaTx.executeWithoutResult(status -> {
+            textbookRepository.findById(documentId).ifPresent(doc -> {
+                doc.setStatus(FileStatus.EXTRACTED);
+                textbookRepository.save(doc);
+            });
+        });
     }
 
     private void validateDocStatus(TextbookDO doc) {
@@ -177,5 +257,10 @@ public class ConstructionServiceImpl implements ConstructionService {
                 .nodes(nodes.stream().map(GraphDataConverter::toNodeData).collect(Collectors.toList()))
                 .edges(edges.stream().map(GraphDataConverter::toEdgeData).collect(Collectors.toList()))
                 .build();
+    }
+
+    private String truncate(String s, int maxLen) {
+        if (s == null) return "";
+        return s.length() <= maxLen ? s : s.substring(0, maxLen) + "...";
     }
 }

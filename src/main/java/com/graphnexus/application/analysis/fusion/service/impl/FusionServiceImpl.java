@@ -225,7 +225,7 @@ public class FusionServiceImpl implements FusionService {
 
     private void updateLogFailed(FusionLogDO logEntry) {
         try {
-            logEntry.setStatus("COMPLETED");
+            logEntry.setStatus("FAILED");
             fusionLogRepository.save(logEntry);
         } catch (Exception ignored) {
             log.warn("更新融合日志失败状态时出错: {}", ignored.getMessage());

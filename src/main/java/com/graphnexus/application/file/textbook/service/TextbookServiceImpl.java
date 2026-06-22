@@ -20,9 +20,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
@@ -37,6 +37,15 @@ import java.util.List;
  * 由图谱构建模块的 {@code TextbookParsedEventListener} 监听并自动触发
  * 两阶段流水线（构建→融合）。教材模块仅依赖自身事件类 + ApplicationEventPublisher。</p>
  *
+ * <p><b>事务策略（ADR-028）</b>：
+ * <ul>
+ *   <li>上传：委托 {@link TextbookUploadService}（自管理事务）</li>
+ *   <li>解析：短事务（状态变更）→ 无事务（MinIO + 解析器）→ 短事务（状态变更）→ 事务外事件</li>
+ *   <li>删除：短事务（状态→DELETING）→ 事务外事件</li>
+ *   <li>查询：{@code @Transactional(readOnly = true)} 保持不变</li>
+ * </ul>
+ * 已消除 {@code TransactionSynchronizationManager.registerSynchronization()} afterCommit 回调。</p>
+ *
  * @author Jay
  * @date 2026/06/12
  */
@@ -50,56 +59,69 @@ public class TextbookServiceImpl implements TextbookService {
     private final TextbookUploadService uploadService;
     private final FileParserRegistry fileParserRegistry;
     private final ApplicationEventPublisher eventPublisher;
+    private final PlatformTransactionManager txManager;
 
-    // ======================== 上传（仅存储 + 入库） ========================
+    // ======================== 上传（委托，自管理事务） ========================
 
     @Override
-    @Transactional
     public TextbookBO upload(MultipartFile file, String subject) {
         return (TextbookBO) uploadService.upload(file, subject);
     }
 
-    // ======================== 解析（前端主动调用） ========================
+    // ======================== 解析（短事务→无事务→短事务→事务外事件） ========================
 
     @Override
-    @Transactional
     public ParseResult parse(Long documentId) {
-        TextbookDO doc = textbookRepository.findById(documentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.A0006, "文档不存在: id=" + documentId));
+        // ===== 阶段 1：短事务 — 校验 + 状态→PARSING（ADR-028 规则 1）=====
 
-        FileStatus status = doc.getStatus();
-        log.info("parse 触发: id={}, currentStatus={}", documentId, status);
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+        tx.executeWithoutResult(status -> {
+            TextbookDO doc = textbookRepository.findById(documentId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
+                            "文档不存在: id=" + documentId));
 
-        if (status == FileStatus.PARSING) {
-            throw new BusinessException(ErrorCode.A0009, "文档正在解析中，请稍后再试");
-        }
-        if (status == FileStatus.DELETING) {
-            throw new BusinessException(ErrorCode.A0006, "文档正在删除中，无法解析: id=" + documentId);
-        }
+            FileStatus currentStatus = doc.getStatus();
+            log.info("parse 触发: id={}, currentStatus={}", documentId, currentStatus);
 
-        // 从 MinIO 读取文件
+            if (currentStatus == FileStatus.PARSING) {
+                throw new BusinessException(ErrorCode.A0009, "文档正在解析中，请稍后再试");
+            }
+            if (currentStatus == FileStatus.DELETING) {
+                throw new BusinessException(ErrorCode.A0006,
+                        "文档正在删除中，无法解析: id=" + documentId);
+            }
+
+            doc.setStatus(FileStatus.PARSING);
+            doc.setFailReason(null);
+            textbookRepository.save(doc);
+        });
+        // PARSING 已提交 → 前端轮询可见
+
+        // ===== 阶段 2：无事务 — MinIO 读取 + 解析器链（ADR-028 规则 2）=====
+
+        // 重新获取文档元数据（实体在阶段 1 事务外已 detached）
+        TextbookDO docMeta = textbookRepository.findById(documentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
+                        "文档不存在: id=" + documentId));
+
         byte[] rawBytes;
         try (InputStream is = fileStorageService.getFile(
-                fileStorageService.extractObjectKey(doc.getFilePath()))) {
+                fileStorageService.extractObjectKey(docMeta.getFilePath()))) {
             rawBytes = toByteArray(is);
         } catch (IOException e) {
+            // MinIO 失败 → 短事务回退状态
+            failParsing(documentId, "文件读取失败: " + e.getMessage());
             throw new BusinessException(ErrorCode.B0001, "文件读取失败", "文件存储服务暂时不可用");
         }
 
-        // 获取解析器链
-        String filename = doc.getName() + (doc.getFileType() != null && !doc.getFileType().isEmpty()
-                ? "." + doc.getFileType() : "");
+        String filename = docMeta.getName() + (docMeta.getFileType() != null
+                && !docMeta.getFileType().isEmpty() ? "." + docMeta.getFileType() : "");
         List<FileParser> parsers = fileParserRegistry.getParsers(filename, FileParser.BIZ_TEXTBOOK);
         if (parsers.isEmpty()) {
+            failParsing(documentId, "未找到文件解析器: " + filename);
             throw new BusinessException(ErrorCode.A0004, "未找到文件解析器: " + filename);
         }
 
-        // 更新状态为 PARSING，重新持有托管实体
-        doc.setStatus(FileStatus.PARSING);
-        doc.setFailReason(null);
-        doc = textbookRepository.saveAndFlush(doc);
-
-        // 遍历解析器链（主→兜底）
         ParseResult parseResult = null;
         String lastParserName = "unknown";
         Exception lastError = null;
@@ -117,36 +139,54 @@ public class TextbookServiceImpl implements TextbookService {
         }
 
         if (parseResult == null) {
-            // 所有解析器都失败 → 回退到 UPLOADED
-            doc.setStatus(FileStatus.UPLOADED);
-            doc.setFailReason("all parsers failed: " + truncate(
-                    lastError != null ? lastError.getMessage() : "unknown", 300));
-            textbookRepository.saveAndFlush(doc);
+            failParsing(documentId, "all parsers failed: "
+                    + truncate(lastError != null ? lastError.getMessage() : "unknown", 300));
             throw new BusinessException(ErrorCode.A0004, "文档解析失败（所有解析器均失败）");
         }
 
-        // 解析成功 → PARSED
-        doc.setStatus(FileStatus.PARSED);
-        doc.setTextContent(parseResult.textContent());
-        doc.setPageCount(parseResult.pageCount());
-        doc.setFailReason(null);
-        doc = textbookRepository.saveAndFlush(doc);
+        // ===== 阶段 3：短事务 — 状态→PARSED（ADR-028 规则 1）=====
 
-        // 发布解析完成事件 → 图谱构建模块监听并自动触发抽取（事件驱动，单向依赖）
-        // ★ 使用 TransactionSynchronization.afterCommit() 确保事务提交后 PARSED 已落库才发布事件，
-        //    避免 @Async 监听器在新线程中读到 UPLOADED 旧状态。
+        completeParsing(documentId, parseResult);
+
+        // ===== 阶段 4：事务外发布事件（ADR-028 规则 4）=====
+
         log.info("解析完成: id={}, parser={}, textLength={}",
                 documentId, lastParserName,
                 parseResult.textContent() != null ? parseResult.textContent().length() : 0);
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                log.info("事务已提交(PARSED已落库)，发布 TextbookParsedEvent: id={}", documentId);
-                eventPublisher.publishEvent(new TextbookParsedEvent(this, documentId));
-            }
-        });
+        eventPublisher.publishEvent(new TextbookParsedEvent(this, documentId));
         return parseResult;
+    }
+
+    /**
+     * 短事务：解析失败 → 回退状态到 UPLOADED + failReason（ADR-028 规则 1 + ADR-029 补偿）。
+     */
+    private void failParsing(Long documentId, String reason) {
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+        tx.executeWithoutResult(status -> {
+            textbookRepository.findById(documentId).ifPresent(doc -> {
+                doc.setStatus(FileStatus.UPLOADED);
+                doc.setFailReason(truncate(reason, 300));
+                textbookRepository.save(doc);
+                log.info("解析失败，状态回退 UPLOADED: id={}", documentId);
+            });
+        });
+    }
+
+    /**
+     * 短事务：解析完成 → 状态 PARSED + 文本内容（ADR-028 规则 1）。
+     */
+    private void completeParsing(Long documentId, ParseResult parseResult) {
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+        tx.executeWithoutResult(status -> {
+            textbookRepository.findById(documentId).ifPresent(doc -> {
+                doc.setStatus(FileStatus.PARSED);
+                doc.setTextContent(parseResult.textContent());
+                doc.setPageCount(parseResult.pageCount());
+                doc.setFailReason(null);
+                textbookRepository.save(doc);
+            });
+        });
     }
 
     // ======================== 查询 ========================
@@ -168,38 +208,37 @@ public class TextbookServiceImpl implements TextbookService {
         return toBO(doc);
     }
 
-    // ======================== 删除 ========================
+    // ======================== 删除（短事务→事务外事件） ========================
 
     @Override
-    @Transactional
     public void deleteTextBook(Long id) {
-        TextbookDO doc = textbookRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
-                        "文档不存在: id=" + id));
+        // ===== 阶段 1：短事务 — 状态→DELETING（ADR-028 规则 1）=====
 
-        // 幂等检查：已在 DELETING 状态则跳过
-        if (doc.getStatus() == FileStatus.DELETING) {
-            log.info("文档已在 DELETING 状态，跳过重复删除: id={}", id);
-            return;
-        }
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+        Boolean deleted = tx.execute(status -> {
+            TextbookDO doc = textbookRepository.findById(id)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.A0006,
+                            "文档不存在: id=" + id));
 
-        // 进入 DELETING 状态，发布事件驱动级联删除
-        doc.setStatus(FileStatus.DELETING);
-        doc = textbookRepository.saveAndFlush(doc);
-        log.info("文档进入 DELETING 状态: id={}", id);
-
-        // ★ 使用 TransactionSynchronization.afterCommit() 确保事务提交后 DELETING 已落库才发布事件，
-        //    与 parse() 保持一致，避免 @Async 监听器在新线程中读不到 DELETING 状态。
-        final Long docId = doc.getId();
-        final String docPath = doc.getFilePath();
-        final String docNo = doc.getDocumentNo();
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                log.info("事务已提交(DELETING已落库)，发布 TextbookDeletedEvent: id={}", docId);
-                eventPublisher.publishEvent(new TextbookDeletedEvent(this, docId, docPath, docNo));
+            if (doc.getStatus() == FileStatus.DELETING) {
+                log.info("文档已在 DELETING 状态，跳过重复删除: id={}", id);
+                return false;
             }
+
+            doc.setStatus(FileStatus.DELETING);
+            textbookRepository.save(doc);
+            log.info("文档进入 DELETING 状态: id={}", id);
+            return true;
         });
+
+        // ===== 阶段 2：事务外发布事件（ADR-028 规则 4）=====
+
+        if (Boolean.TRUE.equals(deleted)) {
+            TextbookDO doc = textbookRepository.findById(id).orElseThrow();
+            eventPublisher.publishEvent(new TextbookDeletedEvent(
+                    this, id, doc.getFilePath(), doc.getDocumentNo()));
+            log.info("已发布 TextbookDeletedEvent: id={}", id);
+        }
     }
 
     /**
@@ -214,7 +253,6 @@ public class TextbookServiceImpl implements TextbookService {
     public void finalizeDeletion(Long documentId, String filePath) {
         log.info("执行 MinIO + MySQL 物理删除: documentId={}", documentId);
 
-        // ① 查找文档（幂等：已删除则跳过）
         var docOpt = textbookRepository.findById(documentId);
         if (docOpt.isEmpty()) {
             log.info("文档已不存在（幂等跳过）: id={}", documentId);
@@ -222,7 +260,6 @@ public class TextbookServiceImpl implements TextbookService {
         }
         TextbookDO doc = docOpt.get();
 
-        // ② MinIO 文件删除（引用计数保护）
         String objectKey = fileStorageService.extractObjectKey(filePath);
         long refCount = textbookRepository.countByFilePathAndStatusNot(filePath, FileStatus.DELETING);
         if (refCount <= 1) {
@@ -238,9 +275,24 @@ public class TextbookServiceImpl implements TextbookService {
                     refCount - 1, documentId, filePath);
         }
 
-        // ③ MySQL 物理删除（图谱清理已成功，执行最终物理删除）
         textbookRepository.delete(doc);
         log.info("文档已物理删除: id={}, filePath={}", documentId, filePath);
+    }
+
+    /**
+     * 保存图谱构建/抽取失败原因到文档记录（ADR-028 规则 5+6）。
+     *
+     * <p>独立 {@code @Transactional} 方法，供 {@code TextbookParsedEventListener} 通过
+     * {@code TextbookService} 代理调用，消除监听器内自调用的 AOP 穿透问题。</p>
+     */
+    @Override
+    @Transactional
+    public void saveFailReason(Long documentId, String errorMessage) {
+        textbookRepository.findById(documentId).ifPresent(doc -> {
+            doc.setFailReason("LLM抽取失败: " + truncate(errorMessage, 300));
+            textbookRepository.save(doc);
+            log.info("failReason 已保存: documentId={}", documentId);
+        });
     }
 
     // ======================== 工具方法 ========================

@@ -17,7 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
@@ -26,10 +27,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 成绩文件上传服务 — 解析 → MySQL → 发布事件。
+ * 成绩文件上传服务 — 解析（无事务）→ MySQL 短事务 → 事务外发布事件。
  *
  * <p>实现 {@link UploadService}，自包含上传链路。
  * 不直接调用 MinIO 或 Neo4j，图谱构建由事件监听器完成。</p>
+ *
+ * <p><b>事务策略（ADR-028）</b>：DB 操作（去重 + 批量写入）通过
+ * {@link TransactionTemplate} 在短事务中执行，事件在事务外发布。</p>
  *
  * @author Jay
  * @date 2026/06/19
@@ -43,10 +47,12 @@ public class GradeUploadService implements UploadService {
     private final FileParserRegistry fileParserRegistry;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final PlatformTransactionManager txManager;
 
     @Override
-    @Transactional
     public Object upload(MultipartFile file, String subject) {
+        // ===== 阶段 1：文件解析（无事务 · ADR-028 规则 2）=====
+
         byte[] rawBytes;
         try {
             rawBytes = file.getBytes();
@@ -55,7 +61,6 @@ public class GradeUploadService implements UploadService {
             throw new BusinessException(ErrorCode.A0011, "文件读取失败");
         }
 
-        // ① 文件解析
         String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown";
         FileParser parser = fileParserRegistry.getParser(filename, FileParser.BIZ_GRADE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0011,
@@ -73,15 +78,10 @@ public class GradeUploadService implements UploadService {
             throw new BusinessException(ErrorCode.A0011, "文件解析失败: " + e.getMessage());
         }
 
-        // ② exam_no 去重检查
-        if (examRecordRepository.existsByExamNo(payload.examNo())) {
-            throw new BusinessException(ErrorCode.A0022,
-                    "考试编号 " + payload.examNo() + " 已存在，请先删除再重新上传");
-        }
+        String fileType = parser.supportedType().name();
 
-        String fileType = parser.supportedType().name(); // "CSV" or "EXCEL"
+        // ===== 阶段 2：构建 Record 列表（纯内存，无事务）=====
 
-        // ③ MySQL 批量写入
         List<ExamRecordDO> records = new ArrayList<>();
         for (StudentRecord sr : payload.students()) {
             String scoreDetailsJson;
@@ -106,13 +106,24 @@ public class GradeUploadService implements UploadService {
                     .build();
             records.add(rec);
         }
-        examRecordRepository.saveAll(records);
+
+        // ===== 阶段 3：短事务内 DB 操作（ADR-028 规则 1）=====
+
+        TransactionTemplate txTemplate = new TransactionTemplate(txManager);
+        txTemplate.executeWithoutResult(status -> {
+            if (examRecordRepository.existsByExamNo(payload.examNo())) {
+                throw new BusinessException(ErrorCode.A0022,
+                        "考试编号 " + payload.examNo() + " 已存在，请先删除再重新上传");
+            }
+            examRecordRepository.saveAll(records);
+        });
 
         log.info("成绩上传完成: examNo={}, fileType={}, students={}, questions={}, kps={}",
                 payload.examNo(), fileType, payload.students().size(),
                 payload.questionCount(), payload.knowledgePoints().size());
 
-        // ④ 发布事件 — 图谱构建由 GradeGraphEventListener 监听完成
+        // ===== 阶段 4：事务外发布事件（ADR-028 规则 4）=====
+
         eventPublisher.publishEvent(new GradeUploadedEvent(
                 this, payload.examNo(), payload.subject(), payload.knowledgePoints()));
 

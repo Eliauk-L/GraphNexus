@@ -59,8 +59,8 @@ public class TextbookDeletedEventListener {
         eventPublisher.publishEvent(new GraphChangedEvent(this));
 
         // 发布图谱清理完成事件 → 教材模块执行 MinIO + MySQL 物理删除
+        log.info("发布 TextbookGraphClearedEvent: documentId={}", documentId);
         eventPublisher.publishEvent(new TextbookGraphClearedEvent(
                 this, documentId, event.getFilePath(), event.getDocumentNo()));
-        log.info("已发布 TextbookGraphClearedEvent: documentId={}", documentId);
     }
 }

@@ -14,7 +14,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,9 @@ import java.util.List;
  *
  * <p>上传由 {@link GradeUploadService} 独立负责。
  * 不再直接调用 MinIO 或 Neo4j，图谱清理由事件监听器完成。</p>
+ *
+ * <p><b>事务策略（ADR-028）</b>：删除的 DB 操作通过 {@link TransactionTemplate} 在短事务中执行，
+ * 事件在事务外发布。</p>
  *
  * @author Jay
  * @date 2026/06/19
@@ -35,6 +40,7 @@ public class GradeServiceImpl implements GradeService {
 
     private final ExamRecordRepository examRecordRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final PlatformTransactionManager txManager;
 
     // ======================== 条件查询 ========================
 
@@ -94,24 +100,27 @@ public class GradeServiceImpl implements GradeService {
     // ======================== 删除 ========================
 
     @Override
-    @Transactional
     public Object[] deleteByExamNo(String examNo) {
-        // C2 幂等
-        List<ExamRecordDO> records = examRecordRepository.findByExamNo(examNo);
-        if (records.isEmpty()) {
-            log.info("考试 {} 无未删除记录，幂等返回", examNo);
-            return new Object[]{examNo, 0};
+        // 短事务内执行 DB 操作（ADR-028 规则 1）
+        TransactionTemplate txTemplate = new TransactionTemplate(txManager);
+        Object[] result = txTemplate.execute(status -> {
+            List<ExamRecordDO> records = examRecordRepository.findByExamNo(examNo);
+            if (records.isEmpty()) {
+                log.info("考试 {} 无未删除记录，幂等返回", examNo);
+                return new Object[]{examNo, 0};
+            }
+
+            int recordCount = records.size();
+            examRecordRepository.deleteAll(records);
+            log.info("考试 {} MySQL 物理删除完成，共 {} 条", examNo, recordCount);
+            return new Object[]{examNo, recordCount};
+        });
+
+        // 事务外发布事件（ADR-028 规则 4）
+        int recordCount = (int) result[1];
+        if (recordCount > 0) {
+            eventPublisher.publishEvent(new GradeDeletedEvent(this, (String) result[0], recordCount));
         }
-
-        int recordCount = records.size();
-
-        // 物理删除
-        examRecordRepository.deleteAll(records);
-        log.info("考试 {} MySQL 物理删除完成，共 {} 条", examNo, recordCount);
-
-        // 发布事件 — 图谱清理由 GradeGraphEventListener 完成
-        eventPublisher.publishEvent(new GradeDeletedEvent(this, examNo, recordCount));
-
-        return new Object[]{examNo, recordCount};
+        return result;
     }
 }
