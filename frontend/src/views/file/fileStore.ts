@@ -74,10 +74,11 @@ export const useFileStore = defineStore('file', () => {
 
   async function parse(id: number) {
     error.value = null
+    // 先启动轮询，再调用 API — 确保 API 处理期间前端能感知中间态（PARSING）
+    startPolling()
     try {
       const result = await parseFile(id)
       await loadFiles()
-      startPolling()
       return result
     } catch {
       error.value = '解析失败'
@@ -85,16 +86,20 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  /** 触发图谱构建（抽取+融合），用于手动重试图谱化 */
+  /** 触发图谱构建（抽取+融合），用于手动重试图谱构建。
+   *
+   * 先启动轮询再调用 API，确保 API 同步处理期间（可达数十秒）
+   * 前端能实时看到 EXTRACTING → EXTRACTED → FUSING → COMPLETED 的完整流转。 */
   async function extract(id: number) {
     error.value = null
+    // 先启动轮询 — API 处理期间后端 saveAndFlush 的中间态可被轮询读取
+    startPolling()
     try {
       await extractGraph(id)
       await loadFiles()
-      startPolling()
     } catch {
-      error.value = '图谱化失败'
-      throw new Error('图谱化失败')
+      error.value = '图谱构建失败'
+      throw new Error('图谱构建失败')
     }
   }
 
