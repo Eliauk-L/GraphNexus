@@ -136,7 +136,9 @@ public class ConstructionGraphRepository {
                     "OPTIONAL MATCH (d)-[:EXTRACTS]->(e:Entity) " +
                     "OPTIONAL MATCH (e)-[:ALIGNED_TO]->(kp:KnowledgePoint) " +
                     "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
-                    "WITH collect(d) + collect(e) + collect(kp) + collect(nextKp) AS allNodes " +
+                    "OPTIONAL MATCH (kp)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
+                    "OPTIONAL MATCH (cat)-[:CHILD_OF]->(parentCat:KnowledgeCategory) " +
+                    "WITH collect(d) + collect(e) + collect(kp) + collect(nextKp) + collect(cat) + collect(parentCat) AS allNodes " +
                     "UNWIND allNodes AS n " +
                     "WITH DISTINCT n WHERE n IS NOT NULL " +
                     "RETURN n ORDER BY labels(n)[0]"
@@ -171,7 +173,9 @@ public class ConstructionGraphRepository {
                     "OPTIONAL MATCH (d)-[r1:EXTRACTS]->(e:Entity) " +
                     "OPTIONAL MATCH (e)-[r2:ALIGNED_TO]->(kp:KnowledgePoint) " +
                     "OPTIONAL MATCH (kp)-[r3:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
-                    "WITH collect(r1) + collect(r2) + collect(r3) AS allRels " +
+                    "OPTIONAL MATCH (kp)-[r4:CHILD_OF]->(cat:KnowledgeCategory) " +
+                    "OPTIONAL MATCH (cat)-[r5:CHILD_OF]->(parentCat:KnowledgeCategory) " +
+                    "WITH collect(r1) + collect(r2) + collect(r3) + collect(r4) + collect(r5) AS allRels " +
                     "UNWIND allRels AS r " +
                     "WITH DISTINCT r WHERE r IS NOT NULL " +
                     "RETURN startNode(r).id AS sourceNodeId, endNode(r).id AS targetNodeId, type(r) AS edgeType"
