@@ -2,9 +2,9 @@
 import { ref, watch, h, computed } from 'vue'
 import {
   NCollapse, NCollapseItem, NInput, NSelect, NDatePicker,
-  NButton, NTag, NSpin, NEmpty, NSpace, NPopconfirm, NModal, NTooltip
+  NButton, NTag, NSpin, NEmpty, NSpace, NPopconfirm, NModal, NPopover
 } from 'naive-ui'
-import { Search, FileDown, Trash2, Eye, X } from '@lucide/vue'
+import { Search, FileDown, Trash2, Eye } from '@lucide/vue'
 import { useQueryStore } from '../queryStore'
 import DataTable from '@/common/components/DataTable.vue'
 import MarkdownReport from './MarkdownReport.vue'
@@ -90,9 +90,9 @@ const columns: DataTableColumns<HistoryRecordVO> = [
       }, { default: () => row.status === 'COMPLETED' ? '完成' : '失败' })
 
       if (row.status === 'FAILED' && row.errorMessage) {
-        return h(NTooltip, { placement: 'top' }, {
+        return h(NPopover, { trigger: 'hover', placement: 'top' }, {
           trigger: () => tag,
-          default: () => row.errorMessage,
+          default: () => h('div', { style: 'max-width: 300px; word-break: break-word;' }, row.errorMessage),
         })
       }
       return tag
@@ -152,11 +152,6 @@ async function openPreview(taskId: string, question: string) {
   } finally {
     previewLoading.value = false
   }
-}
-
-function closePreview() {
-  showPreview.value = false
-  previewAnswer.value = ''
 }
 
 // ── 面板展开时加载数据 ──
@@ -245,12 +240,6 @@ function handlePageChange(page: number) {
       :segmented="{ content: 'soft', footer: 'soft' }"
       size="huge"
     >
-      <template #header-extra>
-        <NButton size="tiny" quaternary @click="closePreview">
-          <template #icon><X :size="16" /></template>
-        </NButton>
-      </template>
-
       <NSpin :show="previewLoading" size="medium">
         <!-- 失败记录：显示错误原因 -->
         <div v-if="previewError" class="preview-error">
