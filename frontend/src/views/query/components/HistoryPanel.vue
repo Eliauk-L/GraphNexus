@@ -236,7 +236,7 @@ function handlePageChange(page: number) {
       v-model:show="showPreview"
       preset="card"
       :title="previewTitle"
-      style="max-width: 900px; max-height: 80vh;"
+      style="width: 900px; max-width: 90vw; max-height: 80vh;"
       size="huge"
     >
       <NSpin :show="previewLoading" size="medium">
@@ -281,13 +281,13 @@ function handlePageChange(page: number) {
 }
 
 .preview-content {
+  width: 100%;
   min-height: 200px;
-  background: #fff;
 }
 
 .preview-error {
+  width: 100%;
   padding: var(--spacing-lg);
-  background: #fff;
 }
 
 .preview-error-label {
