@@ -62,7 +62,7 @@ class IntentRecognitionServiceTest {
         var service = new IntentRecognitionService(List.of(s1, s2));
 
         var ex = assertThrows(BusinessException.class, () -> service.recognize("test"));
-        assertTrue(ex.getMessage().contains("无法识别查询意图"));
+        assertTrue(ex.getMessage().contains("暂不支持该类型的提问"));
     }
 
     @Test
@@ -70,6 +70,6 @@ class IntentRecognitionServiceTest {
         var service = new IntentRecognitionService(Collections.emptyList());
 
         var ex = assertThrows(BusinessException.class, () -> service.recognize("test"));
-        assertTrue(ex.getMessage().contains("无法识别查询意图"));
+        assertTrue(ex.getMessage().contains("暂不支持该类型的提问"));
     }
 }

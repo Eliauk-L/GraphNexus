@@ -272,10 +272,13 @@ public class QueryServiceImpl implements QueryService {
                     "系统中暂无学科数据，请先导入考试记录或文档图谱");
         }
 
-        // 1. 优先 LLM 提取
+        // 1. 先意图识别（避免非目标意图浪费后续 LLM 实体提取调用）
+        QueryIntent intent = recognizeIntent(question);
+
+        // 2. LLM 实体提取（仅在意图可识别时进行）
         ExtractedEntities entities = extractViaLlm(question, subjects);
 
-        // 2. LLM 失败 → 正则兜底
+        // 3. LLM 失败 → 正则兜底
         if (entities == null) {
             log.info("LLM 实体提取失败，降级为规则提取");
             entities = extractViaRegex(question, subjects);
@@ -289,16 +292,92 @@ public class QueryServiceImpl implements QueryService {
         }
 
         // 校验提取的学科在系统中是否存在
-        if (entities.subject() != null && !subjects.contains(entities.subject())) {
+        if (!subjects.contains(entities.subject())) {
             throw new BusinessException(ErrorCode.A0019,
                     "学科\"" + entities.subject() + "\"在系统中暂无数据，当前已有学科："
                     + String.join("、", subjects)
                     + "。请先导入对应学科的考试记录或文档图谱");
         }
 
-        log.info("chat 实体提取完成: studentName={}, studentNo={}, subject={}",
-                entities.studentName(), entities.studentNo(), entities.subject());
-        return ask(question, entities.studentName(), entities.studentNo(), entities.subject());
+        log.info("chat 完成: intent={}, studentName={}, studentNo={}, subject={}",
+                intent, entities.studentName(), entities.studentNo(), entities.subject());
+        // 使用已识别的意图，避免 ask() 内部重复识别
+        return askWithIntent(question, entities.studentName(), entities.studentNo(),
+                entities.subject(), intent);
+    }
+
+    /**
+     * 使用预识别意图执行问答，跳过 ask() 内部的意图识别步骤。
+     */
+    private QueryResultBO askWithIntent(String question, String studentName,
+                                        String studentNo, String subject, QueryIntent intent) {
+        long startTime = System.currentTimeMillis();
+        String taskId = UUID.randomUUID().toString();
+        log.info("同步问答开始(预识别意图): taskId={}, intent={}, studentName={}, subject={}",
+                taskId, intent, studentName, subject);
+
+        try {
+            // 实体解析（跳过意图识别）
+            StudentNode student = resolveStudent(studentName, studentNo);
+
+            // 图剪枝
+            Map<String, Object> params = Map.of(
+                    "weakThreshold", queryProperties.getPruning().getWeakThreshold(),
+                    "maxHops", (double) queryProperties.getPruning().getMaxPrerequisiteHops()
+            );
+            PruningRequest pruningRequest = new PruningRequest(
+                    intent.name(), student.getStudentNo(), subject, params);
+            PrunedSubgraph subgraph = pruningStrategyRegistry.get(intent.name()).prune(pruningRequest);
+
+            if (subgraph.nodes().isEmpty() && "STUDENT_NOT_FOUND".equals(subgraph.meta().strategy())) {
+                throw new BusinessException(ErrorCode.A0006, "未找到学生: " + studentName);
+            }
+
+            // 子图序列化
+            String subgraphText = serializeSubgraph(subgraph, student);
+
+            // Token 预算控制
+            int maxInputTokens = queryProperties.getTokenBudget().getMaxInputTokens();
+            int charsPerToken = queryProperties.getTokenBudget().getCharsPerToken();
+            if (subgraphText.length() > maxInputTokens * charsPerToken) {
+                var result = truncateSubgraph(subgraphText, maxInputTokens * charsPerToken);
+                subgraphText = result.text();
+            }
+            int estimatedTokens = subgraphText.length() / charsPerToken;
+
+            // Prompt 组装（格式感知）
+            String outputFormat = queryProperties.getOutput().getFormat();
+            Map<String, String> templateVars = buildTemplateVars(question, student, subject, subgraphText, subgraph);
+            var promptPair = promptTemplateService.buildPrompt(intent, templateVars, outputFormat);
+
+            // LLM 调用
+            String answer = callLlmWithRetry(promptPair.systemPrompt(), promptPair.userMessage(), outputFormat);
+
+            // 持久化
+            long elapsedMs = System.currentTimeMillis() - startTime;
+            persistTask(taskId, question, studentName, studentNo, subject, intent,
+                    QueryTaskStatus.COMPLETED, answer, subgraph, estimatedTokens,
+                    (int) (promptPair.systemPrompt().length() / charsPerToken + estimatedTokens),
+                    estimatedTokens, null, elapsedMs);
+
+            return new QueryResultBO(taskId, "COMPLETED", question, intent.name(),
+                    answer, outputFormat, new TokenUsage(subgraph.meta().totalNodes(), subgraph.meta().totalEdges(),
+                    estimatedTokens, null, null), null, LocalDateTime.now(), LocalDateTime.now());
+
+        } catch (BusinessException e) {
+            log.error("同步问答失败: taskId={}, {}", taskId, e.getMessage());
+            long elapsedMs = System.currentTimeMillis() - startTime;
+            persistTask(taskId, question, studentName, studentNo, subject, null,
+                    QueryTaskStatus.FAILED, null, null, 0, 0, 0, e.getMessage(), elapsedMs);
+            throw e;
+        } catch (Exception e) {
+            log.error("同步问答异常: taskId={}", taskId, e);
+            long elapsedMs = System.currentTimeMillis() - startTime;
+            persistTask(taskId, question, studentName, studentNo, subject, null,
+                    QueryTaskStatus.FAILED, null, null, 0, 0, 0,
+                    e.getMessage() != null ? e.getMessage() : "未知异常", elapsedMs);
+            throw new BusinessException(ErrorCode.C0001, "问答失败: " + e.getMessage());
+        }
     }
 
     /** LLM 提取：调用大模型从问题中抽取学生姓名/学号和学科，返回 JSON */
