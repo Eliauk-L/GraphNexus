@@ -291,15 +291,22 @@ public class ConstructionGraphRepository {
      */
     public List<GraphNode> findBySubject(String subjectName) {
         try {
+            // 两段收集：先拿所有 KP（含 prerequisite 目标），再为所有 KP 展开 Entity/Document/Category
+            // 这样 nextKp 也不会成为孤立节点，确保全图连通
             Collection<Map<String, Object>> rows = neo4jClient.query(
+                    // 段1：收集学科 KP + prerequisite 目标 KP
                     "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
                     "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
-                    "OPTIONAL MATCH (kp)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
-                    "OPTIONAL MATCH (cat)-[:CHILD_OF]->(parentCat:KnowledgeCategory) " +
-                    "OPTIONAL MATCH (kp)<-[:ALIGNED_TO]-(entity:Entity) " +
+                    "WITH collect(DISTINCT kp) + collect(DISTINCT nextKp) AS scopeKps " +
+                    "UNWIND scopeKps AS sk " +
+                    "WITH DISTINCT sk WHERE sk IS NOT NULL " +
+                    // 段2：对每个范围 KP 展开 Entity、Document、Category
+                    "OPTIONAL MATCH (sk)<-[:ALIGNED_TO]-(entity:Entity) " +
                     "OPTIONAL MATCH (entity)<-[:EXTRACTS]-(doc) " +
-                    "WITH collect(DISTINCT kp) + collect(DISTINCT nextKp) + collect(DISTINCT cat) " +
-                    "   + collect(DISTINCT parentCat) + collect(DISTINCT entity) + collect(DISTINCT doc) AS allNodes " +
+                    "OPTIONAL MATCH (sk)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
+                    "OPTIONAL MATCH (cat)-[:CHILD_OF]->(parentCat:KnowledgeCategory) " +
+                    "WITH collect(DISTINCT sk) + collect(DISTINCT entity) + collect(DISTINCT doc) " +
+                    "   + collect(DISTINCT cat) + collect(DISTINCT parentCat) AS allNodes " +
                     "UNWIND allNodes AS n " +
                     "WITH DISTINCT n WHERE n IS NOT NULL " +
                     "RETURN n ORDER BY labels(n)[0] " +
@@ -331,15 +338,25 @@ public class ConstructionGraphRepository {
      */
     public List<GraphEdge> findEdgesBySubject(String subjectName) {
         try {
+            // 两段收集：先确定 KP 范围，再为该范围内所有 KP 收集边
             Collection<Map<String, Object>> result = neo4jClient.query(
+                    // 段1：收集学科 KP + prerequisite 目标 KP
                     "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
-                    "OPTIONAL MATCH (kp)-[r1:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
-                    "OPTIONAL MATCH (kp)-[r2:CHILD_OF]->(cat:KnowledgeCategory) " +
-                    "OPTIONAL MATCH (cat)-[r3:CHILD_OF]->(parentCat:KnowledgeCategory) " +
-                    "OPTIONAL MATCH (kp)<-[r4:ALIGNED_TO]-(entity:Entity) " +
-                    "OPTIONAL MATCH (entity)<-[r5:EXTRACTS]-(doc) " +
-                    "WITH collect(DISTINCT r1) + collect(DISTINCT r2) + collect(DISTINCT r3) " +
-                    "   + collect(DISTINCT r4) + collect(DISTINCT r5) AS allRels " +
+                    "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
+                    "WITH collect(DISTINCT kp) + collect(DISTINCT nextKp) AS scopeKps " +
+                    "UNWIND scopeKps AS sk " +
+                    "WITH DISTINCT sk WHERE sk IS NOT NULL " +
+                    // 段2：对每个范围 KP 收集边（KP→KP, KP→Cat, Cat→Cat, Entity→KP, Doc→Entity）
+                    "OPTIONAL MATCH (sk)-[r:PREREQUISITE_OF]->(:KnowledgePoint) " +
+                    "OPTIONAL MATCH (sk)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
+                    "OPTIONAL MATCH (cat)-[rc:CHILD_OF]->(:KnowledgeCategory) " +
+                    "OPTIONAL MATCH (sk)<-[ra:ALIGNED_TO]-(:Entity) " +
+                    "WITH collect(DISTINCT r) + collect(DISTINCT rc) + collect(DISTINCT ra) AS kpRels, " +
+                    "     collect(DISTINCT sk) AS scopeKps2 " +
+                    // 段3：Entity → Document 的 EXTRACTS 边
+                    "UNWIND scopeKps2 AS sk2 " +
+                    "OPTIONAL MATCH (sk2)<-[:ALIGNED_TO]-(:Entity)<-[re:EXTRACTS]-() " +
+                    "WITH kpRels + collect(DISTINCT re) AS allRels " +
                     "UNWIND allRels AS r " +
                     "WITH DISTINCT r WHERE r IS NOT NULL " +
                     "RETURN startNode(r).id AS sourceNodeId, endNode(r).id AS targetNodeId, type(r) AS edgeType"
