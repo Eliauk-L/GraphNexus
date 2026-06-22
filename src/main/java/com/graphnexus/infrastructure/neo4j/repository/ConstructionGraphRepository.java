@@ -303,7 +303,7 @@ public class ConstructionGraphRepository {
                     "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
                     "WITH s, collect(DISTINCT kp) + collect(DISTINCT nextKp) AS scopeKps " +
                     "UNWIND scopeKps AS sk " +
-                    "WITH s, DISTINCT sk WHERE sk IS NOT NULL " +
+                    "WITH DISTINCT s, sk WHERE sk IS NOT NULL " +
                     // 段2：对每个范围 KP 展开 Entity、Document、Category
                     "OPTIONAL MATCH (sk)<-[:ALIGNED_TO]-(entity:Entity) " +
                     "OPTIONAL MATCH (entity)<-[:EXTRACTS]-(doc) " +
@@ -350,7 +350,7 @@ public class ConstructionGraphRepository {
                     "WITH collect(DISTINCT rb) AS belongRels, " +
                     "     collect(DISTINCT kp) + collect(DISTINCT nextKp) AS scopeKps " +
                     "UNWIND scopeKps AS sk " +
-                    "WITH belongRels, DISTINCT sk WHERE sk IS NOT NULL " +
+                    "WITH belongRels, sk WHERE sk IS NOT NULL " +
                     // 段2：对每个范围 KP 收集边
                     "OPTIONAL MATCH (sk)-[r:PREREQUISITE_OF]->(:KnowledgePoint) " +
                     "OPTIONAL MATCH (sk)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
