@@ -46,11 +46,11 @@ function registerAuthInterceptors(instance: typeof axios | typeof client) {
       const originalRequest = error.config
 
       if (
-        error.response?.status === 401 &&
+        (error.response?.status === 401 || error.response?.status === 403) &&
         !originalRequest._retry &&
         !originalRequest.url?.includes('/api/v1/auth/refresh')
       ) {
-        console.log('[Interceptor] 401 detected, attempting refresh...', { url: originalRequest.url })
+        console.log('[Interceptor] 401/403 detected, attempting refresh...', { url: originalRequest.url, status: error.response?.status })
         const refreshToken = getRefreshToken()
         if (!refreshToken) {
           clearTokens()
