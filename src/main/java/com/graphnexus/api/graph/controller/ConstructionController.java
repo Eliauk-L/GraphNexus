@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 图谱构建 REST API 控制器 — 两阶段流水线（构建→图谱融合）。
  *
@@ -74,6 +76,36 @@ public class ConstructionController {
     @GetMapping("/full")
     public ApiResult<GraphSubgraphVO> getFullGraph() {
         GraphSubgraphBO bo = constructionService.getFullGraph();
+        return ApiResult.success(GraphSubgraphVO.from(bo));
+    }
+
+    /**
+     * 查询所有学科名称列表。
+     */
+    @Operation(summary = "查询学科列表", description = "返回 Neo4j 中所有 Subject 节点的名称，按名称排序。用于前端学科选择器下拉框数据源")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "学科名称列表（字符串数组）"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+    })
+    @GetMapping("/subjects")
+    public ApiResult<List<String>> getSubjects() {
+        List<String> subjects = constructionService.listSubjects();
+        return ApiResult.success(subjects);
+    }
+
+    /**
+     * 查询指定学科的知识全景图（跨文档 KP 聚合）。
+     */
+    @Operation(summary = "查询学科全景图", description = "返回指定学科下所有 KnowledgePoint 节点及其 PREREQUISITE_OF 依赖边、CHILD_OF 分类层级关系。聚合跨文档知识点，展示整个学科的知识结构骨架")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "学科全景图（节点列表 + 边列表）"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+    })
+    @GetMapping("/subject/{subjectName}")
+    public ApiResult<GraphSubgraphVO> getSubjectGraph(
+            @Parameter(description = "学科名称（如 数学、物理）", required = true, example = "数学")
+            @PathVariable String subjectName) {
+        GraphSubgraphBO bo = constructionService.getSubjectGraph(subjectName);
         return ApiResult.success(GraphSubgraphVO.from(bo));
     }
 }

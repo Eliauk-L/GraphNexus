@@ -3,6 +3,8 @@ package com.graphnexus.application.graph.construction.service;
 import com.graphnexus.application.graph.construction.model.ExtractionResultBO;
 import com.graphnexus.application.graph.construction.model.GraphSubgraphBO;
 
+import java.util.List;
+
 /**
  * 图谱构建服务接口 — 编排两阶段流水线（构建→图谱融合）。
  *
@@ -36,4 +38,19 @@ public interface ConstructionService {
      * @return 全量图谱（节点 + 边）
      */
     GraphSubgraphBO getFullGraph();
+
+    /**
+     * 查询所有学科名称列表（从 Neo4j Subject 节点聚合）。
+     *
+     * @return 按名称排序的学科列表
+     */
+    List<String> listSubjects();
+
+    /**
+     * 查询指定学科的知识全景图（跨文档 KP 聚合视图）。
+     *
+     * @param subjectName 学科名称（如"数学"）
+     * @return 子图（该学科所有 KP + PREREQUISITE_OF + CHILD_OF + KnowledgeCategory）
+     */
+    GraphSubgraphBO getSubjectGraph(String subjectName);
 }

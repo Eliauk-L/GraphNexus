@@ -19,6 +19,7 @@ import com.graphnexus.infrastructure.neo4j.node.FileNode;
 import com.graphnexus.infrastructure.neo4j.node.GraphNode;
 import com.graphnexus.infrastructure.neo4j.node.SubjectNode;
 import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
+import com.graphnexus.infrastructure.neo4j.repository.QueryGraphRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -60,6 +61,7 @@ public class ConstructionServiceImpl implements ConstructionService {
     private final TextbookRepository textbookRepository;
     private final ExtractionService extractionService;
     private final ConstructionGraphRepository constructionGraphRepository;
+    private final QueryGraphRepository queryGraphRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PlatformTransactionManager txManager;
     private final Neo4jTransactionManager neo4jTransactionManager;
@@ -249,6 +251,20 @@ public class ConstructionServiceImpl implements ConstructionService {
         List<GraphNode> nodes = constructionGraphRepository.findAllNodes();
         List<GraphEdge> edges = constructionGraphRepository.findAllEdges();
         log.info("全量图谱查询完成：nodes={}, edges={}", nodes.size(), edges.size());
+        return buildSubgraphResult(nodes, edges);
+    }
+
+    @Override
+    public List<String> listSubjects() {
+        return queryGraphRepository.findDistinctSubjects();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GraphSubgraphBO getSubjectGraph(String subjectName) {
+        List<GraphNode> nodes = constructionGraphRepository.findBySubject(subjectName);
+        List<GraphEdge> edges = constructionGraphRepository.findEdgesBySubject(subjectName);
+        log.info("学科全景图查询完成：subjectName={}, nodes={}, edges={}", subjectName, nodes.size(), edges.size());
         return buildSubgraphResult(nodes, edges);
     }
 
