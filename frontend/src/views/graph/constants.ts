@@ -100,3 +100,50 @@ export const DEFAULT_NODE_COLOR = '#8C8C8C'
 
 /** 边默认颜色（兜底） */
 export const DEFAULT_EDGE_COLOR = '#8C8C8C'
+
+// ── 度量映射参数 ──
+
+/** 度量驱动的最小节点半径 px */
+export const METRIC_SIZE_MIN = 20
+
+/** 度量驱动的最大节点半径 px */
+export const METRIC_SIZE_MAX = 60
+
+/** 无度量数据时的默认节点半径 px（与 NODE_SIZES.KnowledgePoint 一致） */
+export const METRIC_SIZE_DEFAULT = 40
+
+/** PageRank 色阶（5 档 OKLCH 暖色梯度，低→高） */
+export const PAGERANK_COLORS: string[] = [
+  'oklch(0.55 0.18 250)',   // 0~20%   冷蓝（接近默认 KP 色）
+  'oklch(0.65 0.10 180)',   // 20~40%  浅暖
+  'oklch(0.60 0.15 120)',   // 40~60%  中暖
+  'oklch(0.55 0.18 70)',    // 60~80%  暖橙
+  'oklch(0.50 0.22 50)',    // 80~100% 深橙
+]
+
+/**
+ * 计算值在数组中的百分位索引（0-based）。
+ * 用于将 PageRank 值映射到色阶档位。
+ */
+export function percentileIndex(value: number, allValues: number[], bucketCount: number): number {
+  if (allValues.length === 0) return 0
+  const sorted = [...allValues].sort((a, b) => a - b)
+  const rank = sorted.filter((v) => v < value).length
+  return Math.min(Math.floor((rank / sorted.length) * bucketCount), bucketCount - 1)
+}
+
+/**
+ * 线性映射：value 从 [inMin, inMax] 映射到 [outMin, outMax]。
+ * 用 95 百分位截断防止离群值压缩主体分布。
+ */
+export function linearMap(
+  value: number,
+  inMin: number,
+  inMax: number,
+  outMin: number,
+  outMax: number,
+): number {
+  if (inMax === inMin) return (outMin + outMax) / 2
+  const clamped = Math.min(Math.max(value, inMin), inMax)
+  return outMin + ((clamped - inMin) / (inMax - inMin)) * (outMax - outMin)
+}
