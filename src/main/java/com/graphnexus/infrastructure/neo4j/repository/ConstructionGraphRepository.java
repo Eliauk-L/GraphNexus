@@ -298,18 +298,18 @@ public class ConstructionGraphRepository {
             // 两段收集：先拿所有 KP（含 prerequisite 目标），再为所有 KP 展开 Entity/Document/Category
             // 这样 nextKp 也不会成为孤立节点，确保全图连通
             Collection<Map<String, Object>> rows = neo4jClient.query(
-                    // 段1：收集学科 KP + prerequisite 目标 KP
+                    // 段1：收集学科 KP + prerequisite 目标 KP + Subject 节点
                     "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
                     "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
-                    "WITH collect(DISTINCT kp) + collect(DISTINCT nextKp) AS scopeKps " +
+                    "WITH s, collect(DISTINCT kp) + collect(DISTINCT nextKp) AS scopeKps " +
                     "UNWIND scopeKps AS sk " +
-                    "WITH DISTINCT sk WHERE sk IS NOT NULL " +
+                    "WITH s, DISTINCT sk WHERE sk IS NOT NULL " +
                     // 段2：对每个范围 KP 展开 Entity、Document、Category
                     "OPTIONAL MATCH (sk)<-[:ALIGNED_TO]-(entity:Entity) " +
                     "OPTIONAL MATCH (entity)<-[:EXTRACTS]-(doc) " +
                     "OPTIONAL MATCH (sk)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
                     "OPTIONAL MATCH (cat)-[:CHILD_OF]->(parentCat:KnowledgeCategory) " +
-                    "WITH collect(DISTINCT sk) + collect(DISTINCT entity) + collect(DISTINCT doc) " +
+                    "WITH collect(DISTINCT s) + collect(DISTINCT sk) + collect(DISTINCT entity) + collect(DISTINCT doc) " +
                     "   + collect(DISTINCT cat) + collect(DISTINCT parentCat) AS allNodes " +
                     "UNWIND allNodes AS n " +
                     "WITH DISTINCT n WHERE n IS NOT NULL " +
@@ -344,24 +344,26 @@ public class ConstructionGraphRepository {
         try {
             // 两段收集：先确定 KP 范围，再为该范围内所有 KP 收集边
             Collection<Map<String, Object>> result = neo4jClient.query(
-                    // 段1：收集学科 KP + prerequisite 目标 KP
-                    "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
+                    // 段1：收集学科 KP + prerequisite 目标 KP + BELONGS_TO_SUBJECT 边
+                    "MATCH (kp:KnowledgePoint)-[rb:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
                     "OPTIONAL MATCH (kp)-[:PREREQUISITE_OF]->(nextKp:KnowledgePoint) " +
-                    "WITH collect(DISTINCT kp) + collect(DISTINCT nextKp) AS scopeKps " +
+                    "WITH collect(DISTINCT rb) AS belongRels, " +
+                    "     collect(DISTINCT kp) + collect(DISTINCT nextKp) AS scopeKps " +
                     "UNWIND scopeKps AS sk " +
-                    "WITH DISTINCT sk WHERE sk IS NOT NULL " +
-                    // 段2：对每个范围 KP 收集边（KP→KP, KP→Cat, Cat→Cat, Entity→KP, Doc→Entity）
+                    "WITH belongRels, DISTINCT sk WHERE sk IS NOT NULL " +
+                    // 段2：对每个范围 KP 收集边
                     "OPTIONAL MATCH (sk)-[r:PREREQUISITE_OF]->(:KnowledgePoint) " +
                     "OPTIONAL MATCH (sk)-[:CHILD_OF]->(cat:KnowledgeCategory) " +
                     "OPTIONAL MATCH (cat)-[rc:CHILD_OF]->(:KnowledgeCategory) " +
                     "OPTIONAL MATCH (sk)<-[ra:ALIGNED_TO]-(:Entity) " +
-                    "WITH collect(DISTINCT r) + collect(DISTINCT rc) + collect(DISTINCT ra) AS kpRels, " +
+                    "WITH belongRels, " +
+                    "     collect(DISTINCT r) + collect(DISTINCT rc) + collect(DISTINCT ra) AS kpRels, " +
                     "     collect(DISTINCT sk) AS scopeKps2 " +
-                    // 段3：Entity → Document 的 EXTRACTS 边（单独 collect 再拼接，避免聚合列混用）
+                    // 段3：EXTRACTS 边
                     "UNWIND scopeKps2 AS sk2 " +
                     "OPTIONAL MATCH (sk2)<-[:ALIGNED_TO]-(:Entity)<-[re:EXTRACTS]-() " +
-                    "WITH kpRels, collect(DISTINCT re) AS extraRels " +
-                    "UNWIND kpRels + extraRels AS r " +
+                    "WITH belongRels, kpRels, collect(DISTINCT re) AS extraRels " +
+                    "UNWIND belongRels + kpRels + extraRels AS r " +
                     "WITH DISTINCT r WHERE r IS NOT NULL " +
                     "RETURN startNode(r).id AS sourceNodeId, endNode(r).id AS targetNodeId, type(r) AS edgeType"
             ).bindAll(Map.of("name", subjectName)).fetch().all();
