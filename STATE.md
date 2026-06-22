@@ -6,11 +6,12 @@
 
 ## 当前活动
 
-- **Change ID**: `fusion-to-analysis-event-driven`
-- **当前阶段**: DEV ✅ → 下一步 TEST / REVIEW
-- **当前角色**: Dev（全部任务完成）→ 下一步 Reviewer
-- **最后更新**: 2026-06-21
-- **路径建议**: 完整 — REQUIREMENT → DESIGN → TASK → DEV → TEST → REVIEW → INTEGRATION
+- **Change ID**: `frontend-status-flow`
+- **当前阶段**: TASK ✅ → 下一步 DEV
+- **当前角色**: Planner → 下一步 Dev
+- **最后更新**: 2026-06-22
+- **路径建议**: 最短 — REQUIREMENT (增量) → UI-DESIGN → TASK → DEV（纯前端修复 + 轻量增强）
+- **TASK 阶段产出**: 5 个任务 · 3 波次 · Wave1 2 并行 + Wave2 2 并行(1 有依赖) + Wave3 终验。每任务配 vue-tsc verify。T01 修复轮询策略·T02 新建管线进度组件·T03 图谱页状态联动·T04 文件列表集成·T05 全量验证
 - **关键决策（REQUIREMENT 级）**：fusion 全栈（api-dto + application + infrastructure + 前端）从 graph 模块迁入 analysis 模块；构建完成改用同步事件 `GraphConstructedEvent` 触发融合（替换 `ConstructionServiceImpl` 直接调用 + grade `@Order(2)` 监听器，统一文档/成绩两路径触发入口）；REST `/api/v1/graph/fusion/*` → `/api/v1/analysis/fusion/*`；保留 `CONTEXT.md` L153 同步链路（`@EventListener` 同步，单请求 COMPLETED）；fusion 行为等价，不引异步/MQ/schema 变更。
 - **关键决策（DESIGN 级 · D1–D11）**：
   - D1 事件机制 = plain 同步 `@EventListener`（非 `AFTER_COMMIT`/`@Async`，AC-4 同步响应契约排除）

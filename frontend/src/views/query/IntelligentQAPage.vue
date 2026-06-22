@@ -40,7 +40,7 @@ function handleSend(question: string) {
         <div class="qa-question body-lead">
           <strong>{{ item.question }}</strong>
         </div>
-        <MarkdownReport :content="item.answer" />
+        <MarkdownReport :content="item.answer" :output-format="store.outputFormat" />
         <TokenUsageBar :token-usage="store.tokenUsage" />
       </div>
     </div>

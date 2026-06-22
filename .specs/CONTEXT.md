@@ -295,6 +295,9 @@
 | `application/query/chat/intent/` | 可插拔意图识别策略链（L2） | `IntentRecognitionStrategy` 接口 + `IntentRecognitionService` 编排器 + `LlmIntentRecognitionStrategy`（LLM 分类）+ `KeywordIntentRecognitionStrategy`（关键词兜底）。按 priority 链式执行，统一的可插拔策略模式 |
 | `application/query/chat/registry/` | 剪枝策略注册表（L2） | `PruningStrategyRegistry`：按意图名路由策略，解耦 `QueryServiceImpl` 与具体策略 |
 | `frontend/src/common/components/HtmlSvgViewer.vue` | HTML/SVG 安全渲染组件 | DOMPurify 净化 + v-html 渲染，按 `outputFormat` 选择渲染器 |
+| `frontend/src/views/file/components/` | 文件管理页子组件目录 | `FileUpload.vue`（文件上传弹窗）。后续新增 `StatusPipeline.vue`（管线进度指示器）归入此目录 |
+| **前端状态轮询** | 前端通过定时 `setInterval` 拉取 `GET /api/v1/file/textbooks` 列表，检测文件状态变化的机制。仅对 `*ING` 活跃处理态（PARSING/EXTRACTING/FUSING）轮询，最大持续 5 分钟，超时或全入终态后自动停止 | 文件管理页 `fileStore.ts` |
+| **管线进度指示器** | 文件列表状态列的紧凑步骤条组件，展示「解析 → 抽取 → 融合」三阶段完成/进行中/未开始状态，替代原有纯文字 `StatusBadge` | `frontend-status-flow` REQUIREMENT |
 
 ## 禁动清单
 

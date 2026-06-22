@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import MarkdownViewer from '@/common/components/MarkdownViewer.vue'
+import HtmlSvgViewer from '@/common/components/HtmlSvgViewer.vue'
 
-defineProps<{
+const props = defineProps<{
   content: string
+  outputFormat?: string
 }>()
 </script>
 
 <template>
   <div class="markdown-report">
-    <MarkdownViewer :content="content" />
+    <HtmlSvgViewer v-if="props.outputFormat === 'html-svg'" :content="content" />
+    <MarkdownViewer v-else :content="content" />
   </div>
 </template>
 

@@ -2,7 +2,8 @@ package com.graphnexus.application.query.chat.service.impl;
 
 import com.graphnexus.application.analysis.model.PrunedSubgraph;
 import com.graphnexus.application.analysis.model.PruningRequest;
-import com.graphnexus.application.analysis.strategy.StudentDiagnosisStrategy;
+import com.graphnexus.application.query.chat.intent.IntentRecognitionService;
+import com.graphnexus.application.query.chat.registry.PruningStrategyRegistry;
 import com.graphnexus.common.LlmGateway;
 import com.graphnexus.application.query.chat.config.QueryProperties;
 import com.graphnexus.application.query.chat.model.QueryIntent;
@@ -46,22 +47,19 @@ public class QueryServiceImpl implements QueryService {
 
     private final QueryGraphRepository queryGraphRepository;
     private final ExamRecordRepository examRecordRepository;
-    private final StudentDiagnosisStrategy diagnosisStrategy;
+    private final IntentRecognitionService intentRecognitionService;
+    private final PruningStrategyRegistry pruningStrategyRegistry;
     private final PromptTemplateService promptTemplateService;
     private final LlmGateway llmGateway;
     private final QueryTaskRepository queryTaskRepository;
     private final QueryProperties queryProperties;
     private final ObjectMapper objectMapper;
 
-    // ======================== 意图识别关键词 ========================
+    // ======================== 意图识别 ========================
 
-    private static final Map<String, QueryIntent> INTENT_KEYWORDS = Map.of(
-            "薄弱", QueryIntent.STUDENT_DIAGNOSIS,
-            "加强", QueryIntent.STUDENT_DIAGNOSIS,
-            "掌握", QueryIntent.STUDENT_DIAGNOSIS,
-            "诊断", QueryIntent.STUDENT_DIAGNOSIS,
-            "分析学生", QueryIntent.STUDENT_DIAGNOSIS
-    );
+    QueryIntent recognizeIntent(String question) {
+        return intentRecognitionService.recognize(question);
+    }
 
     // ======================== 公共 API ========================
 
@@ -86,7 +84,7 @@ public class QueryServiceImpl implements QueryService {
             );
             PruningRequest pruningRequest = new PruningRequest(
                     intent.name(), student.getStudentNo(), subject, params);
-            PrunedSubgraph subgraph = diagnosisStrategy.prune(pruningRequest);
+            PrunedSubgraph subgraph = pruningStrategyRegistry.get(intent.name()).prune(pruningRequest);
 
             if (subgraph.nodes().isEmpty() && "STUDENT_NOT_FOUND".equals(subgraph.meta().strategy())) {
                 throw new BusinessException(ErrorCode.A0006, "未找到学生: " + studentName);
@@ -108,7 +106,8 @@ public class QueryServiceImpl implements QueryService {
             }
             int estimatedTokens = subgraphText.length() / charsPerToken;
 
-            // 6. Prompt 组装
+            // 6. Prompt 组装（格式感知）
+            String outputFormat = queryProperties.getOutput().getFormat();
             Map<String, String> templateVars = new HashMap<>();
             templateVars.put("studentName", student.getName() != null ? student.getName() : "");
             templateVars.put("studentNo", student.getStudentNo());
@@ -120,10 +119,10 @@ public class QueryServiceImpl implements QueryService {
             templateVars.put("maxHops", String.valueOf(queryProperties.getPruning().getMaxPrerequisiteHops()));
             templateVars.put("mastersAvailable", String.valueOf(subgraph.meta().mastersAvailable()));
 
-            var promptPair = promptTemplateService.buildPrompt(intent, templateVars);
+            var promptPair = promptTemplateService.buildPrompt(intent, templateVars, outputFormat);
 
-            // 7. LLM 调用（含重试 + 格式校验）
-            String answer = callLlmWithRetry(promptPair.systemPrompt(), promptPair.userMessage());
+            // 7. LLM 调用（含重试 + 按格式校验）
+            String answer = callLlmWithRetry(promptPair.systemPrompt(), promptPair.userMessage(), outputFormat);
 
             // 8. 持久化
             long elapsedMs = System.currentTimeMillis() - startTime;
@@ -133,7 +132,7 @@ public class QueryServiceImpl implements QueryService {
                     estimatedTokens, null, elapsedMs);
 
             return new QueryResultBO(taskId, "COMPLETED", question, intent.name(),
-                    answer, null, new TokenUsage(subgraph.meta().totalNodes(), subgraph.meta().totalEdges(),
+                    answer, outputFormat, new TokenUsage(subgraph.meta().totalNodes(), subgraph.meta().totalEdges(),
                     estimatedTokens, null, null), null, LocalDateTime.now(), LocalDateTime.now());
 
         } catch (BusinessException e) {
@@ -226,18 +225,19 @@ public class QueryServiceImpl implements QueryService {
                     "maxHops", (double) queryProperties.getPruning().getMaxPrerequisiteHops()
             );
             PruningRequest pruningRequest = new PruningRequest(intent.name(), student.getStudentNo(), subject, params);
-            PrunedSubgraph subgraph = diagnosisStrategy.prune(pruningRequest);
+            PrunedSubgraph subgraph = pruningStrategyRegistry.get(intent.name()).prune(pruningRequest);
             String subgraphText = serializeSubgraph(subgraph, student);
 
             int charsPerToken = queryProperties.getTokenBudget().getCharsPerToken();
+            String outputFormat = queryProperties.getOutput().getFormat();
             Map<String, String> templateVars = buildTemplateVars(question, student, subject, subgraphText, subgraph);
-            var promptPair = promptTemplateService.buildPrompt(intent, templateVars);
-            String answer = callLlmWithRetry(promptPair.systemPrompt(), promptPair.userMessage());
+            var promptPair = promptTemplateService.buildPrompt(intent, templateVars, outputFormat);
+            String answer = callLlmWithRetry(promptPair.systemPrompt(), promptPair.userMessage(), outputFormat);
 
             long elapsedMs = System.currentTimeMillis() - startTime;
             updateCompletedTask(taskId, answer, subgraph, charsPerToken, elapsedMs);
             return new QueryResultBO(taskId, "COMPLETED", question, intent.name(),
-                    answer, null, null, null, LocalDateTime.now(), LocalDateTime.now());
+                    answer, outputFormat, null, null, LocalDateTime.now(), LocalDateTime.now());
         } catch (Exception e) {
             throw e;
         }
@@ -563,26 +563,31 @@ public class QueryServiceImpl implements QueryService {
 
     // ======================== LLM 调用 + 重试 ========================
 
-    String callLlmWithRetry(String systemPrompt, String userMessage) {
+    String callLlmWithRetry(String systemPrompt, String userMessage, String format) {
         int maxRetries = queryProperties.getRetry().getMaxRetries();
         long retryDelay = queryProperties.getRetry().getRetryDelayMs();
+        boolean isMarkdown = "markdown".equals(format);
         String lastResponse = null;
 
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 String currentSystemPrompt = systemPrompt;
                 if (attempt > 0) {
-                    currentSystemPrompt = systemPrompt + "\n\n【重要】上次输出格式不正确。"
-                            + "请务必以 ## 标题开头，直接开始报告正文，不要有任何前导语。"
-                            + "确保包含至少一个列表（- 或 1. ）。";
+                    String hint = isMarkdown
+                            ? "请务必以 ## 标题开头，直接开始报告正文，不要有任何前导语。确保包含至少一个列表（- 或 1. ）。"
+                            : "请务必以 HTML 标签开头（如 <h2>），包含至少一个 <svg> 元素。禁止 Markdown 标记和前导语。";
+                    currentSystemPrompt = systemPrompt + "\n\n【重要】上次输出格式不正确。" + hint;
                 }
 
                 String response = llmGateway.chat(currentSystemPrompt, userMessage);
                 lastResponse = response;
 
-                if (validateLlmResponse(response)) {
-                    return response;
-                }
+                boolean valid = isMarkdown
+                        ? validateMarkdownResponse(response)
+                        : validateHtmlSvgResponse(response);
+
+                if (valid) return response;
+
                 log.warn("LLM 格式校验未通过 (attempt {}/{}), retry after {}ms",
                         attempt + 1, maxRetries + 1, retryDelay);
 
@@ -598,21 +603,36 @@ public class QueryServiceImpl implements QueryService {
                 break;
             }
         }
-        // 重试耗尽，降级返回原始文本
         log.warn("LLM 格式校验重试耗尽，降级返回原始文本");
         return lastResponse != null ? lastResponse : "";
     }
 
-    boolean validateLlmResponse(String response) {
+    /** Markdown 格式校验（保留原有逻辑） */
+    boolean validateMarkdownResponse(String response) {
         if (response == null || response.isBlank()) return false;
         String trimmed = response.trim();
-        // 必须以 # 开头（标题，无前导语）
         if (!trimmed.startsWith("#")) return false;
-        // 必须含列表标记
         if (!trimmed.contains("- ") && !trimmed.matches(".*\\d\\.\\s.*")) return false;
-        // 不含常见前导语
         String lower = trimmed.substring(0, Math.min(100, trimmed.length()));
         return !lower.contains("根据提供") && !lower.contains("以下是") && !lower.contains("根据子图");
+    }
+
+    /** HTML+SVG 格式校验（新增） */
+    boolean validateHtmlSvgResponse(String response) {
+        if (response == null || response.isBlank()) return false;
+        String trimmed = response.trim();
+        // 必须以 HTML 标签开头
+        if (!trimmed.startsWith("<")) return false;
+        // 必须包含至少 1 个 <svg> 元素
+        String lower = trimmed.toLowerCase();
+        if (!lower.contains("<svg")) return false;
+        // SVG 必须含 xmlns
+        if (lower.contains("<svg") && !lower.contains("xmlns")) return false;
+        // 不含 Markdown 标记
+        if (trimmed.startsWith("##") || trimmed.startsWith("# ")) return false;
+        // 不含常见前导语
+        String first100 = lower.substring(0, Math.min(100, lower.length()));
+        return !first100.contains("根据提供") && !first100.contains("以下是");
     }
 
     // ======================== 持久化辅助 ========================

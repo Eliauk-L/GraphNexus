@@ -8,6 +8,7 @@ export const useQueryStore = defineStore('query', () => {
   const answer = ref('')
   const taskId = ref('')
   const intent = ref('')
+  const outputFormat = ref<string>('markdown')
   const status = ref<'idle' | 'pending' | 'processing' | 'completed' | 'failed'>('idle')
   const tokenUsage = ref<TokenUsageVO | null>(null)
   const errorMessage = ref('')
@@ -77,6 +78,7 @@ export const useQueryStore = defineStore('query', () => {
     taskId.value = result.taskId
     answer.value = result.answer
     intent.value = result.intent
+    outputFormat.value = result.outputFormat || 'markdown'
     tokenUsage.value = result.tokenUsage
     status.value = 'completed'
     history.value.push({
@@ -87,7 +89,7 @@ export const useQueryStore = defineStore('query', () => {
   }
 
   return {
-    currentQuestion, answer, taskId, intent, status, tokenUsage,
+    currentQuestion, answer, taskId, intent, outputFormat, status, tokenUsage,
     errorMessage, history,
     sendChat, sendAsync, stopPolling,
   }

@@ -18,6 +18,7 @@ const props = defineProps<{
   data: G6GraphData | null
   loading?: boolean
   error?: string | null
+  fullscreen?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -226,6 +227,20 @@ watch(
   },
 )
 
+watch(
+  () => props.fullscreen,
+  () => {
+    // 全屏切换后等 DOM 更新完，触发 G6 重新适配
+    nextTick(() => {
+      setTimeout(() => {
+        if (graph) {
+          try { graph.render() } catch { /* ignore */ }
+        }
+      }, 200)
+    })
+  },
+)
+
 onMounted(() => {
   nextTick(async () => {
     if (props.data && props.data.nodes.length > 0) {
@@ -264,7 +279,7 @@ defineExpose({ getGraph: () => graph })
     </div>
 
     <!-- G6 画布 -->
-    <div v-show="props.data && !props.error" ref="container" class="graph-canvas" />
+    <div v-show="props.data && !props.error" ref="container" class="graph-canvas" :class="{ 'graph-canvas-fs': props.fullscreen }" />
   </div>
 </template>
 
@@ -282,6 +297,10 @@ defineExpose({ getGraph: () => graph })
   border-radius: var(--rounded-md);
   overflow: hidden;
   background: var(--color-surface);
+}
+
+.graph-canvas-fs {
+  height: 100%;
 }
 
 .graph-empty,
