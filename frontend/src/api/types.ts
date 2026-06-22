@@ -190,6 +190,7 @@ export interface QueryAskResponse {
   question: string
   intent: string
   answer: string
+  outputFormat?: string  // 'html-svg' | 'markdown'
   status: string
   tokenUsage: TokenUsageVO | null
 }
@@ -208,6 +209,7 @@ export interface QueryResultResponse {
   question: string
   intent: string
   answer: string
+  outputFormat?: string  // 'html-svg' | 'markdown'
   tokenUsage: TokenUsageVO | null
   errorMessage: string
   createdAt: string
