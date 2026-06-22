@@ -1,6 +1,7 @@
 package com.graphnexus.application.file.grade.service;
 
 import com.graphnexus.application.file.grade.event.GradeDeletedEvent;
+import com.graphnexus.application.file.grade.model.ExamSummaryBO;
 import com.graphnexus.application.file.grade.model.GradeRecordBO;
 import com.graphnexus.common.PageResult;
 import com.graphnexus.infrastructure.mysql.file.entity.ExamRecordDO;
@@ -18,6 +19,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -122,5 +124,24 @@ public class GradeServiceImpl implements GradeService {
             eventPublisher.publishEvent(new GradeDeletedEvent(this, (String) result[0], recordCount));
         }
         return result;
+    }
+
+    // ======================== 考试汇总 ========================
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<ExamSummaryBO> listDistinctExams(int pageNum, int pageSize) {
+        Page<Object[]> page = examRecordRepository.findDistinctExams(
+                PageRequest.of(pageNum - 1, pageSize));
+
+        Page<ExamSummaryBO> boPage = page.map(row -> ExamSummaryBO.builder()
+                .examNo((String) row[0])
+                .examName((String) row[1])
+                .examDate((LocalDate) row[2])
+                .subject((String) row[3])
+                .studentCount(((Number) row[4]).longValue())
+                .build());
+
+        return PageResult.of(boPage);
     }
 }

@@ -1,5 +1,5 @@
 import client from './client'
-import type { GradeRecordVO, GradeUploadResultVO, DeleteResultVO, PageResult } from './types'
+import type { GradeRecordVO, GradeUploadResultVO, ExamSummaryVO, DeleteResultVO, PageResult } from './types'
 
 /** 上传成绩文件（CSV/Excel） */
 export function uploadGradeFile(file: File, subject: string): Promise<GradeUploadResultVO> {
@@ -23,6 +23,14 @@ export function listGrades(params: {
   pageSize?: number
 } = {}): Promise<PageResult<GradeRecordVO>> {
   return client.get('/file/grades', { params })
+}
+
+/** 分页查询不重复的考试汇总（管理考试弹窗用） */
+export function listExams(params: {
+  pageNum?: number
+  pageSize?: number
+} = {}): Promise<PageResult<ExamSummaryVO>> {
+  return client.get('/file/grades/exams', { params })
 }
 
 /** 按考试编号级联删除成绩 */

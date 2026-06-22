@@ -1,13 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { listGrades, deleteGradeByExam, uploadGradeFile } from '@/api/grade'
-import type { GradeRecordVO } from '@/api/types'
+import { listGrades, listExams, deleteGradeByExam, uploadGradeFile } from '@/api/grade'
+import type { GradeRecordVO, ExamSummaryVO } from '@/api/types'
 
 export const useGradeStore = defineStore('grade', () => {
   const grades = ref<GradeRecordVO[]>([])
   const total = ref(0)
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  // 考试汇总（管理考试弹窗）
+  const exams = ref<ExamSummaryVO[]>([])
+  const examsLoading = ref(false)
 
   // 筛选条件
   const filters = ref({
@@ -37,10 +41,25 @@ export const useGradeStore = defineStore('grade', () => {
     }
   }
 
+  /** 加载全量考试汇总（管理考试弹窗用） */
+  async function loadExams() {
+    examsLoading.value = true
+    try {
+      const result = await listExams({ pageSize: 1000 })
+      exams.value = result.list
+    } catch {
+      error.value = '加载考试列表失败'
+    } finally {
+      examsLoading.value = false
+    }
+  }
+
   async function remove(examNo: string) {
     error.value = null
     try {
       await deleteGradeByExam(examNo)
+      // 从本地考试列表中移除
+      exams.value = exams.value.filter((e) => e.examNo !== examNo)
       await loadGrades()
     } catch {
       error.value = '删除失败'
@@ -54,6 +73,7 @@ export const useGradeStore = defineStore('grade', () => {
     try {
       await uploadGradeFile(file, subject)
       await loadGrades()
+      await loadExams() // 刷新考试列表
     } catch {
       error.value = '上传成绩失败'
       throw new Error('上传成绩失败')
@@ -62,5 +82,5 @@ export const useGradeStore = defineStore('grade', () => {
     }
   }
 
-  return { grades, total, loading, error, filters, loadGrades, remove, upload }
+  return { grades, total, loading, error, exams, examsLoading, filters, loadGrades, loadExams, remove, upload }
 })

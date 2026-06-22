@@ -1,9 +1,11 @@
 package com.graphnexus.api.file.controller;
 
 import com.graphnexus.api.file.dto.grade.DeleteResultVO;
+import com.graphnexus.api.file.dto.grade.ExamSummaryVO;
 import com.graphnexus.api.file.dto.grade.GradeRecordVO;
 import com.graphnexus.api.file.dto.grade.GradeUploadResultVO;
 import com.graphnexus.application.file.grade.service.GradeUploadService;
+import com.graphnexus.application.file.grade.model.ExamSummaryBO;
 import com.graphnexus.application.file.grade.model.GradeRecordBO;
 import com.graphnexus.application.file.grade.model.GradeUploadResultBO;
 import com.graphnexus.application.file.grade.service.GradeService;
@@ -100,5 +102,21 @@ public class GradeController {
     ) {
         Object[] result = gradeService.deleteByExamNo(examNo);
         return ApiResult.success(DeleteResultVO.of((String) result[0], (int) result[1]));
+    }
+
+    /**
+     * 分页查询不重复的考试汇总（管理考试弹窗用）。
+     */
+    @Operation(summary = "考试汇总", description = "返回按 examNo 去重的考试元数据 + 人数，用于管理考试弹窗")
+    @GetMapping("/exams")
+    public ApiResult<PageResult<ExamSummaryVO>> listExams(
+            @Parameter(description = "页码（从 1 开始）", example = "1")
+            @RequestParam(defaultValue = "1") int pageNum,
+            @Parameter(description = "每页大小", example = "50")
+            @RequestParam(defaultValue = "50") int pageSize
+    ) {
+        PageResult<ExamSummaryBO> result = gradeService.listDistinctExams(pageNum, pageSize);
+        List<ExamSummaryVO> voList = result.list().stream().map(ExamSummaryVO::from).toList();
+        return ApiResult.success(new PageResult<>(voList, result.total(), result.pageNum(), result.pageSize()));
     }
 }

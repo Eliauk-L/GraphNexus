@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { NSpace, NModal, useMessage } from 'naive-ui'
 import { Search, Trash2, Upload, Settings } from '@lucide/vue'
 import { useGradeStore } from './gradeStore'
@@ -10,6 +11,7 @@ import DataTable from '@/common/components/DataTable.vue'
 import type { DataTableColumns } from 'naive-ui'
 
 const store = useGradeStore()
+const { exams, examsLoading } = storeToRefs(store)
 const message = useMessage()
 
 const page = ref(1)
@@ -25,24 +27,8 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 // ── 管理考试弹窗 ──
 const showManageModal = ref(false)
 const manageSearch = ref('')
-// 从成绩列表中推导考试元信息
-const distinctExams = computed(() => {
-  const seen = new Set<string>()
-  const list: { examNo: string; examName: string; subject: string; count: number }[] = []
-  // 用 store.grades 推导，避免额外 API 调用
-  for (const g of store.grades) {
-    if (!seen.has(g.examNo)) {
-      seen.add(g.examNo)
-      list.push({
-        examNo: g.examNo,
-        examName: g.examName,
-        subject: g.subject,
-        count: store.grades.filter((r) => r.examNo === g.examNo).length,
-      })
-    }
-  }
-  return list
-})
+// 从后端专用接口获取全量考试汇总，而非从当前分页 store.grades 推导
+const distinctExams = computed(() => exams.value)
 
 const filteredExams = computed(() => {
   if (!manageSearch.value.trim()) return distinctExams.value
@@ -98,9 +84,10 @@ async function confirmUpload() {
 }
 
 // ── 管理弹窗 ──
-function openManageModal() {
+async function openManageModal() {
   showManageModal.value = true
   manageSearch.value = ''
+  await store.loadExams()
 }
 
 async function confirmDeleteExam(examNo: string) {
@@ -120,6 +107,7 @@ function formatSize(bytes: number): string {
 
 onMounted(() => {
   store.loadGrades(page.value, pageSize.value)
+  store.loadExams()
 })
 </script>
 
@@ -200,7 +188,7 @@ onMounted(() => {
         </div>
         <div class="manage-list">
           <div v-if="filteredExams.length === 0" class="supporting" style="color:var(--color-text-tertiary);text-align:center;padding:var(--spacing-2xl)">
-            暂无考试记录
+            {{ examsLoading ? '加载中...' : '暂无考试记录' }}
           </div>
           <div
             v-for="exam in filteredExams"
@@ -208,9 +196,17 @@ onMounted(() => {
             class="manage-row"
           >
             <div class="manage-row__info">
-              <span class="supporting" style="font-weight:500">{{ exam.examNo }}</span>
-              <span class="supporting" style="color:var(--color-text-secondary);margin-left:var(--spacing-sm)">{{ exam.examName }}</span>
-              <span class="supporting" style="color:var(--color-text-tertiary);margin-left:var(--spacing-sm)">{{ exam.subject }} · {{ exam.count }}人</span>
+              <div class="manage-row__header">
+                <span class="manage-row__exam-no">{{ exam.examNo }}</span>
+                <span class="manage-row__subject">{{ exam.subject }}</span>
+              </div>
+              <div class="manage-row__meta">
+                <span class="manage-row__exam-name">{{ exam.examName }}</span>
+                <span class="manage-row__divider">·</span>
+                <span>{{ exam.studentCount }} 人</span>
+                <span class="manage-row__divider">·</span>
+                <span>{{ exam.examDate }}</span>
+              </div>
             </div>
             <BaseButton variant="danger" size="small" @click="confirmDeleteExam(exam.examNo)">
               <Trash2 :size="14" style="margin-right:2px" />删除
@@ -238,14 +234,51 @@ onMounted(() => {
 .file-selected { padding:var(--spacing-md); border:1px solid var(--color-border); border-radius:var(--rounded-md); }
 .modal-footer { margin-top:var(--spacing-lg); padding-top:var(--spacing-md); border-top:1px solid var(--color-border); }
 
-.manage-modal { padding:var(--spacing-md); }
-.manage-search { display:flex; margin-bottom:var(--spacing-md); }
-.manage-list { max-height:400px; overflow-y:auto; }
-.manage-row {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:var(--spacing-sm) var(--spacing-md);
-  border-bottom:1px solid var(--color-border);
-  transition: background var(--duration-fast);
+.manage-modal { padding: var(--spacing-md); }
+.manage-search { display: flex; margin-bottom: var(--spacing-md); }
+.manage-list {
+  display: flex; flex-direction: column; gap: var(--spacing-sm);
+  max-height: 420px; overflow-y: auto;
 }
-.manage-row:hover { background: var(--color-bg); }
+.manage-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-md);
+  background: var(--color-surface);
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+.manage-row:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+.manage-row__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.manage-row__header { display: flex; align-items: center; gap: var(--spacing-sm); }
+.manage-row__exam-no {
+  font-size: 0.875rem; font-weight: 600;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono, 'SF Mono', 'Menlo', monospace);
+  letter-spacing: 0.02em;
+}
+.manage-row__subject {
+  display: inline-block;
+  padding: 1px 8px;
+  font-size: 0.7rem; font-weight: 500;
+  color: var(--color-primary);
+  background: var(--color-primary-bg, rgba(59, 130, 246, 0.08));
+  border-radius: var(--rounded-full, 999px);
+  white-space: nowrap;
+}
+.manage-row__meta {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.75rem; color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+.manage-row__exam-name {
+  color: var(--color-text-secondary);
+  max-width: 240px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.manage-row__divider { color: var(--color-border); }
 </style>

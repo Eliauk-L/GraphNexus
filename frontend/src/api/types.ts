@@ -98,6 +98,15 @@ export interface GradeUploadResultVO {
   csvMd5: string
 }
 
+/** 考试汇总（管理考试弹窗用） */
+export interface ExamSummaryVO {
+  examNo: string
+  examName: string
+  examDate: string
+  subject: string
+  studentCount: number
+}
+
 // ── 知识图谱 ──
 
 export interface ExtractionResultVO {

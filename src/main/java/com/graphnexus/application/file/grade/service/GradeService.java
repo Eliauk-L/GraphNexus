@@ -1,5 +1,6 @@
 package com.graphnexus.application.file.grade.service;
 
+import com.graphnexus.application.file.grade.model.ExamSummaryBO;
 import com.graphnexus.application.file.grade.model.GradeRecordBO;
 import com.graphnexus.common.PageResult;
 
@@ -28,4 +29,11 @@ public interface GradeService {
      * @return [examNo, deletedRecordCount]
      */
     Object[] deleteByExamNo(String examNo);
+
+    /**
+     * 分页查询不重复的考试汇总（管理考试弹窗用）。
+     *
+     * <p>按 examNo 分组去重，返回每场考试的元数据 + 考生人数。</p>
+     */
+    PageResult<ExamSummaryBO> listDistinctExams(int pageNum, int pageSize);
 }
