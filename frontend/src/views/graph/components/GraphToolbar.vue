@@ -1,17 +1,25 @@
 <script setup lang="ts">
 /**
- * GraphToolbar — 图谱搜索框。
+ * GraphToolbar — 图谱工具栏：学科选择 + 搜索 + PageRank 开关 + 度量排行按钮。
  */
 import { ref, computed } from 'vue'
 import BaseInput from '@/common/components/BaseInput.vue'
+import BaseSelect from '@/common/components/BaseSelect.vue'
+import { BarChart3 } from '@lucide/vue'
 
 const props = defineProps<{
   searchResults?: { id: string; label: string; nodeType: string }[]
+  subjects?: string[]
+  currentSubject?: string | null
+  pagerankEnabled?: boolean
 }>()
 
 const emit = defineEmits<{
   'search': [query: string]
   'select-node': [nodeId: string]
+  'select-subject': [subject: string]
+  'toggle-pagerank': []
+  'toggle-metrics-panel': []
 }>()
 
 const searchQuery = ref('')
@@ -32,6 +40,10 @@ function onSelectNode(nodeId: string) {
   searchQuery.value = ''
 }
 
+const subjectOptions = computed(() =>
+  (props.subjects ?? []).map((s) => ({ label: s, value: s })),
+)
+
 function nodeTypeColor(type: string): string {
   const colors: Record<string, string> = {
     KnowledgePoint: '#3B82F6',
@@ -47,6 +59,14 @@ function nodeTypeColor(type: string): string {
 
 <template>
   <div class="graph-toolbar">
+    <BaseSelect
+      :model-value="currentSubject ?? undefined"
+      :options="subjectOptions"
+      placeholder="选择学科"
+      style="width: 200px; flex-shrink: 0;"
+      @update:model-value="(v) => emit('select-subject', v as string)"
+    />
+
     <div class="search-area">
       <div class="search-wrapper">
         <BaseInput
@@ -62,16 +82,30 @@ function nodeTypeColor(type: string): string {
             class="search-item"
             @click="onSelectNode(item.id)"
           >
-            <span
-              class="search-item-dot"
-              :style="{ background: nodeTypeColor(item.nodeType) }"
-            />
+            <span class="search-item-dot" :style="{ background: nodeTypeColor(item.nodeType) }" />
             <span class="search-item-label">{{ item.label }}</span>
             <span class="search-item-type supporting">{{ item.nodeType }}</span>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- PageRank Toggle -->
+    <label class="toggle-wrapper" title="切换 PageRank 显示">
+      <span
+        class="toggle-track"
+        :class="{ 'toggle-track--on': pagerankEnabled }"
+        @click="emit('toggle-pagerank')"
+      >
+        <span class="toggle-thumb" />
+      </span>
+      <span class="toggle-label">PageRank</span>
+    </label>
+
+    <!-- 度量排行按钮 -->
+    <button class="btn-toolbar" title="度量排行" @click="emit('toggle-metrics-panel')">
+      <BarChart3 :size="18" />
+    </button>
   </div>
 </template>
 
@@ -138,5 +172,72 @@ function nodeTypeColor(type: string): string {
 .search-item-type {
   color: var(--color-text-tertiary);
   flex-shrink: 0;
+}
+
+/* ── Toggle 开关 ── */
+.toggle-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.toggle-track {
+  position: relative;
+  width: 30px;
+  height: 18px;
+  border-radius: var(--rounded-full);
+  background: var(--color-border);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.toggle-track--on {
+  background: var(--color-brand);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--rounded-full);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-hover-lift);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.toggle-track--on .toggle-thumb {
+  transform: translateX(12px);
+}
+
+.toggle-label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── 工具栏按钮 ── */
+.btn-toolbar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+.btn-toolbar:hover {
+  color: var(--color-brand);
+  border-color: var(--color-brand);
+  transform: translateY(-1px);
 }
 </style>
