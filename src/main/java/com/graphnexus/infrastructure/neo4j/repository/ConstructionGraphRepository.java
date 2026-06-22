@@ -353,11 +353,11 @@ public class ConstructionGraphRepository {
                     "OPTIONAL MATCH (sk)<-[ra:ALIGNED_TO]-(:Entity) " +
                     "WITH collect(DISTINCT r) + collect(DISTINCT rc) + collect(DISTINCT ra) AS kpRels, " +
                     "     collect(DISTINCT sk) AS scopeKps2 " +
-                    // 段3：Entity → Document 的 EXTRACTS 边
+                    // 段3：Entity → Document 的 EXTRACTS 边（单独 collect 再拼接，避免聚合列混用）
                     "UNWIND scopeKps2 AS sk2 " +
                     "OPTIONAL MATCH (sk2)<-[:ALIGNED_TO]-(:Entity)<-[re:EXTRACTS]-() " +
-                    "WITH kpRels + collect(DISTINCT re) AS allRels " +
-                    "UNWIND allRels AS r " +
+                    "WITH kpRels, collect(DISTINCT re) AS extraRels " +
+                    "UNWIND kpRels + extraRels AS r " +
                     "WITH DISTINCT r WHERE r IS NOT NULL " +
                     "RETURN startNode(r).id AS sourceNodeId, endNode(r).id AS targetNodeId, type(r) AS edgeType"
             ).bindAll(Map.of("name", subjectName)).fetch().all();
