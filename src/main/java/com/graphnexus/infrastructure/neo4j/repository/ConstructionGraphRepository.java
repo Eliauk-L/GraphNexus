@@ -55,7 +55,17 @@ public class ConstructionGraphRepository {
     }
 
     private Map<String, Object> toNodeProps(GraphNode node) {
-        return node.toProperties();
+        // 过滤 null 值，避免 SET n = $props 时用 null 覆盖已有属性
+        // 场景：考试 KP（CSV_IMPORT）的 documentId/gradeLevel 为 null，
+        // 若直接 SET 会覆盖文档 KP 已存储的正确值
+        Map<String, Object> props = node.toProperties();
+        Map<String, Object> filtered = new HashMap<>();
+        for (var entry : props.entrySet()) {
+            if (entry.getValue() != null) {
+                filtered.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return filtered;
     }
 
     // ======================== 边 CRUD ========================
@@ -127,7 +137,8 @@ public class ConstructionGraphRepository {
                 node.setDocumentId(n.get("documentId").asString());
                 try { node.setCreatedAt(java.time.LocalDateTime.parse(n.get("createdAt").asString())); }
                 catch (Exception e) { node.setCreatedAt(null); }
-                node.setProperties(new HashMap<>());
+                // 提取所有 Neo4j 节点属性（name, description 等）
+                node.setProperties(new HashMap<>(n.asMap()));
                 nodes.add(node);
             }
             return nodes;
@@ -198,6 +209,57 @@ public class ConstructionGraphRepository {
         int deletedCount = summary.counters().nodesDeleted();
         log.debug("已删除 Exam 节点 {} 个（examNo={}）", deletedCount, examNo);
         return deletedCount;
+    }
+
+    // ======================== 全量图谱查询 ========================
+
+    /**
+     * 查询全量图谱所有节点（排除 DELETING 状态的文档关联节点）。
+     */
+    public List<GraphNode> findAllNodes() {
+        try {
+            Collection<Map<String, Object>> rows = neo4jClient.query(
+                    "MATCH (n) RETURN n ORDER BY n.nodeType"
+            ).fetch().all();
+            List<GraphNode> nodes = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                org.neo4j.driver.types.Node n = (org.neo4j.driver.types.Node) row.get("n");
+                SimpleGraphNode node = new SimpleGraphNode();
+                node.setId(n.get("id").asString());
+                node.setNodeType(n.get("nodeType").asString());
+                try { node.setDocumentId(n.get("documentId").asString()); } catch (Exception e) { node.setDocumentId(null); }
+                try { node.setCreatedAt(java.time.LocalDateTime.parse(n.get("createdAt").asString())); }
+                catch (Exception e) { node.setCreatedAt(null); }
+                node.setProperties(new HashMap<>(n.asMap()));
+                nodes.add(node);
+            }
+            return nodes;
+        } catch (Exception e) {
+            log.warn("查询全量图谱节点失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 查询全量图谱所有边。
+     */
+    public List<GraphEdge> findAllEdges() {
+        try {
+            Collection<Map<String, Object>> result = neo4jClient.query(
+                    "MATCH (a)-[r]->(b) " +
+                    "RETURN a.id AS sourceNodeId, b.id AS targetNodeId, type(r) AS edgeType"
+            ).fetch().all();
+            return result.stream().map(row -> {
+                SimpleGraphEdge edge = new SimpleGraphEdge();
+                edge.setSourceNodeId((String) row.get("sourceNodeId"));
+                edge.setTargetNodeId((String) row.get("targetNodeId"));
+                edge.setEdgeType((String) row.get("edgeType"));
+                return edge;
+            }).collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("查询全量图谱边失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     // ======================== Subject 辅助 ========================
