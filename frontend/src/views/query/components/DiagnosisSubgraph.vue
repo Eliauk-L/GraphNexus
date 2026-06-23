@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * DiagnosisSubgraph — 诊断子图可视化组件（纯 SVG）。
- * 见 DESIGN § D1-D4 + UI-DESIGN § 6。
+ * DiagnosisSubgraph — 知识结构子图可视化组件。
+ * 展示学生→知识点的掌握关系（MASTERS）和知识点间的前置依赖（PREREQUISITE_OF）。
+ * 参考 GraphVisualizePage 的力导向布局 + 掌握度色阶。
  */
 import { ref, watch, onMounted, computed } from 'vue'
 import { getPrunedSubgraph } from '@/api/analysis'
@@ -22,21 +23,21 @@ const state = ref<LoadState>('idle')
 const subgraph = ref<SubgraphResponse | null>(null)
 
 // ── 画布参数 ──
-const W = 600
-const H = 400
+const W = 640
+const H = 440
 
-// ── 掌握度色阶（复用 tokens.css 变量）──
+// ── 掌握度色阶 ──
 function masteryFill(weight: number | undefined): string {
-  if (weight === undefined || weight === null) return 'var(--mastery-gray)'
-  if (weight < 0.4) return 'var(--color-error)'
-  if (weight < 0.6) return 'var(--mastery-orange)'
-  if (weight < 0.8) return 'var(--mastery-yellow)'
-  return 'var(--color-success)'
+  if (weight === undefined || weight === null) return '#9CA3AF'
+  if (weight < 0.4) return '#EF4444'
+  if (weight < 0.6) return '#F59E0B'
+  if (weight < 0.8) return '#EAB308'
+  return '#10B981'
 }
 
 function nodeRadius(weight: number | undefined): number {
   if (weight === undefined || weight === null) return 16
-  return 12 + weight * 28
+  return 13 + weight * 26
 }
 
 // ── 力导向布局 ──
@@ -46,10 +47,8 @@ interface LayoutNode {
   label: string
   weight?: number
   examHistory?: string
-  x: number
-  y: number
-  vx: number
-  vy: number
+  x: number; y: number
+  vx: number; vy: number
   fixed: boolean
 }
 
@@ -60,12 +59,8 @@ interface LayoutEdge {
   weight: number
 }
 
-interface LayoutResult {
-  nodes: LayoutNode[]
-  edges: LayoutEdge[]
-}
-
-function computeLayout(data: SubgraphResponse): LayoutResult {
+function computeLayout(data: SubgraphResponse): { nodes: LayoutNode[]; edges: LayoutEdge[] } {
+  const nodeMap = new Map(data.nodes.map(n => [n.id, n]))
   const nodes: LayoutNode[] = data.nodes.map((n) => ({
     id: n.id,
     nodeType: n.nodeType,
@@ -78,28 +73,24 @@ function computeLayout(data: SubgraphResponse): LayoutResult {
     fixed: n.nodeType === 'Student',
   }))
 
-  // Student 固定居中上方
+  // Student 固定居中偏上
   const student = nodes.find((n) => n.nodeType === 'Student')
-  if (student) {
-    student.x = W / 2
-    student.y = 60
-  }
+  if (student) { student.x = W / 2; student.y = 70 }
 
-  const edgeMap: LayoutEdge[] = data.edges.map((e) => ({
+  const edges: LayoutEdge[] = data.edges.map((e) => ({
     source: e.sourceNodeId,
     target: e.targetNodeId,
     edgeType: e.edgeType,
-    weight: e.weight,
+    weight: e.weight ?? 1.0,
   }))
 
-  // 力模拟（50 次迭代）
-  const REPULSION = 3000
-  const ATTRACTION = 0.005
+  // 力模拟（60 次迭代）
+  const REPULSION = 3200
+  const ATTRACTION = 0.006
   const DAMPING = 0.85
-  const CENTER_GRAVITY = 0.01
+  const CENTER_GRAVITY = 0.008
 
-  for (let iter = 0; iter < 50; iter++) {
-    // 节点间斥力
+  for (let iter = 0; iter < 60; iter++) {
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const dx = nodes[j].x - nodes[i].x
@@ -112,9 +103,7 @@ function computeLayout(data: SubgraphResponse): LayoutResult {
         if (!nodes[j].fixed) { nodes[j].vx += fx; nodes[j].vy += fy }
       }
     }
-
-    // 边引力
-    for (const e of edgeMap) {
+    for (const e of edges) {
       const s = nodes.find((n) => n.id === e.source)
       const t = nodes.find((n) => n.id === e.target)
       if (!s || !t) continue
@@ -127,31 +116,32 @@ function computeLayout(data: SubgraphResponse): LayoutResult {
       if (!s.fixed) { s.vx += fx; s.vy += fy }
       if (!t.fixed) { t.vx -= fx; t.vy -= fy }
     }
-
-    // 中心引力 + 更新位置
     for (const n of nodes) {
       if (n.fixed) continue
       n.vx += (W / 2 - n.x) * CENTER_GRAVITY
       n.vy += (H / 2 - n.y) * CENTER_GRAVITY
-      n.vx *= DAMPING
-      n.vy *= DAMPING
-      n.x += n.vx
-      n.y += n.vy
-      // 边界
-      n.x = Math.max(20, Math.min(W - 20, n.x))
-      n.y = Math.max(20, Math.min(H - 20, n.y))
+      n.vx *= DAMPING; n.vy *= DAMPING
+      n.x += n.vx; n.y += n.vy
+      n.x = Math.max(30, Math.min(W - 30, n.x))
+      n.y = Math.max(30, Math.min(H - 30, n.y))
     }
   }
 
-  return { nodes, edges: edgeMap }
+  return { nodes, edges }
 }
 
-const layout = computed<LayoutResult | null>(() => {
+const layout = computed(() => {
   if (!subgraph.value || subgraph.value.nodes.length === 0) return null
   return computeLayout(subgraph.value)
 })
 
-// ── 唯一 ID 生成（SVG marker 等）──
+// ── 边标签位置（PREREQUISITE_OF 边中点偏移）──
+function edgeLabelPos(sx: number, sy: number, tx: number, ty: number) {
+  const mx = (sx + tx) / 2
+  const my = (sy + ty) / 2
+  return { x: mx - 8, y: my - 6 }
+}
+
 let idCounter = 0
 function uid(): string { return `ds-${idCounter++}` }
 
@@ -159,6 +149,7 @@ function uid(): string { return `ds-${idCounter++}` }
 async function load() {
   if (!props.taskId) return
   state.value = 'loading'
+  idCounter = 0
   try {
     subgraph.value = await getPrunedSubgraph(props.taskId)
     state.value = 'loaded'
@@ -168,15 +159,9 @@ async function load() {
   }
 }
 
-watch(() => props.taskId, (newId) => {
-  if (newId) load()
-})
+watch(() => props.taskId, (newId) => { if (newId) load() })
+onMounted(() => { if (props.taskId) load() })
 
-onMounted(() => {
-  if (props.taskId) load()
-})
-
-// ── 事件处理 ──
 function handleNodeClick(ln: LayoutNode) {
   emit('node-click', {
     id: ln.id,
@@ -185,6 +170,15 @@ function handleNodeClick(ln: LayoutNode) {
     examHistory: ln.examHistory,
   })
 }
+
+// ── 统计 ──
+const stats = computed(() => {
+  if (!layout.value) return null
+  const kpNodes = layout.value.nodes.filter(n => n.nodeType !== 'Student')
+  const mastersEdges = layout.value.edges.filter(e => e.edgeType === 'MASTERS')
+  const prereqEdges = layout.value.edges.filter(e => e.edgeType === 'PREREQUISITE_OF')
+  return { kpCount: kpNodes.length, mastersCount: mastersEdges.length, prereqCount: prereqEdges.length }
+})
 </script>
 
 <template>
@@ -206,11 +200,20 @@ function handleNodeClick(ln: LayoutNode) {
 
     <!-- 子图 SVG -->
     <div v-else-if="state === 'loaded' && layout" class="subgraph-wrapper">
+      <!-- 统计摘要 -->
+      <div v-if="stats" class="stats-bar supporting">
+        <span>{{ stats.kpCount }} 个知识点</span>
+        <span class="stats-sep">|</span>
+        <span>{{ stats.mastersCount }} 条掌握关系</span>
+        <span class="stats-sep">|</span>
+        <span>{{ stats.prereqCount }} 条前置依赖</span>
+      </div>
+
       <svg
         xmlns="http://www.w3.org/2000/svg"
         :viewBox="`0 0 ${W} ${H}`"
         width="100%"
-        height="400"
+        height="440"
         class="subgraph-svg"
       >
         <!-- 边 -->
@@ -222,10 +225,31 @@ function handleNodeClick(ln: LayoutNode) {
             :y1="layout.nodes.find(n => n.id === e.source)?.y ?? 0"
             :x2="layout.nodes.find(n => n.id === e.target)?.x ?? 0"
             :y2="layout.nodes.find(n => n.id === e.target)?.y ?? 0"
-            :stroke="e.edgeType === 'MASTERS' ? 'var(--color-text-tertiary)' : 'var(--color-border)'"
-            :stroke-width="e.edgeType === 'MASTERS' ? 1.5 + e.weight : 1"
-            :stroke-dasharray="e.edgeType === 'PREREQUISITE_OF' ? '4,4' : 'none'"
+            :stroke="e.edgeType === 'MASTERS' ? '#9CA3AF' : '#6B7280'"
+            :stroke-width="e.edgeType === 'MASTERS' ? 1.5 + e.weight * 2 : 1.8"
+            :stroke-dasharray="e.edgeType === 'PREREQUISITE_OF' ? '5,3' : 'none'"
+            :opacity="e.edgeType === 'MASTERS' ? 0.6 : 0.8"
           />
+          <!-- PREREQUISITE_OF 边标签（依赖强度） -->
+          <text
+            v-for="e in layout.edges.filter(ed => ed.edgeType === 'PREREQUISITE_OF')"
+            :key="'el-' + uid()"
+            :x="edgeLabelPos(
+              layout.nodes.find(n => n.id === e.source)?.x ?? 0,
+              layout.nodes.find(n => n.id === e.source)?.y ?? 0,
+              layout.nodes.find(n => n.id === e.target)?.x ?? 0,
+              layout.nodes.find(n => n.id === e.target)?.y ?? 0
+            ).x"
+            :y="edgeLabelPos(
+              layout.nodes.find(n => n.id === e.source)?.x ?? 0,
+              layout.nodes.find(n => n.id === e.source)?.y ?? 0,
+              layout.nodes.find(n => n.id === e.target)?.x ?? 0,
+              layout.nodes.find(n => n.id === e.target)?.y ?? 0
+            ).y"
+            font-size="10"
+            fill="#6B7280"
+            text-anchor="start"
+          >{{ e.weight?.toFixed(2) }}</text>
         </g>
 
         <!-- 节点 -->
@@ -236,22 +260,42 @@ function handleNodeClick(ln: LayoutNode) {
             class="node-group"
             @click="handleNodeClick(ln)"
           >
+            <!-- 外环（hover 指示） -->
             <circle
-              :cx="ln.x"
-              :cy="ln.y"
+              :cx="ln.x" :cy="ln.y"
+              :r="nodeRadius(ln.weight) + 4"
+              fill="none" stroke="transparent" stroke-width="2"
+              class="node-ring"
+            />
+            <!-- 主节点 -->
+            <circle
+              :cx="ln.x" :cy="ln.y"
               :r="nodeRadius(ln.weight)"
-              :fill="ln.nodeType === 'Student' ? 'var(--color-brand)' : masteryFill(ln.weight)"
-              stroke="var(--color-surface)"
-              stroke-width="2"
+              :fill="ln.nodeType === 'Student' ? '#3B82F6' : masteryFill(ln.weight)"
+              stroke="#fff" stroke-width="2"
               class="node-circle"
             />
+            <!-- Student 图标标签 -->
+            <text
+              v-if="ln.nodeType === 'Student'"
+              :x="ln.x" :y="ln.y + 5"
+              text-anchor="middle" font-size="12" fill="#fff" font-weight="600"
+            >生</text>
+            <!-- 掌握度百分比（KP 节点内） -->
+            <text
+              v-if="ln.nodeType !== 'Student' && ln.weight !== undefined"
+              :x="ln.x" :y="ln.y + 4"
+              text-anchor="middle" font-size="10" fill="#fff" font-weight="500"
+            >{{ Math.round(ln.weight * 100) }}%</text>
+            <!-- 节点名称标签 -->
             <text
               :x="ln.x"
-              :y="ln.y + nodeRadius(ln.weight) + 14"
+              :y="ln.y + nodeRadius(ln.weight) + 16"
               text-anchor="middle"
-              font-family="var(--font-display)"
+              font-family="var(--font-body)"
               font-size="11"
-              fill="var(--color-text-primary)"
+              :fill="ln.nodeType === 'Student' ? '#1D4ED8' : '#374151'"
+              font-weight="500"
             >{{ ln.label }}</text>
           </g>
         </g>
@@ -259,25 +303,18 @@ function handleNodeClick(ln: LayoutNode) {
 
       <!-- 图例 -->
       <div class="legend">
-        <div class="legend-item">
-          <span class="legend-dot" style="background: var(--color-error)" />
-          <span class="supporting">&lt; 0.4</span>
+        <div class="legend-section">
+          <span class="supporting" style="font-weight: 600; color: var(--color-text-secondary)">掌握度</span>
+          <div class="legend-item"><span class="legend-dot" style="background: #EF4444" /><span class="supporting">&lt;40%</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background: #F59E0B" /><span class="supporting">40-60%</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background: #EAB308" /><span class="supporting">60-80%</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background: #10B981" /><span class="supporting">≥80%</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background: #9CA3AF" /><span class="supporting">未考查</span></div>
         </div>
-        <div class="legend-item">
-          <span class="legend-dot" style="background: var(--mastery-orange)" />
-          <span class="supporting">0.4–0.6</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-dot" style="background: var(--mastery-yellow)" />
-          <span class="supporting">0.6–0.8</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-dot" style="background: var(--color-success)" />
-          <span class="supporting">≥ 0.8</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-dot" style="background: var(--mastery-gray)" />
-          <span class="supporting">未考查</span>
+        <div class="legend-section">
+          <span class="supporting" style="font-weight: 600; color: var(--color-text-secondary)">关系类型</span>
+          <div class="legend-item"><span class="legend-line legend-line--masters" /><span class="supporting">掌握关系</span></div>
+          <div class="legend-item"><span class="legend-line legend-line--prereq" /><span class="supporting">前置依赖</span></div>
         </div>
       </div>
     </div>
@@ -285,16 +322,23 @@ function handleNodeClick(ln: LayoutNode) {
 </template>
 
 <style scoped>
-.subgraph-wrapper {
-  position: relative;
-}
+.subgraph-wrapper { position: relative; }
+.subgraph-svg { display: block; }
 
-.subgraph-svg {
-  display: block;
+.stats-bar {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  background: var(--color-bg);
+  border-radius: var(--rounded-sm);
+  color: var(--color-text-secondary);
+  justify-content: center;
 }
+.stats-sep { color: var(--color-border); }
 
 .state-placeholder {
-  height: 400px;
+  height: 440px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -302,7 +346,7 @@ function handleNodeClick(ln: LayoutNode) {
 
 .skeleton-box {
   width: 100%;
-  height: 400px;
+  height: 440px;
   background: var(--color-border);
   border-radius: var(--rounded-md);
   animation: shimmer 1.5s ease-in-out infinite;
@@ -313,34 +357,38 @@ function handleNodeClick(ln: LayoutNode) {
   50% { opacity: 1; }
 }
 
-/* 节点交互 */
-.node-group {
-  cursor: pointer;
-}
+.node-group { cursor: pointer; }
 
 .node-circle {
-  transition: stroke-width var(--duration-fast) var(--ease-out),
-              filter var(--duration-fast) var(--ease-out);
+  transition: stroke-width var(--duration-fast) var(--ease-out);
 }
 
-.node-circle:hover {
-  stroke-width: 3;
-  stroke: var(--color-brand-veil);
+.node-ring {
+  transition: stroke var(--duration-fast) var(--ease-out);
 }
+
+.node-group:hover .node-ring { stroke: rgba(59, 130, 246, 0.3); }
+.node-group:hover .node-circle { stroke-width: 3; }
 
 /* 图例 */
 .legend {
   display: flex;
-  gap: var(--spacing-md);
-  justify-content: flex-end;
-  margin-top: var(--spacing-sm);
+  gap: var(--spacing-xl);
+  justify-content: center;
+  margin-top: var(--spacing-md);
   flex-wrap: wrap;
+}
+
+.legend-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .legend-dot {
@@ -350,9 +398,21 @@ function handleNodeClick(ln: LayoutNode) {
   flex-shrink: 0;
 }
 
+.legend-line {
+  width: 24px;
+  height: 2px;
+  flex-shrink: 0;
+  border-radius: 1px;
+}
+
+.legend-line--masters { background: #9CA3AF; opacity: 0.6; }
+
+.legend-line--prereq {
+  background: repeating-linear-gradient(90deg, #6B7280 0px, #6B7280 5px, transparent 5px, transparent 8px);
+  opacity: 0.8;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-box {
-    animation: none;
-  }
+  .skeleton-box { animation: none; }
 }
 </style>

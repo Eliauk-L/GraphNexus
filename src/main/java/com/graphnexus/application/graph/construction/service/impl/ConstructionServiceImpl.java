@@ -17,6 +17,7 @@ import com.graphnexus.infrastructure.neo4j.edge.ExtractsEdge;
 import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
 import com.graphnexus.infrastructure.neo4j.node.FileNode;
 import com.graphnexus.infrastructure.neo4j.node.GraphNode;
+import com.graphnexus.infrastructure.neo4j.node.KnowledgePointNode;
 import com.graphnexus.infrastructure.neo4j.node.SubjectNode;
 import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
 import com.graphnexus.infrastructure.neo4j.repository.QueryGraphRepository;

@@ -120,7 +120,7 @@
 | **所属系统** | GraphNexus — 基于图谱技术的 AI 上下文处理与精准问答系统 |
 | **所属用例** | UC-01: 教辅 PDF 上传与图谱构建 |
 | **用例脚本** | **主成功脚本**：管理员上传 PDF → 异步解析 → 宽图谱融合 → 通知完成；**异常脚本**：版面分析失败 / NER为空 / RE为空 |
-| **涉及类/服务** | P1管理后台、文档处理.文档上传(原M3.DocumentIngestionService)、文档处理.文档解析(原M3.PipelineWorker: 版面分析→NER→RE→导入)、图分析.实体对齐(原M2.KnowledgePointService)、图分析.图融合(原M4.GraphFusionService)、横切.通知(原M7.NotificationService)、L4.Neo4j、L4.RabbitMQ |
+| **涉及类/服务** | P1管理后台、文档处理.文档上传(原TextbookController: POST /upload → status=UPLOADED)、文档处理.文档解析(原TextbookController: POST /parse/{id}, ADMIN only, MinerU优先→PDFBox兜底→文本入库; 解析后自动触发两阶段图谱构建→融合)、文档处理.图构建(原ConstructionController: POST /extract/{id}, 手动知识图谱抽取)、L4.Neo4j、L4.MinIO |
 | **前置条件** | 管理员已登录；学科分类已存在于 M2 中 |
 | **后置条件(成功)** | PDF 解析完成，知识点和关系写入 Neo4j，管理员收到完成通知 |
 | **后置条件(失败)** | Document 标记为 FAILED/COMPLETED_WITH_WARNING，管理员收到异常通知 |
@@ -129,24 +129,22 @@
 
 | 对象 | 角色定位 | 职责 |
 |------|---------|------|
-| **管理员(A1)** | 主动参与者（L0 用户层） | 选择学科、上传 PDF、接收处理结果通知 |
-| **P1管理后台** | 边界对象（L0→L1 网关→L2） | 接收用户输入、展示上传结果 |
-| **文档处理.文档上传** | 控制对象（L2 应用层·文档处理） | 文件校验、创建 Document 实体、发布消息 |
-| **L4.RabbitMQ** | 基础设施（L3 基础设施层） | 解耦上传同步操作与异步处理 |
-| **文档处理.文档解析** | 控制对象（L2 应用层·文档处理） | 执行四步流水线：版面分析→NER→RE→图谱导入 |
-| **图分析.实体对齐** | 实体对象（L2 应用层·图分析） | 知识点名称匹配、低置信度实体推送对齐池 |
-| **图分析.图融合** | 实体对象（L2 应用层·图分析） | 增量融合宽图谱 |
-| **横切.通知** | 横切对象 | 发送处理完成/失败通知 |
-| **L4.Neo4j** | 持久化对象（L3 基础设施层） | 图谱数据存储 |
+| **管理员(A1)** | 主动参与者（L0 用户层） | 选择学科→上传PDF→触发解析→触发图谱抽取 |
+| **P1管理后台** | 边界对象（L0→L1 网关→L2） | 文件上传界面、解析按钮、抽取按钮 |
+| **文档处理.文档上传** | 控制对象（L2 应用层·文档处理） | `POST /file/textbooks/upload`: 文件校验(PDF/TXT)、MinIO存储、创建DB记录(status=UPLOADED) |
+| **文档处理.文档解析** | 控制对象（L2 应用层·文档处理） | `POST /file/textbooks/parse/{id}`(仅ADMIN): MinerU优先→PDFBox兜底→文本提取入库→**自动触发两阶段图谱构建→融合** |
+| **文档处理.图构建** | 控制对象（L2 应用层·文档处理） | `POST /graph/construction/extract/{id}`: 手动NER/RE抽取→Neo4j节点+关系写入 |
+| **L4.MinIO** | 持久化对象（L3 基础设施层） | PDF/TXT文件对象存储 |
+| **L4.Neo4j** | 持久化对象（L3 基础设施层） | 知识图谱节点+关系存储 |
 
 ### 步骤3：设置生命线
 
 ```
-管理员    P1       文档处理    MQ       文档处理    图分析     图分析     横切       Neo4j
-  │        │        .文档上传     │        .文档解析    .实体对齐    .图融合     .通知        │
-  │        │         │        │         │         │         │         │         │
-  ║        ║         ║        ║         ║         ║         ║         ║         ║
-  ▼        ▼         ▼        ▼         ▼         ▼         ▼         ▼         ▼
+管理员    P1       文档处理    MinIO     文档处理    文档处理    Neo4j
+  │        │        .文档上传     │        .文档解析    .图构建      │
+  │        │         │        │         │         │         │
+  ║        ║         ║        ║         ║         ║         ║
+  ▼        ▼         ▼        ▼         ▼         ▼         ▼
 ```
 
 每个对象从头到尾贯穿一条纵向虚线生命线。
@@ -158,114 +156,78 @@ sequenceDiagram
     actor A as 管理员(A1)
     participant P1 as P1:管理后台
     participant DocUp as 文档处理<br/>.文档上传
-    participant MQ as L4:RabbitMQ<br/>消息队列
+    participant MinIO as L4:MinIO<br/>(文件存储)
     participant DocParse as 文档处理<br/>.文档解析
-    participant Align as 图分析<br/>.实体对齐
-    participant Fusion as 图分析<br/>.图融合
-    participant Notif as 横切<br/>.通知
+    participant GraphExtract as 文档处理<br/>.图构建
     participant DB as L4:Neo4j
 
-    Note over A,DB: ═══════ 阶段1: 上传与校验 (同步, 秒级) ═══════
+    Note over A,DB: ═══════ 步骤1: 上传文件 (同步) ═══════
 
     A->>+P1: 选择学科("数学") + 选择PDF文件
-    activate P1
-    P1->>+DocUp: uploadDocument(pdfFile: File, subjectId: "数学", uploaderId: adminId): Document
+    P1->>+DocUp: POST /file/textbooks/upload<br/>(file: MultipartFile, subject: "数学")
     activate DocUp
 
-    DocUp->>DocUp: validateFormat(fileType="PDF") → passed
-    DocUp->>DocUp: validateSize(fileSize=12MB, limit=50MB) → passed
+    DocUp->>DocUp: validateFormat(PDF/TXT) + validateSize
+    DocUp->>+MinIO: putObject(bucket, filePath, fileStream)
+    MinIO-->>-DocUp: stored (objectKey)
 
-    DocUp->>+DB: CREATE (d:Document {id, fileName, status:UPLOADED, subjectId, uploadTime})
-    DB-->>-DocUp: ok
+    DocUp->>+DB: INSERT INTO textbook (fileName, filePath, subject, status=UPLOADED, ...)
+    DB-->>-DocUp: textbookId=42
 
-    DocUp->>+MQ: publish(topic="document.uploaded", payload={docId, filePath, subjectId})
-    MQ-->>-DocUp: ack
-
-    DocUp-->>-P1: Document{id:"DOC-042", status:"UPLOADED", message:"文件已接收，正在处理中..."}
+    DocUp-->>-P1: TextbookVO{id:42, status:"UPLOADED", fileName, filePath}
     deactivate DocUp
-    P1-->>-A: 上传成功 ✓ 处理完成后将收到通知
-    deactivate P1
+    P1-->>-A: 上传成功 ✓ 文件已存储，等待解析
 
-    Note over A,DB: ═══════ 阶段2: 异步处理流水线 (分钟级) ═══════
+    Note over A,DB: ═══════ 步骤2: 触发解析 (ADMIN only, 同步) ═══════
 
-    MQ->>+DocParse: consume(topic="document.uploaded")
+    A->>+P1: 点击"解析"按钮 (仅ADMIN可见)
+    P1->>+DocParse: POST /file/textbooks/parse/42
     activate DocParse
 
-    DocParse->>+DB: MATCH (d:Document {id:"DOC-042"}) SET d.status=PROCESSING
+    DocParse->>+MinIO: getObject(bucket, filePath)
+    MinIO-->>-DocParse: fileStream
+
+    DocParse->>DocParse: 文本提取: MinerU(优先) → PDFBox(兜底)<br/>→ 提取文本内容 + 页数
+
+    DocParse->>+DB: UPDATE textbook SET content=extractedText, pages=N, status=PARSED
     DB-->>-DocParse: ok
 
-    rect rgb(255, 248, 230)
-        Note over DocParse: 步骤2a: 版面分析 (LayoutAnalysis)
-        DocParse->>DocParse: analyzeLayout(filePath): LayoutResult
-        Note right of DocParse: 识别区域: 正文×18, 标题×7,<br/>表格×3, 公式×12
-    end
+    Note over DocParse,DB: 解析成功后自动触发两阶段图谱构建→融合<br/>(内部调用 ConstructionService, 前端无需额外调用)
 
-    rect rgb(240, 248, 230)
-        Note over DocParse: 步骤2b: NER实体抽取
-        DocParse->>DocParse: extractEntities(layoutResult): List~Entity~
-        Note right of DocParse: 概念实体×14, 公式实体×10,<br/>定理实体×5, 定义实体×3
-    end
+    DocParse->>DocParse: 内部自动: 图谱构建(EntityNode+RelationEdge→Neo4j)<br/>→ 图谱融合(KP节点合并+MASTERS边重算)
 
-    rect rgb(230, 245, 255)
-        Note over DocParse: 步骤2c: RE关系抽取
-        DocParse->>DocParse: extractRelations(entities): List~Relation~
-        Note right of DocParse: 引用关系×18, 推导关系×8,<br/>包含关系×12, 前置依赖×7
-    end
-
-    rect rgb(255, 230, 230)
-        Note over DocParse: 步骤2d: 图谱导入
-        DocParse->>+DB: UNWIND entities AS e CREATE (n:KnowledgePoint {name:e.name, source:"PDF"})
-        DB-->>-DocParse: 32 nodes created
-        DocParse->>+DB: UNWIND relations AS r MATCH (a),(b) CREATE (a)-[rel:RELATES {type:r.type}]->(b)
-        DB-->>-DocParse: 45 edges created
-        DocParse->>+DB: CREATE (d:Document{id:"DOC-042"})-[:EXTRACTS {confidence:r.conf}]->(kp)
-        DB-->>-DocParse: 32 extraction relations created
-        DocParse->>+DB: MATCH (d:Document {id:"DOC-042"}) SET d.status=COMPLETED
-        DB-->>-DocParse: ok
-    end
-
-    Note over DocParse,Align: 步骤2e: 知识点匹配与对齐
-    DocParse->>+Align: searchKnowledgePoints(entityNameList: List~String~): List~MatchResult~
-    activate Align
-    Align->>+DB: MATCH (kp:KnowledgePoint) WHERE kp.name IN [...]
-    DB-->>-Align: 匹配结果: 已存在×20, 新增×12, 疑似重复×3
-    Align-->>-DocParse: MatchResult{existing:20, new:12, suspectedDuplicates:3}
-    deactivate Align
-
-    DocParse->>Align: pushToAlignmentPool(suspectedDuplicates: List~Entity~)
-    Note over Align: 低置信度实体进入实体对齐候选池
-
+    DocParse-->>-P1: TextbookParseResultVO{textContent, pageCount, status:"PARSED"}
     deactivate DocParse
+    P1-->>-A: 解析完成 ✓ 文本+图谱已入库
 
-    Note over A,DB: ═══════ 阶段3: 宽图谱融合与通知 ═══════
+    Note over A,DB: ═══════ 步骤3: 手动图谱重抽取 (可选) ═══════
 
-    DocParse->>+Fusion: buildWideGraph(scope=INCREMENTAL): FusionResult
-    activate Fusion
-    Fusion->>Fusion: 以学生+知识点为图钉<br/>融合文档图谱与已有事件图谱
-    Fusion->>+DB: 执行图融合查询
-    DB-->>-Fusion: 新关联关系×18
-    Fusion-->>-DocParse: FusionResult{newNodes:0, newRels:18, mergedNodes:0, duration:1200ms}
-    deactivate Fusion
+    A->>+P1: 点击"重新抽取图谱"
+    P1->>+GraphExtract: POST /graph/construction/extract/42
+    activate GraphExtract
 
-    DocParse->>+Notif: sendNotification(userId: adminId, type: "PDF解析完成", data: {docName, entityCount:32, relCount:45, duration:38s}): Notification
-    activate Notif
-    Notif->>Notif: 选择通知渠道(站内消息+邮件)
-    Notif-->>-DocParse: Notification{id, status:SENT}
-    deactivate Notif
+    GraphExtract->>GraphExtract: NER实体抽取 (KnowledgePoint节点)
+    GraphExtract->>GraphExtract: RE关系抽取 (引用/推导/包含/前置依赖边)
 
-    deactivate DocParse
+    GraphExtract->>+DB: CREATE (n:KnowledgePoint {...}) / CREATE (e)-[:RELATES]->(n)
+    DB-->>-GraphExtract: 节点+N, 边+M created
 
-    Note over A: 管理员收到通知: "《中考数学》解析完成 ✓<br/>抽取32个知识点，45条关系，耗时38秒"
-```
+    GraphExtract->>+DB: CREATE (doc:Document)-[:EXTRACTS]->(kp)
+    DB-->>-GraphExtract: extraction relations created
 
-### 步骤6：设置约束与条件
+    GraphExtract-->>-P1: ExtractionResultVO{entityCount, relationCount}
+    deactivate GraphExtract
+    P1-->>-A: 图谱重抽取完成 ✓ N个节点, M条关系
+
+    ### 步骤6：设置约束与条件
 
 | 约束类型 | 内容 |
 |---------|------|
-| **时间约束** | P95 单份 10-20 页 PDF 处理耗时 < 60s；上传阶段 < 2s 返回；MQ 消息确认 < 500ms |
-| **循环约束** | NER/RE 抽取为单次执行（非循环），每份 PDF 仅处理一次（消息去重 key=docId） |
-| **条件分支** | 版面分析失败→标记 FAILED→通知管理员提供文本版；RE为空→标记 COMPLETED_WITH_WARNING→仅导入实体节点；NER为空→标记 COMPLETED_WITH_WARNING→通知管理员检查文档 |
-| **状态不变式** | Document.status ∈ {UPLOADED, PROCESSING, COMPLETED, COMPLETED_WITH_WARNING, FAILED} |
+| **时间约束** | 上传 P95 < 2s 返回；解析（含内置图谱构建）< 60s（取决于文件大小）；手动重抽取 < 30s |
+| **角色约束** | 上传需要 TEACHER 角色；解析（`/parse/{id}`）仅限 ADMIN 角色 |
+| **状态流转** | UPLOADED → (parse) → PARSING → PARSED / PARSE_FAILED；手动重抽取不改变 status |
+| **条件分支** | 解析失败→status=PARSE_FAILED, 错误信息返回前端；文件非 PDF/TXT→400 拒绝上传 |
+| **并发约束** | 重复上传内容相同的文件（同 subject + 同 MD5）→ 409 冲突 |
 | **并发约束** | 同一 docId 的消息在处理中去重；PipelineWorker 支持并行消费 |
 
 ---
@@ -279,32 +241,30 @@ sequenceDiagram
 | **所属系统** | GraphNexus |
 | **所属用例** | UC-02: 学生主数据维护与成绩导入 + UC-07: 权重更新规则配置 |
 | **用例脚本** | **主成功脚本**：CSV 校验 → 逐行匹配学生/知识点 → 创建 ExamEvent → 权重引擎调整 → 前置依赖链衰减传播；**异常脚本**：学号不存在(按策略跳过/创建)、知识点不匹配(标记待确认) |
-| **涉及类/服务** | P1管理后台、文档处理.数据源管理(原M3.EventIngestionService)、基础数据.用户管理(原M1.StudentService)、图分析.实体对齐(原M2.KnowledgePointService)、图处理.边权更新(原M4.WeightService)、图分析.图剪枝(原M4.PruningService: 前置链追溯)、L4.Neo4j |
-| **前置条件** | 管理员已登录；学生主数据(M1)和知识体系(M2)已存在；权重更新规则(UC-07)已配置 |
-| **后置条件(成功)** | ExamEvent 写入 Neo4j，MasteryRelation 权重更新，WeightChangeLog 记录 |
-| **后置条件(失败)** | 异常行记录明细，成功行已写入 |
+| **涉及类/服务** | P1管理后台、文档处理.数据源管理(原GradeController: POST /file/grades/upload → 双行表头CSV/Excel解析→MySQL写入)、L4.MySQL |
+| **前置条件** | 管理员已登录（@PreAuthorize("hasRole('TEACHER')")）；CSV/Excel 文件格式符合双行表头规范 |
+| **后置条件(成功)** | 成绩数据写入 MySQL（grade_record 表），返回成功/失败计数 |
+| **后置条件(失败)** | 文件格式错误→400；考试编号重复→409；异常明细返回 |
 
 ### 步骤2：设置交互场景 — 对象角色
 
 | 对象 | 角色定位 | 职责 |
 |------|---------|------|
-| **管理员(A1)** | 主动参与者（L0 用户层） | 上传 CSV、配置导入参数 |
-| **P1管理后台** | 边界对象（L0→L1 网关→L2） | 文件上传界面、导入配置选择、结果摘要展示 |
-| **文档处理.数据源管理** | 控制对象（L2 应用层·文档处理） | CSV 校验、行级处理编排、事件节点创建 |
-| **基础数据.用户管理** | 实体对象（L2 应用层·基础数据） | 学号查询匹配 |
-| **图分析.实体对齐** | 实体对象（L2 应用层·图分析） | 知识点名称查询匹配 |
-| **图处理.边权更新** | 控制对象（L2 应用层·图处理） | 规则匹配、权重计算、日志记录 |
-| **图分析.图剪枝** | 实体对象（L2 应用层·图分析） | 前置依赖链查询(深度BFS) |
-| **L4.Neo4j** | 持久化对象（L3 基础设施层） | ExamEvent创建、MasteryRelation更新、WeightChangeLog写入 |
+| **管理员(A1)** | 主动参与者（L0 用户层） | 选择学科 + 上传CSV/Excel文件 |
+| **P1管理后台** | 边界对象（L0→L1 网关→L2） | 文件上传界面、返回上传结果摘要 |
+| **文档处理.数据源管理** | 控制对象（L2 应用层·文档处理） | `POST /file/grades/upload`: CSV/Excel双行表头解析→校验字段→逐行写入MySQL |
+| **L4.MySQL** | 持久化对象（L3 基础设施层） | grade_record 表存储（examNo, studentNo, name, className, subject, score...） |
+
+> **注意**：当前实现中，成绩上传仅完成 MySQL 写入。Neo4j EventNode 异步创建、MasteryRelation 权重更新、前置依赖链衰减传播等为设计文档规划的后续功能，尚未在成绩上传 API 中直接体现。系统预留了 `POST /graph/construction/extract/{id}` 等图谱构建接口用于后续集成。
 
 ### 步骤3：设置生命线
 
 ```
-管理员    P1       文档处理    基础数据    图分析      图处理      图分析     Neo4j
-  │        │        .数据源管理    .用户管理    .实体对齐    .边权更新    .图剪枝      │
-  │        │         │        │        │        │         │         │
-  ║        ║         ║        ║        ║        ║         ║         ║
-  ▼        ▼         ▼        ▼        ▼        ▼         ▼         ▼
+管理员    P1       文档处理     L4
+  │        │        .数据源管理    .MySQL
+  │        │         │        │
+  ║        ║         ║        ║
+  ▼        ▼         ▼        ▼
 ```
 
 ### 步骤4 + 步骤5：设置消息与激活期
@@ -313,124 +273,58 @@ sequenceDiagram
 sequenceDiagram
     actor A as 管理员(A1)
     participant P1 as P1:管理后台
-    participant DataSrc as 文档处理<br/>.数据源管理
-    participant UserMgr as 基础数据<br/>.用户管理
-    participant Align as 图分析<br/>.实体对齐
-    participant Weight as 图处理<br/>.边权更新
-    participant Prune as 图分析<br/>.图剪枝
-    participant DB as L4:Neo4j
+    participant GradeUp as 文档处理<br/>.数据源管理
+    participant MySQL as L4:MySQL
 
-    Note over A,DB: ═══════ 阶段1: CSV校验与导入配置 ═══════
+    Note over A,MySQL: ═══════ 成绩 CSV/Excel 上传 ═══════
 
-    A->>+P1: 选择CSV文件 + 导入配置<br/>(得分粒度=每题, 分配=平均, 冲突=跳过)
-    P1->>+DataSrc: importGradesCSV(csvFile: File, config: ImportConfig): ImportResult
-    activate DataSrc
+    A->>+P1: 选择学科("数学") + 选择CSV文件
+    P1->>+GradeUp: POST /file/grades/upload<br/>(file: MultipartFile, subject: "数学")
+    activate GradeUp
 
-    DataSrc->>DataSrc: validateCSVFormat(headers: ["学号","科目","知识点","得分"]): ValidationResult
-    Note right of DataSrc: ✓ 必填字段完整<br/>✓ 得分值范围合法(0-100)
+    GradeUp->>GradeUp: validateFormat(CSV/Excel) → passed
+    Note right of GradeUp: 双行表头格式校验<br/>examinee_No, examinee_name,<br/>class_name, knowledge_point, score...
 
-    Note over A,DB: ═══════ 阶段2: 逐行处理 (loop) ═══════
+    GradeUp->>GradeUp: 逐行解析 + 字段校验
 
-    loop 每行CSV记录 (示例: 学号=S2024001, 知识点=二次函数, 得分=45)
-        DataSrc->>+UserMgr: searchStudents(studentId="S2024001"): Student
-        activate UserMgr
-        UserMgr->>+DB: MATCH (s:Student {studentId:"S2024001"}) RETURN s
-        alt 学号存在
-            DB-->>UserMgr: Student{id, name:"张三", classId:"C301"}
-            UserMgr-->>-DataSrc: Student{id, name, classId}
-        else 学号不存在
-            DB-->>UserMgr: null
-            UserMgr-->>DataSrc: NotFound
-            Note over DataSrc: 冲突策略=跳过 → 标记异常行
-        end
-        deactivate UserMgr
-
-        DataSrc->>+Align: searchKnowledgePoints(keyword="二次函数"): List~KnowledgePoint~
-        activate Align
-        Align->>+DB: MATCH (kp:KnowledgePoint) WHERE kp.name CONTAINS "二次函数"
-        alt 匹配成功
-            DB-->>Align: KnowledgePoint{id:"KP-087", name:"二次函数"}
-            Align-->>-DataSrc: KnowledgePoint{id, name}
-        else 不匹配
-            DB-->>Align: []
-            Align-->>DataSrc: NotFound
-            Note over DataSrc: 标记"待确认"，不入库
-        end
-        deactivate Align
-
-        alt 学生+知识点均匹配
-            DataSrc->>+DB: CREATE (e:ExamEvent {studentId, kpId, score:45, examName:"期末考", date:...})
-            DB-->>-DataSrc: ExamEvent{id:"EVT-128"}
-        end
+    loop 逐行写入
+        GradeUp->>+MySQL: INSERT INTO grade_record<br/>(examNo, name, studentNo, subject, kpName, score, ...)
+        MySQL-->>-GradeUp: ok
     end
 
-    DataSrc-->>-P1: ImportResult{successCount:42, failCount:3, anomalies:[...]}
-    deactivate DataSrc
+    GradeUp-->>-P1: GradeUploadResultVO{<br/>successCount:42, failCount:3,<br/>examNo:"E20200041", subject:"数学"}
+    deactivate GradeUp
+    P1-->>-A: 上传完成 ✓<br/>42条导入成功, 3条失败<br/>考试编号: E20200041
 
-    Note over A,DB: ═══════ 阶段3: 权重更新触发 ═══════
+    Note over A,MySQL: ─── 后续查询与删除 ───
 
-    P1->>+Weight: adjustWeightByEvent(eventId="EVT-128"): WeightChangeResult
-    activate Weight
+    A->>+P1: 查看成绩列表
+    P1->>+GradeUp: GET /file/grades?examNo=E20200041&studentNo=S001...
+    GradeUp->>+MySQL: SELECT FROM grade_record WHERE ...
+    MySQL-->>-GradeUp: rows
+    GradeUp-->>-P1: PageResult~GradeRecordVO~
+    deactivate GradeUp
+    P1-->>-A: 成绩列表展示
 
-    Weight->>Weight: 1. 读取事件: student=S2024001, kp=二次函数, score=45/100
-    Weight->>Weight: 2. 匹配规则: BehaviorWeightRule{错误作答, Δ=-0.08}
-    Weight->>Weight: 3. 计算: 原权重0.52 → 新权重 = 0.52 + (-0.08) = 0.44
-
-    Weight->>+DB: MATCH (s:Student{id:"S2024001"})-[r:MASTERY]->(kp:KP{id:"KP-087"})<br/>SET r.weight = 0.44, r.lastUpdated = timestamp()
-    DB-->>-Weight: ok
-
-    Weight->>+DB: CREATE (log:WeightChangeLog {<br/>studentId, kpId, beforeWeight:0.52, afterWeight:0.44,<br/>trigger:"ExamEvent#EVT-128", source:SYSTEM, timestamp})
-    DB-->>-Weight: ok
-
-    Note over Weight: 检查规则生效范围
-
-    Weight->>Weight: isScopeChainEffect(rule) → true (影响前置依赖链)
-
-    Note over A,DB: ═══════ 阶段4: 前置依赖链衰减传播 ═══════
-
-    Weight->>+Prune: getPrerequisites(kpId="KP-087", depth=3): List~PrerequisiteNode~
-    activate Prune
-    Prune->>+DB: MATCH (kp:KP{id:"KP-087"})-[:PREREQUISITE*1..3]->(pre:KnowledgePoint)<br/>RETURN pre, length(path) as depth
-    DB-->>-Prune: [配方法(d1), 一元二次方程(d1), 完全平方公式(d2), 因式分解(d2), 多项式运算(d3)]
-    Prune-->>-Weight: List~PrerequisiteNode~
-    deactivate Prune
-
-    Weight->>Weight: 计算衰减系数: d1×0.5, d2×0.25, d3×0.125<br/>基础Δ=-0.08
-
-    Weight->>+DB: UPDATE 配方法权重: 0.48 → 0.46 = 0.48 + (-0.08×0.5)
-    DB-->>-Weight: ok
-    Weight->>DB: INSERT WeightChangeLog{trigger: "前置链传播←二次函数@EVT-128"}
-
-    Weight->>+DB: UPDATE 一元二次方程权重: 0.65 → 0.63 = 0.65 + (-0.08×0.5)
-    DB-->>-Weight: ok
-    Weight->>DB: INSERT WeightChangeLog{trigger: "前置链传播←二次函数@EVT-128"}
-
-    Weight->>+DB: UPDATE 完全平方公式权重: 0.71 → 0.69 = 0.71 + (-0.08×0.25)
-    DB-->>-Weight: ok
-    Weight->>DB: INSERT WeightChangeLog{trigger: "前置链传播←配方法@EVT-128"}
-
-    Weight->>+DB: UPDATE 因式分解权重: 0.55 → 0.53 = 0.55 + (-0.08×0.25)
-    DB-->>-Weight: ok
-
-    Weight->>+DB: UPDATE 多项式运算权重: 0.82 → 0.81 = 0.82 + (-0.08×0.125)
-    DB-->>-Weight: ok
-
-    Weight-->>-P1: WeightChangeResult{affectedCount:6, depth:3, details:[...]}
-    deactivate Weight
-
-    P1-->>-A: 导入完成 ✓<br/>42条考试记录, 触发6条权重调整<br/>传播链: 二次函数→配方法→完全平方公式→多项式运算
+    A->>+P1: 删除某场考试全部成绩
+    P1->>+GradeUp: DELETE /file/grades/exam/E20200041
+    GradeUp->>+MySQL: DELETE FROM grade_record WHERE examNo=...
+    MySQL-->>-GradeUp: deletedCount=42
+    GradeUp-->>-P1: DeleteResultVO{examNo, deletedCount:42}
+    deactivate GradeUp
+    P1-->>-A: 删除完成 ✓ 42条记录已清除
 ```
 
 ### 步骤6：设置约束与条件
 
 | 约束类型 | 内容 |
 |---------|------|
-| **时间约束** | 千行CSV导入 < 30s；单行处理 < 100ms；前置链DB查询 < 500ms |
-| **循环约束** | loop: 逐行处理 CSV 记录（行数 = N，N ∈ [1, 10000]） |
-| **条件分支** | 学号不存在∧策略=跳过→标记异常行；学号不存在∧策略=创建→自动创建Student→继续；知识点不匹配→标记待确认→不入库 |
-| **状态不变式** | MasteryRelation.weight ∈ [0.0, 1.0]；WeightChangeLog 与 MasteryRelation 更新一一对应 |
-| **并发约束** | 同一 studentId+kpId 的权重更新需串行（乐观锁 version 字段） |
-| **事务约束** | 每行 CSV 处理为独立事务（失败不回滚已成功行）；日志写入与权重更新在同一事务内 |
+| **时间约束** | 千行CSV上传 < 10s；逐行 INSERT 无事务回滚 |
+| **角色约束** | 上传需要 TEACHER 角色（@PreAuthorize("hasRole('TEACHER')")） |
+| **条件分支** | 考试编号重复→409 Conflict；文件格式错误→400；字段校验失败→标记异常行但不中断 |
+| **并发约束** | 无分布式锁；同一 examNo 重复上传→409 |
+
+> **设计预留**：时序图原稿中的 Neo4j EventNode 创建、MasteryRelation 权重引擎调整、前置依赖链衰减传播（d1×0.5, d2×0.25, d3×0.125）为架构设计中的完整版功能，当前 MVP 实现阶段尚未在成绩上传 API 中直接体现。
 
 ---
 
@@ -443,29 +337,30 @@ sequenceDiagram
 | **所属系统** | GraphNexus |
 | **所属用例** | UC-04: 实体对齐审核与管理 |
 | **用例脚本** | **主成功脚本**：查看候选列表→并排展示→确认合并(影响面预估)→执行合并(迁移关系+删除副实体+记日志)→通知图谱更新；**异常脚本**：批量合并中某对失败(事务保护)、合并错误(回滚) |
-| **涉及类/服务** | P1管理后台、图分析.实体对齐(原M2.EntityAlignmentService + M2.KnowledgePointService)、图分析.图融合(原M4.GraphFusionService)、L4.Neo4j |
-| **前置条件** | 管理员已登录；系统中存在来源不同的疑似相同实体 |
-| **后置条件(成功)** | 副实体删除，关系迁移至主实体，操作日志记录（支持回滚） |
-| **后置条件(失败)** | 操作回滚，实体状态不变 |
+| **涉及类/服务** | P1管理后台、图分析.实体对齐(原FusionController: POST /analysis/fusion/execute → FuzzyMatch全量融合, GET /analysis/fusion/status, POST /analysis/fusion/rollback/{id})、L4.Neo4j |
+| **前置条件** | 管理员已登录（@PreAuthorize("hasAnyRole('ADMIN','OPS_STAFF')")）；Neo4j 中存在需要融合的 KnowledgePoint 节点 |
+| **后置条件(成功)** | 同名/相似 KP 合并（FuzzyMatch 阈值 0.85），MASTERS 边权重重算，融合日志持久化到 fusion_log 表 |
+| **后置条件(失败)** | 融合冲突（409: 已有融合进行中）→拒绝并发；图状态已变更→无法回滚（409） |
 
 ### 步骤2：设置交互场景 — 对象角色
 
 | 对象 | 角色定位 | 职责 |
 |------|---------|------|
-| **管理员(A1)** | 主动参与者（L0 用户层） | 逐条审核、确认合并/驳回、批量操作、错误回滚 |
-| **P1管理后台** | 边界对象（L0→L1 网关→L2） | 候选列表展示、并排实体信息展示、影响面展示 |
-| **图分析.实体对齐** | 控制对象（L2 应用层·图分析） | 候选对管理、合并执行、快照记录、回滚 |
-| **图分析.图融合** | 实体对象（L2 应用层·图分析） | 合并后图谱连通性重算 |
-| **L4.Neo4j** | 持久化对象（L3 基础设施层） | 关系迁移、实体删除、日志写入 |
+| **管理员(A1)** | 主动参与者（L0 用户层） | 手动触发全量融合、查看融合状态、回滚错误融合 |
+| **P1管理后台** | 边界对象（L0→L1 网关→L2） | 融合操作按钮、状态展示、回滚确认 |
+| **图分析.实体对齐** | 控制对象（L2 应用层·图分析） | `POST /fusion/execute`: 全自动 FuzzyMatch(阈值0.85) → KP合并 + MASTERS重算 → fusion_log 持久化; `GET /fusion/status`: 查询最近融合明细; `POST /fusion/rollback/{id}`: (仅ADMIN) 逆向恢复图状态 |
+| **L4.Neo4j** | 持久化对象（L3 基础设施层） | 知识图谱节点合并、边迁移、权重更新 |
+
+> **注意**：当前实现为全自动全量融合（FuzzyMatch 阈值 0.85），不同于设计文档中规划的人工逐对审核模型（getCandidates/confirmMerge/rejectPair）。融合结果通过 fusion_log 表持久化，支持基于日志的整次回滚。
 
 ### 步骤3：设置生命线
 
 ```
-管理员    P1       图分析      图分析     Neo4j
-  │        │        .实体对齐    .图融合      │
-  │        │         │        │         │
-  ║        ║         ║        ║         ║
-  ▼        ▼         ▼        ▼         ▼
+管理员    P1       图分析     Neo4j
+  │        │        .实体对齐    │
+  │        │         │        │
+  ║        ║         ║        ║
+  ▼        ▼         ▼        ▼
 ```
 
 ### 步骤4 + 步骤5：设置消息与激活期
@@ -474,101 +369,78 @@ sequenceDiagram
 sequenceDiagram
     actor A as 管理员(A1)
     participant P1 as P1:管理后台
-    participant Alignment as 图分析<br/>.实体对齐
-    participant Fusion as 图分析<br/>.图融合
+    participant Fusion as 图分析<br/>.实体对齐
     participant DB as L4:Neo4j
 
-    Note over A,DB: ═══════ 步骤1: 获取候选列表 ═══════
+    Note over A,DB: ═══════ 步骤1: 手动触发全量融合 ═══════
 
-    A->>+P1: 打开实体对齐审核页
-    P1->>+Alignment: getCandidates(confidenceRange: Range(0.6,0.9), status: PENDING): List~EntityAlignmentPair~
-    activate Alignment
-    Alignment->>+DB: MATCH (pair:EntityAlignmentPair)<br/>WHERE pair.confidence >= 0.6 AND pair.confidence <= 0.9<br/>AND pair.status = "PENDING"
-    DB-->>-Alignment: [pair#42, pair#58, pair#73, ...]
-    Alignment-->>-P1: List~EntityAlignmentPair~
-    deactivate Alignment
-    P1-->>-A: 候选列表 (按置信度: 高>0.9 / 中0.6-0.9 / 低<0.6)
-
-    Note over A,DB: ═══════ 步骤2: 逐条审核 ═══════
-
-    A->>P1: 点击 pair#42 查看详情
-    P1-->>A: 并排展示<br/>主实体: "二次函数" (来源:中考数学.pdf, 关系数:12)<br/>副实体: "一元二次函数" (来源:期末成绩.csv, 关系数:5)<br/>相似度: 0.82
-
-    A->>+P1: 选择操作: 确认合并 (策略: KEEP_PRIMARY)
-
-    Note over A,DB: ═══════ 步骤3: 影响面预估 ═══════
-
-    P1->>+Alignment: confirmMerge(pairId=42, strategy: KEEP_PRIMARY): ImpactSummary
-    activate Alignment
-
-    Alignment->>+DB: MATCH (secondary:KP{id:"KP-156"})-[r]-()<br/>RETURN count(r) as relCount, labels(r) as relTypes
-    DB-->>-Alignment: 5条关系 (3×MasteryRelation + 2×ExamEvent关联)
-    Alignment->>+DB: MATCH (s:Student)-[:MASTERY]->(secondary:KP{id:"KP-156"})<br/>RETURN count(DISTINCT s) as affectedStudents
-    DB-->>-Alignment: 受影响学生: 2人
-
-    Alignment-->>-P1: ImpactSummary{mergeRelations:5, deleteEntity:1, affectedStudents:2}
-    deactivate Alignment
-
-    P1-->>A: 影响面摘要: 将迁移5条关系, 删除「一元二次函数」节点, 影响2名学生
-
-    A->>P1: 确认执行 (已查看影响面)
-
-    Note over A,DB: ═══════ 步骤4: 执行合并 (事务保护) ═══════
-
-    P1->>+Alignment: executeMerge(pairId=42): MergeResult
-    activate Alignment
-
-    Alignment->>+DB: BEGIN TRANSACTION
-
-    Alignment->>DB: 1. 记录快照: CREATE (snap:MergeSnapshot {pairId, primaryBefore, secondaryBefore, relsBefore, timestamp})
-    DB-->>Alignment: 快照已保存
-
-    Alignment->>DB: 2. 迁移关系:<br/>MATCH (sec:KP{id:"KP-156"})-[r]-(n)<br/>CREATE (prim:KP{id:"KP-087"})-[r2:COPY_OF(r)]->(n)<br/>SET r2 = properties(r)
-    DB-->>Alignment: 5条关系已迁移
-
-    Alignment->>DB: 3. 删除副实体:<br/>MATCH (sec:KP{id:"KP-156"}) DETACH DELETE sec
-    DB-->>Alignment: 1节点已删除
-
-    Alignment->>DB: 4. 记录合并日志:<br/>CREATE (log:MergeLog {opTime, operator, primaryId, secondaryId, snapshotRef, affectedCount:5})
-    DB-->>Alignment: 日志已记录
-
-    Alignment->>DB: COMMIT
-    DB-->>Alignment: success
-
-    Alignment->>+Fusion: notifyGraphUpdate(mergedKpId="KP-087"): void
+    A->>+P1: 点击"执行宽图谱融合"
+    P1->>+Fusion: POST /analysis/fusion/execute
     activate Fusion
-    Fusion->>+DB: 重新计算受影响子图的连通性指标
-    DB-->>-Fusion: 连通性重新计算完成
+
+    Fusion->>Fusion: 1. 检查并发: 是否已有融合进行中?<br/>是→409 Conflict 拒绝
+
+    Fusion->>+DB: 2. 执行 FuzzyMatch<br/>MATCH (kp1:KnowledgePoint), (kp2:KnowledgePoint)<br/>WHERE apoc.text.levenshteinSimilarity(kp1.name, kp2.name) >= 0.85<br/>AND id(kp1) < id(kp2)
+    DB-->>-Fusion: 候选 KP 组列表
+
+    Fusion->>Fusion: 3. 逐组合并: 保留主KP → 迁移副KP的所有边 → 删除副KP
+    Fusion->>Fusion: 4. 重算受影响学生的 MASTERS 权重<br/>(TimeDecay 时间衰减)
+
+    Fusion->>+DB: 5. 更新 Neo4j (节点合并 + 边迁移 + 权重更新)
+    DB-->>-Fusion: 更新完成
+
+    Fusion->>+DB: 6. INSERT INTO fusion_log<br/>(trigger_type=MANUAL, status=COMPLETED,<br/>mergedKpGroupCount, mastersEdgeCount,<br/>fusionDetailJson, mastersSnapshotJson)
+    DB-->>-Fusion: fusionLogId=5
+
+    Fusion-->>-P1: FusionExecuteVO{<br/>fusionLogId:5, mergedKpGroupCount:12,<br/>mastersEdgeCount:87}
     deactivate Fusion
+    P1-->>-A: 融合完成 ✓<br/>合并12组知识点, 更新87条MASTERS边
 
-    Alignment-->>-P1: MergeResult{mergedKpId:"KP-087", mergedName:"二次函数", affectedRelCount:5}
-    deactivate Alignment
+    Note over A,DB: ═══════ 步骤2: 查看融合状态 ═══════
 
-    P1-->>A: 合并完成 ✓<br/>"二次函数"现已包含原"一元二次函数"的5条关联关系
+    A->>+P1: 查看最近一次融合详情
+    P1->>+Fusion: GET /analysis/fusion/status
+    activate Fusion
+    Fusion->>+DB: SELECT * FROM fusion_log ORDER BY id DESC LIMIT 1
+    DB-->>-Fusion: 最近融合记录
+    Fusion-->>-P1: FusionStatusVO{<br/>fusionLogId, status, executedAt,<br/>mergedKpGroupCount, mastersEdgeCount,<br/>fusionDetailJson, mastersSnapshotJson}
+    deactivate Fusion
+    P1-->>-A: 展示融合明细<br/>(源KP→目标KP映射 + 权重变更快照)
 
-    Note over A: ─── ★ 回滚路径 (可选) ───
+    Note over A,DB: ═══════ 步骤3: 回滚融合 (仅ADMIN) ═══════
 
-    A->>P1: 发现错误合并 → 打开合并历史 → 点击"回滚"
-    P1->>+Alignment: rollbackMerge(mergeLogId: "ML-042"): RollbackResult
-    activate Alignment
-    Alignment->>+DB: BEGIN TRANSACTION
-    Alignment->>DB: 1. 读取快照 → 2. 重新创建副实体 → 3. 还原关系 → 4. 重置pair状态
-    Alignment->>DB: COMMIT
-    DB-->>-Alignment: success
-    Alignment-->>-P1: RollbackResult{restoredEntity:1, restoredRelations:4}
-    deactivate Alignment
-    P1-->>A: 回滚成功 ✓ 实体已恢复，关系已还原
+    A->>+P1: 发现错误融合 → 点击"回滚"
+    P1->>+Fusion: POST /analysis/fusion/rollback/5
+    activate Fusion
+
+    Fusion->>+DB: 1. 读取 fusion_log 中的 fusionDetailJson + mastersSnapshotJson
+    DB-->>-Fusion: 快照数据
+
+    Fusion->>Fusion: 2. 检查图状态是否已变更 (限制: 仅可回滚最近一次融合)
+
+    Fusion->>+DB: 3. 逆向恢复:<br/>重新创建被合并的源KP节点<br/>→ 重定向被迁移的边<br/>→ 恢复融合前的 MASTERS 权重
+    DB-->>-Fusion: 恢复完成
+
+    Fusion->>+DB: 4. UPDATE fusion_log SET rolled_back=true
+    DB-->>-Fusion: ok
+
+    Fusion-->>-P1: FusionRollbackVO{<br/>fusionLogId:5, restoredKpCount:12,<br/>restoredEdgeCount:87}
+    deactivate Fusion
+    P1-->>-A: 回滚成功 ✓<br/>恢复12个知识点节点, 87条边已还原
+
+    Note over A: ─── 失败处理 ───
+    Note over Fusion: 并发冲突: 已有融合进行中 → 409<br/>回滚限制: 仅可回滚最近一次融合 → 409<br/>图状态已变更: 无法回滚 → 409
 ```
 
 ### 步骤6：设置约束与条件
 
 | 约束类型 | 内容 |
 |---------|------|
-| **时间约束** | 候选列表查询 < 500ms；影响面预估 < 200ms；合并事务 < 1s |
-| **条件分支** | 操作选择: 确认合并(KEEP_PRIMARY/KEEP_SECONDARY/CUSTOM) / 驳回(加入白名单) / 跳过(暂存)；批量操作: 按置信度区间/实体类型/来源批量选中 |
-| **状态不变式** | EntityAlignmentPair.status ∈ {PENDING, MERGED, REJECTED}；合并后关系总数 = 原主实体关系数 + 原副实体关系数；回滚后状态恢复至合并前 |
-| **并发约束** | 同一 pairId 的合并操作需加分布式锁（避免重复合并） |
-| **事务约束** | 合并为单事务（快照+迁移+删除+日志 原子提交）；回滚为单事务（快照恢复） |
+| **时间约束** | 全量融合 < 30s（取决于 KP 节点数）；状态查询 < 200ms |
+| **角色约束** | execute/status: ADMIN + OPS_STAFF；rollback: 仅 ADMIN |
+| **并发约束** | 融合同一时间仅允许一个操作（409 拒绝并发）；FuzzyMatch 阈值 0.85 |
+| **回滚限制** | 仅可回滚最近一次融合；回滚后图状态有变更则无法再次回滚；不支持跨多次融合的部分回滚 |
+| **状态不变式** | fusion_log 记录完整 fusionDetail + mastersSnapshot；回滚后图状态恢复至融合前 |
 
 ---
 
@@ -581,23 +453,23 @@ sequenceDiagram
 | **所属系统** | GraphNexus |
 | **所属用例** | UC-10: 单学生薄弱点归因查询 |
 | **用例脚本** | **主成功脚本**：教师输入查询→权限校验→任务驱动剪枝→上下文构建→LLM调用→结构化报告；**异常脚本**：权限拒绝(403)、剪枝子图为空、LLM不可用(降级)、超时(重试) |
-| **涉及类/服务** | P2教师工作台、Nginx(L1网关)、智能查询.智能对话(原M6.AttributionQueryService)、基础数据.角色管理(原M1.AuthorizationService: L2细粒度DataScope)、图分析.图剪枝(原M4.PruningService)、智能查询.上下文组装(原M5.ContextBuilderService)、基础数据.LLM网关(原M5.LLMGatewayService: 支持Claude/Doubao/Deepseek多模型路由)、A6.LLM Service(外部) |
-| **前置条件** | 宽图谱已融合；剪枝策略+权重规则已配置；LLM服务可用（至少一个Provider在线） |
-| **后置条件(成功)** | 返回结构化归因报告(根因+证据链+置信度) |
-| **后置条件(失败)** | 返回错误提示(权限/数据不足/LLM不可用) |
+| **涉及类/服务** | P2教师工作台、Nginx(L1网关: JWT认证)、智能查询.智能对话(原QueryController: POST /query/ask → @PreAuthorize("hasRole('TEACHER')")→QueryService内部: 意图识别(STUDENT_DIAGNOSIS)→图剪枝(Student Diagnosis Strategy)→LLM 分析生成→返回 Markdown) | POST /query/chat → LLM-first 实体提取+正则fallback → 同上 | POST /query/ask-async → 立即返回taskId→轮询GET /query/result/{taskId} |
+| **前置条件** | 教师已登录（JWT Token 有效 + TEACHER 角色）；问题不可为空；宽图谱中已存在相关学生和知识点数据 |
+| **后置条件(成功)** | 返回 Markdown 格式诊断结论 + token 用量（QueryAskResponse） |
+| **后置条件(失败)** | A0002 参数校验失败 / A0019 无法识别查询意图 / A0020 多个同名Student需学号精确指定 / C0001 LLM API 调用失败 |
 
 ### 步骤2：设置交互场景 — 对象角色
 
 | 对象 | 角色定位 | 职责 |
 |------|---------|------|
-| **教师(A2)** | 主动参与者（L0 用户层） | 输入查询(自然语言/结构化)、查看报告、交互下钻 |
-| **P2教师工作台** | 边界对象（L0→L1 网关→L2） | 查询输入(自动补全)、报告展示(追溯路径可视化) |
-| **智能查询.智能对话** | 控制对象（L2 应用层·智能查询） | 意图识别、编排调用下层服务、组装DTO |
-| **基础数据.角色管理** | 实体对象（L2 应用层·基础数据） | 教师-班级权限校验（L1网关粗粒度+此处细粒度DataScope） |
-| **图分析.图剪枝** | 实体对象（L2 应用层·图分析） | 任务驱动剪枝(加载策略→BFS→截断→过滤) |
-| **智能查询.上下文组装** | 控制对象（L2 应用层·智能查询） | 子图序列化、Token预算控制、多源信息融合 |
-| **基础数据.LLM网关** | 控制对象（L2 应用层·基础数据） | 模型路由（Claude/Doubao/Deepseek）、配额检查、降级策略、调用日志 |
+| **教师(A2)** | 主动参与者（L0 用户层） | 输入自然语言问题 + 学生信息(姓名/学号/学科)、查看 Markdown 诊断结论 |
+| **P2教师工作台** | 边界对象（L0→L1 网关→L2） | 问题输入框、历史记录面板、报告展示(MarkdownViewer)、导出按钮 |
+| **L1网关(Nginx+JWT)** | 网关对象（L1） | JWT Token 校验 + @PreAuthorize("hasRole('TEACHER')") RBAC |
+| **智能查询.智能对话** | 控制对象（L2 应用层·智能查询） | QueryService 内部封装: 意图识别(STUDENT_DIAGNOSIS)→图剪枝→上下文组装→LLM调用→Markdown生成（前端不可见内部步骤） |
+| **基础数据.LLM网关** | 控制对象（L2 应用层·基础数据） | LlmGateway.chat(systemPrompt, userMessage) — Claude/Doubao/Deepseek 多模型路由 |
 | **A6.LLM Service** | 外部系统 | 外部LLM API（Claude/Doubao/Deepseek等多Provider） |
+
+> **注意**：当前实现中，QueryService 将意图识别、图剪枝、上下文组装、LLM 调用全部封装为内部步骤。前端仅通过 `/query/ask`、`/query/chat`、`/query/ask-async` 三个 API 端点交互，无需（也无法）分别调用 prune/buildContext/callLLM。RBAC 由 Spring Security @PreAuthorize 在 Controller 层完成，而非显式的基础数据.角色管理服务调用。
 
 ### 步骤3：设置生命线
 

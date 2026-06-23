@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="DDD四层架构" id="ddd-arch">
-    <mxGraphModel dx="1571" dy="954" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1350" math="0" shadow="0">
+    <mxGraphModel dx="1358" dy="887" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1350" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -189,10 +189,10 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-22" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅图谱剪枝" vertex="1">
           <mxGeometry height="32.5" width="160" x="650" y="526" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-23" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="运营管理" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-23" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅运营管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="870" y="650" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-25" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="运维管理" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-25" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅运维管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="631.87" y="650" as="geometry" />
         </mxCell>
         <mxCell id="-0LW9sA8rut5vbFzkOL8-1" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#4CAF50;strokeWidth=2;fontSize=13;arcSize=5;align=center;" value="✅API" vertex="1">
@@ -201,7 +201,7 @@
         <mxCell id="DPsZBMzHLm7OR3CuRtGB-4" connectable="0" parent="1" style="group;rounded=1;strokeColor=#666666;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=5;fontFamily=Helvetica;fontSize=13;fontColor=#333333;fillColor=default;" value="" vertex="1">
           <mxGeometry height="80" width="150" x="1130" y="370" as="geometry" />
         </mxCell>
-        <mxCell id="DPsZBMzHLm7OR3CuRtGB-1" parent="DPsZBMzHLm7OR3CuRtGB-4" style="rounded=1;whiteSpace=wrap;fillColor=default;strokeColor=#666666;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;verticalAlign=top;fontFamily=Helvetica;fontColor=#333333;" value="LLM网关" vertex="1">
+        <mxCell id="DPsZBMzHLm7OR3CuRtGB-1" parent="DPsZBMzHLm7OR3CuRtGB-4" style="rounded=1;whiteSpace=wrap;fillColor=default;strokeColor=#666666;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;verticalAlign=top;fontFamily=Helvetica;fontColor=#333333;" value="✅LLM网关" vertex="1">
           <mxGeometry height="80" width="150" as="geometry" />
         </mxCell>
         <mxCell id="DPsZBMzHLm7OR3CuRtGB-2" parent="DPsZBMzHLm7OR3CuRtGB-4" style="rounded=1;whiteSpace=wrap;fillColor=default;strokeColor=#666666;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;verticalAlign=middle;fontFamily=Helvetica;fontColor=#333333;" value="Deepseek" vertex="1">

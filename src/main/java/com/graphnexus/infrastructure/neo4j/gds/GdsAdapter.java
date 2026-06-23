@@ -66,6 +66,9 @@ public class GdsAdapter {
                 "YIELD nodeId, score " +
                 "RETURN gds.util.asNode(nodeId).id AS nodeId, " +
                 "labels(gds.util.asNode(nodeId))[0] AS nodeType, " +
+                "coalesce(gds.util.asNode(nodeId).name, gds.util.asNode(nodeId).id) AS nodeName, " +
+                "coalesce(gds.util.asNode(nodeId).subject, '') AS subject, " +
+                "coalesce(gds.util.asNode(nodeId).className, '') AS className, " +
                 "score",
                 graphName, maxIterations, dampingFactor);
 
@@ -83,6 +86,9 @@ public class GdsAdapter {
                 "YIELD nodeId, score " +
                 "RETURN gds.util.asNode(nodeId).id AS nodeId, " +
                 "labels(gds.util.asNode(nodeId))[0] AS nodeType, " +
+                "coalesce(gds.util.asNode(nodeId).name, gds.util.asNode(nodeId).id) AS nodeName, " +
+                "coalesce(gds.util.asNode(nodeId).subject, '') AS subject, " +
+                "coalesce(gds.util.asNode(nodeId).className, '') AS className, " +
                 "score",
                 graphName, orientation);
 
@@ -135,6 +141,9 @@ public class GdsAdapter {
                     .map(row -> new GdsResult(
                             (String) row.get("nodeId"),
                             (String) row.get("nodeType"),
+                            (String) row.get("nodeName"),
+                            (String) row.get("subject"),
+                            (String) row.get("className"),
                             ((Number) row.get("score")).doubleValue()
                     ))
                     .collect(Collectors.toList());

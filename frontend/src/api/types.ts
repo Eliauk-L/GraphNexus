@@ -170,6 +170,9 @@ export interface FusionRollbackVO {
 export interface MetricResultVO {
   nodeId: string
   nodeType: string
+  nodeName?: string
+  subject?: string
+  className?: string
   metricName: 'PageRank' | 'inDegree' | 'outDegree'
   metricValue: number
 }

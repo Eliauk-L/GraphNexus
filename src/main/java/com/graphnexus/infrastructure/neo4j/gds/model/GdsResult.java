@@ -15,5 +15,8 @@ package com.graphnexus.infrastructure.neo4j.gds.model;
 public record GdsResult(
         String nodeId,
         String nodeType,
+        String nodeName,
+        String subject,
+        String className,
         double score
 ) {}

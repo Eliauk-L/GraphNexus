@@ -20,6 +20,15 @@ public class MetricResultVO {
     @Schema(description = "节点类型标签", example = "KnowledgePoint")
     private String nodeType;
 
+    @Schema(description = "节点名称", example = "二次函数顶点坐标")
+    private String nodeName;
+
+    @Schema(description = "学科", example = "数学")
+    private String subject;
+
+    @Schema(description = "班级", example = "三年一班")
+    private String className;
+
     @Schema(description = "指标名称：PageRank / inDegree / outDegree", example = "PageRank")
     private String metricName;
 
@@ -33,6 +42,9 @@ public class MetricResultVO {
         MetricResultVO vo = new MetricResultVO();
         vo.setNodeId(bo.nodeId());
         vo.setNodeType(bo.nodeType());
+        vo.setNodeName(bo.nodeName());
+        vo.setSubject(bo.subject());
+        vo.setClassName(bo.className());
         vo.setMetricName(bo.metricName());
         vo.setMetricValue(bo.metricValue());
         return vo;

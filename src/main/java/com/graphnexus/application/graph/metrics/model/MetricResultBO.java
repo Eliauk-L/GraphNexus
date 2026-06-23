@@ -16,6 +16,9 @@ package com.graphnexus.application.graph.metrics.model;
 public record MetricResultBO(
         String nodeId,
         String nodeType,
+        String nodeName,
+        String subject,
+        String className,
         String metricName,
         Double metricValue
 ) {

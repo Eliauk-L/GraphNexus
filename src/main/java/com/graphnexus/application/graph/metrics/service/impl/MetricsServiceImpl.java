@@ -71,7 +71,7 @@ public class MetricsServiceImpl implements MetricsService {
             String graphName = gdsAdapter.projectGraph(projNodes, normalizedEdges);
             try {
                 return gdsAdapter.runPageRank(graphName).stream()
-                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), "pagerank", r.score()))
+                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), r.subject(), r.className(), "pagerank", r.score()))
                         .sorted(Comparator.comparingDouble(MetricResultBO::metricValue).reversed())
                         .collect(Collectors.toList());
             } finally {
@@ -93,10 +93,10 @@ public class MetricsServiceImpl implements MetricsService {
             try {
                 List<MetricResultBO> results = new ArrayList<>();
                 results.addAll(gdsAdapter.runDegreeStream(graphName, "NATURAL").stream()
-                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), "outDegree", r.score()))
+                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), r.subject(), r.className(), "outDegree", r.score()))
                         .collect(Collectors.toList()));
                 results.addAll(gdsAdapter.runDegreeStream(graphName, "REVERSE").stream()
-                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), "inDegree", r.score()))
+                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), r.subject(), r.className(), "inDegree", r.score()))
                         .collect(Collectors.toList()));
                 return results;
             } finally {
