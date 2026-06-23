@@ -8,7 +8,7 @@ import com.graphnexus.application.file.textbook.model.ParseResult;
 import com.graphnexus.application.file.parse.FileParser;
 import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.application.file.textbook.parser.TextbookParser;
-import com.graphnexus.application.ops.audit.service.AuditLogService;
+import com.graphnexus.application.ops.audit.annotation.Auditable;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
@@ -63,16 +63,14 @@ public class TextbookServiceImpl implements TextbookService {
     private final FileParserRegistry fileParserRegistry;
     private final ApplicationEventPublisher eventPublisher;
     private final PlatformTransactionManager txManager;
-    private final AuditLogService auditLogService;
 
     // ======================== 上传（委托，自管理事务） ========================
 
     @Override
+    @Auditable(OperationType.DOCUMENT_UPLOAD)
     public TextbookBO upload(MultipartFile file, String subject) {
-        TextbookBO result = (TextbookBO) uploadService.upload(file, subject);
-        auditLogService.record(getCurrentUserId(), OperationType.DOCUMENT_UPLOAD,
-                result != null ? result.getId().toString() : null);
-        return result;
+        Long userId = getCurrentUserId();
+        return (TextbookBO) uploadService.upload(file, subject, userId);
     }
 
     // ======================== 解析（短事务→无事务→短事务→事务外事件） ========================

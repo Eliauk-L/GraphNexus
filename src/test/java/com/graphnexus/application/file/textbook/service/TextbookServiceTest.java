@@ -5,6 +5,7 @@ import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.application.file.textbook.model.ParseResult;
 import com.graphnexus.application.file.textbook.parser.pdf.mineru.MinerUTextbookParser;
 import com.graphnexus.application.file.textbook.parser.pdf.PdfBoxTextbookParser;
+import com.graphnexus.application.ops.audit.service.AuditLogService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.application.file.textbook.parser.pdf.mineru.config.MinerUProperties;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
@@ -77,6 +78,9 @@ class TextbookServiceTest {
     @Mock
     private TransactionStatus txStatus;
 
+    @Mock
+    private AuditLogService auditLogService;
+
     @InjectMocks
     private TextbookServiceImpl fileService;
 
@@ -116,7 +120,7 @@ class TextbookServiceTest {
                 .subject("MATH")
                 .status("UPLOADED")
                 .build();
-        when(uploadService.upload(file, "MATH")).thenReturn(expectedBO);
+        when(uploadService.upload(eq(file), eq("MATH"), anyLong())).thenReturn(expectedBO);
 
         TextbookBO result = fileService.upload(file, "MATH");
 
@@ -124,7 +128,7 @@ class TextbookServiceTest {
         assertEquals("test.pdf", result.getName());
         assertEquals("MATH", result.getSubject());
         assertEquals("UPLOADED", result.getStatus());
-        verify(uploadService).upload(file, "MATH");
+        verify(uploadService).upload(eq(file), eq("MATH"), anyLong());
     }
 
     @Test
@@ -133,7 +137,7 @@ class TextbookServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.xyz", "application/octet-stream", "data".getBytes()
         );
-        when(uploadService.upload(file, "MATH"))
+        when(uploadService.upload(eq(file), eq("MATH"), anyLong()))
                 .thenThrow(new BusinessException(com.graphnexus.common.exception.ErrorCode.A0004,
                         "不支持的文件类型: test.xyz"));
 

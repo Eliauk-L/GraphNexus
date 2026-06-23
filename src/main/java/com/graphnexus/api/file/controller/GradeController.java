@@ -58,7 +58,7 @@ public class GradeController {
             @Parameter(description = "学科名称", required = true, example = "数学")
             @RequestParam("subject") String subject
     ) {
-        GradeUploadResultBO bo = (GradeUploadResultBO) gradeUploadService.upload(file, subject);
+        GradeUploadResultBO bo = (GradeUploadResultBO) gradeUploadService.upload(file, subject, 0L);
         return ApiResult.success(GradeUploadResultVO.from(bo));
     }
 

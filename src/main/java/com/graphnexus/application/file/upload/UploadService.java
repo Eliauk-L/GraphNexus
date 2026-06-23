@@ -17,9 +17,10 @@ public interface UploadService {
     /**
      * 上传文件 — 校验 + 存储 + 入库。
      *
-     * @param file    上传文件
-     * @param subject 学科
+     * @param file       上传文件
+     * @param subject    学科
+     * @param uploadedBy 上传者用户 ID（从 SecurityContext 获取）
      * @return 入库后的业务对象
      */
-    Object upload(MultipartFile file, String subject);
+    Object upload(MultipartFile file, String subject, Long uploadedBy);
 }

@@ -6,7 +6,7 @@ import com.graphnexus.application.auth.model.TokenPair;
 import com.graphnexus.application.auth.model.UserInfo;
 import com.graphnexus.application.auth.service.AuthService;
 import com.graphnexus.application.auth.service.TokenService;
-import com.graphnexus.application.ops.audit.service.AuditLogService;
+import com.graphnexus.application.ops.audit.annotation.Auditable;
 import com.graphnexus.common.ApiResult;
 import com.graphnexus.common.PageResult;
 import com.graphnexus.common.exception.BusinessException;
@@ -46,11 +46,11 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuditLogService auditLogService;
     private final TokenService tokenService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
+    @Auditable(OperationType.LOGIN)
     public LoginResponse login(LoginRequest request) {
         UserAccountDO user = userAccountRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0023));
@@ -82,8 +82,6 @@ public class AuthServiceImpl implements AuthService {
                 .status(user.getStatus().name())
                 .roles(roles)
                 .build();
-
-        auditLogService.record(user.getId(), OperationType.LOGIN);
 
         return new LoginResponse(tokenPair.getAccessToken(), tokenPair.getRefreshToken(),
                 tokenPair.getExpiresIn(), userInfo);

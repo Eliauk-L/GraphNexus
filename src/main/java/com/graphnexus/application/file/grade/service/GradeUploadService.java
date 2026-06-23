@@ -50,7 +50,7 @@ public class GradeUploadService implements UploadService {
     private final PlatformTransactionManager txManager;
 
     @Override
-    public Object upload(MultipartFile file, String subject) {
+    public Object upload(MultipartFile file, String subject, Long uploadedBy) {
         // ===== 阶段 1：文件解析（无事务 · ADR-028 规则 2）=====
 
         byte[] rawBytes;
