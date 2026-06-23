@@ -161,6 +161,7 @@ function removeFile() {
   border: 2px dashed var(--color-border);
   border-radius: var(--rounded-md);
   cursor: pointer;
+  background: var(--color-surface);
   transition: border-color var(--duration-fast) var(--ease-out);
 }
 
