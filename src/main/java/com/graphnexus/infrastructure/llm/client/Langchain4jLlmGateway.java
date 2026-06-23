@@ -122,7 +122,35 @@ public class Langchain4jLlmGateway implements LlmGateway {
             throw e;
         } catch (Exception e) {
             log.error("LLM 调用失败: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.C0001, "LLM 调用失败: " + e.getMessage());
+            throw new BusinessException(ErrorCode.C0001, toFriendlyError(e));
         }
+    }
+
+    /**
+     * 将 LLM 服务商原始异常转换为用户友好提示。
+     */
+    private String toFriendlyError(Exception e) {
+        String msg = e.getMessage();
+        if (msg == null) return "大模型服务暂时不可用，请稍后重试";
+        String lower = msg.toLowerCase();
+        if (lower.contains("401") || lower.contains("unauthorized")
+                || lower.contains("invalid api key") || lower.contains("incorrect api key")
+                || lower.contains("authentication") || lower.contains("auth failed")) {
+            return "大模型 API Key 无效或已过期，请联系管理员检查 LLM_API_KEY 配置";
+        }
+        if (lower.contains("403") || lower.contains("forbidden")) {
+            return "大模型服务拒绝访问，可能未开通该模型权限，请联系管理员";
+        }
+        if (lower.contains("429") || lower.contains("rate limit") || lower.contains("too many requests")) {
+            return "大模型调用过于频繁，请稍后重试";
+        }
+        if (lower.contains("timeout") || lower.contains("timed out")) {
+            return "大模型响应超时，请稍后重试";
+        }
+        if (lower.contains("500") || lower.contains("502") || lower.contains("503")
+                || lower.contains("internal server error") || lower.contains("service unavailable")) {
+            return "大模型服务暂时不可用，请稍后重试";
+        }
+        return "大模型服务调用失败，请稍后重试";
     }
 }

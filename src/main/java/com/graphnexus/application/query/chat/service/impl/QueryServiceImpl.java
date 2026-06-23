@@ -537,10 +537,28 @@ public class QueryServiceImpl implements QueryService {
                         studentName, studentNo, className, subject);
                 return new ExtractedEntities(studentName, studentNo, className, subject);
             }
+        } catch (BusinessException e) {
+            // 永久性错误（API Key/Auth）→ 直接抛出让用户看到
+            if (isPermanentLlmError(e.getMessage())) {
+                throw e;
+            }
+            log.warn("LLM 实体提取异常，将降级为规则提取: {}", e.getMessage());
         } catch (Exception e) {
             log.warn("LLM 实体提取异常，将降级为规则提取: {}", e.getMessage());
         }
         return null;
+    }
+
+    /** 判断 LLM 异常是否为永久性配置错误（不应降级或重试） */
+    private boolean isPermanentLlmError(String msg) {
+        if (msg == null) return false;
+        String lower = msg.toLowerCase();
+        return lower.contains("api key") || lower.contains("apikey")
+                || lower.contains("unauthorized") || lower.contains("401")
+                || lower.contains("forbidden") || lower.contains("403")
+                || lower.contains("authentication") || lower.contains("auth failed")
+                || lower.contains("未配置") || lower.contains("无效")
+                || lower.contains("权限");
     }
 
     /** 正则提取：手动规则兜底 */
@@ -945,6 +963,8 @@ public class QueryServiceImpl implements QueryService {
                     Thread.sleep(retryDelay);
                 }
             } catch (BusinessException e) {
+                // 永久性错误不重试，直接抛出让用户看到
+                if (isPermanentLlmError(e.getMessage())) throw e;
                 if (attempt >= maxRetries) throw e;
                 log.warn("LLM 调用失败 (attempt {}/{}): {}", attempt + 1, maxRetries + 1, e.getMessage());
                 try { Thread.sleep(retryDelay); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }

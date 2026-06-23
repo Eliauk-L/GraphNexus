@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphnexus.application.query.chat.model.QueryIntent;
 import com.graphnexus.application.query.prompt.service.PromptTemplateService;
 import com.graphnexus.common.LlmGateway;
+import com.graphnexus.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Component;
  * LLM 意图分类策略 — 调用 LLM 将用户自然语言问题分类为 {@link QueryIntent}。
  *
  * <p>Priority=10（最高优先级），链中第一个执行。
- * 调用失败或无法解析时返回 {@code null}，交由下一策略处理。</p>
+ * 调用失败时：永久性错误（API Key/Auth）直接抛出，瞬态错误返回 null 降级。</p>
  *
  * @author Jay
  * @date 2026/06/22
@@ -40,10 +41,29 @@ public class LlmIntentRecognitionStrategy implements IntentRecognitionStrategy {
                     .replace("{{intentList}}", intentList);
             String response = llmGateway.chat(systemPrompt, question);
             return parseClassificationResponse(response);
+        } catch (BusinessException e) {
+            // 永久性错误（API Key/Auth/权限）→ 直接抛出让用户看到，不降级
+            if (isPermanentError(e.getMessage())) {
+                throw e;
+            }
+            log.warn("LLM 意图分类失败（可降级），交由下一策略: {}", e.getMessage());
+            return null;
         } catch (Exception e) {
             log.warn("LLM 意图分类失败，交由下一策略: {}", e.getMessage());
             return null;
         }
+    }
+
+    /** 判断是否为永久性配置错误（需透传给用户，不应降级） */
+    private boolean isPermanentError(String msg) {
+        if (msg == null) return false;
+        String lower = msg.toLowerCase();
+        return lower.contains("api key") || lower.contains("apikey")
+                || lower.contains("unauthorized") || lower.contains("401")
+                || lower.contains("forbidden") || lower.contains("403")
+                || lower.contains("authentication") || lower.contains("auth failed")
+                || lower.contains("未配置") || lower.contains("无效")
+                || lower.contains("权限");
     }
 
     /**
