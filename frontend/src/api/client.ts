@@ -7,7 +7,7 @@ const { message } = createDiscreteApi(['message'])
 
 const client = axios.create({
   baseURL: '/api/v1',
-  timeout: 30000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -32,37 +32,6 @@ const router = createRouter({
       name: 'diagnosis',
       component: () => import('@/views/query/IntelligentQAPage.vue'),
     },
-    {
-      path: '/settings',
-      redirect: '/settings/fusion',
-    },
-    {
-      path: '/settings/fusion',
-      name: 'settings-fusion',
-      component: () => import('@/views/fusion/FusionManagePage.vue'),
-    },
-    {
-      path: '/settings/metrics',
-      name: 'settings-metrics',
-      component: () => import('@/views/metrics/MetricsDashboardPage.vue'),
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: () => import('@/views/auth/LoginPage.vue'),
-      meta: { guest: true },
-    },
-    {
-      path: '/403',
-      name: 'forbidden',
-      component: () => import('@/views/auth/ForbiddenPage.vue'),
-    },
-    {
-      path: '/settings/users',
-      name: 'settings-users',
-      component: () => import('@/views/auth/UserManagePage.vue'),
-      meta: { roles: ['ADMIN'] },
-    },
   ],
 })
 
