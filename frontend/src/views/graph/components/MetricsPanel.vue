@@ -55,7 +55,7 @@ const isEmpty = computed(() => props.examFrequencyData.length === 0)
       <div class="metrics-divider" />
 
       <div v-if="isEmpty" class="metrics-empty">
-        该学科暂无考试记录
+        暂无考试频次数据
       </div>
 
       <div v-else class="metrics-table-wrap">
