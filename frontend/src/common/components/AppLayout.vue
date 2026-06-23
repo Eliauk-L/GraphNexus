@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute, RouterView, RouterLink, useRouter } from 'vue-router'
 import {
   BookOpen, GitGraph, GraduationCap, MessageCircle,
-  Settings, User, LogOut,
+  Settings, User, LogOut, Activity, FileText,
 } from '@lucide/vue'
 import { NPopover } from 'naive-ui'
 import { useAuthStore } from '@/stores/authStore'
@@ -17,6 +17,8 @@ const navItems = [
   { path: '/knowledge-graph', label: '知识点可视化', icon: GitGraph, roles: ['ADMIN', 'TEACHER', 'OPS_MANAGER'] },
   { path: '/grades', label: '学生成绩管理', icon: GraduationCap, roles: ['ADMIN', 'TEACHER'] },
   { path: '/diagnosis', label: '学情诊断', icon: MessageCircle, roles: ['ADMIN', 'TEACHER', 'STUDENT'] },
+  { path: '/system/health', label: '系统健康', icon: Activity, roles: ['ADMIN', 'OPS_MANAGER', 'OPS_STAFF'] },
+  { path: '/system/logs', label: '系统日志', icon: FileText, roles: ['ADMIN', 'OPS_MANAGER', 'OPS_STAFF'] },
 ]
 
 const settingsItems = [

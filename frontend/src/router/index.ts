@@ -55,6 +55,18 @@ const router = createRouter({
       component: () => import('@/views/settings/SettingsConfigPage.vue'),
       meta: { roles: ['ADMIN'] },
     },
+    {
+      path: '/system/health',
+      name: 'system-health',
+      component: () => import('@/views/system/SystemHealthPage.vue'),
+      meta: { roles: ['ADMIN', 'OPS_MANAGER', 'OPS_STAFF'] },
+    },
+    {
+      path: '/system/logs',
+      name: 'system-logs',
+      component: () => import('@/views/system/SystemLogPage.vue'),
+      meta: { roles: ['ADMIN', 'OPS_MANAGER', 'OPS_STAFF'] },
+    },
   ],
 })
 
