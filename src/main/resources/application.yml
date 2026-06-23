@@ -46,7 +46,7 @@ management:
     neo4j:
       enabled: true
     db:
-      enabled: false
+      enabled: true
   metrics:
     export:
       prometheus:
