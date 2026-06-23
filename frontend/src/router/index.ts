@@ -42,11 +42,6 @@ const router = createRouter({
       component: () => import('@/views/fusion/FusionManagePage.vue'),
     },
     {
-      path: '/settings/metrics',
-      name: 'settings-metrics',
-      component: () => import('@/views/metrics/MetricsDashboardPage.vue'),
-    },
-    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/auth/LoginPage.vue'),
