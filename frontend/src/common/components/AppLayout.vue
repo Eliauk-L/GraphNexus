@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute, RouterView, RouterLink, useRouter } from 'vue-router'
 import {
   BookOpen, GitGraph, GraduationCap, MessageCircle,
-  Settings, GitMerge, User, LogOut,
+  Settings, User, LogOut,
 } from '@lucide/vue'
 import { NPopover } from 'naive-ui'
 import { useAuthStore } from '@/stores/authStore'
@@ -20,7 +20,6 @@ const navItems = [
 ]
 
 const settingsItems = [
-  { path: '/settings/fusion', label: '融合管理', icon: GitMerge, roles: ['ADMIN', 'OPS_STAFF'] },
   { path: '/settings/users', label: '用户管理', icon: User, roles: ['ADMIN'] },
 ]
 

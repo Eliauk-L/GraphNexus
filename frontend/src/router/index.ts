@@ -32,16 +32,6 @@ const router = createRouter({
       name: 'diagnosis',
       component: () => import('@/views/query/IntelligentQAPage.vue'),
     },
-    {
-      path: '/settings',
-      redirect: '/settings/fusion',
-    },
-    {
-      path: '/settings/fusion',
-      name: 'settings-fusion',
-      component: () => import('@/views/fusion/FusionManagePage.vue'),
-    },
-    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/auth/LoginPage.vue'),
