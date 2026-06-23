@@ -30,6 +30,8 @@ async function loadGraph() {
     // 销毁旧图
     if (graph) { graph.destroy(); graph = null }
 
+    // 先解除 loading 让 canvas div 渲染出来，再初始化 G6
+    loading.value = false
     await nextTick()
 
     const width = containerRef.value.clientWidth
@@ -85,11 +87,13 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="graph-overview__body">
-      <NSpin v-if="loading" style="height:100%;display:flex;align-items:center;justify-content:center" />
-      <div v-else-if="error" class="graph-overview__empty supporting" style="color:var(--color-text-tertiary)">
+      <div v-show="loading" style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;background:var(--color-surface)">
+        <NSpin />
+      </div>
+      <div v-show="error" class="graph-overview__empty supporting" style="color:var(--color-text-tertiary);position:absolute;inset:0;z-index:1">
         {{ error }}
       </div>
-      <div v-else ref="containerRef" class="graph-overview__canvas" />
+      <div ref="containerRef" class="graph-overview__canvas" />
     </div>
   </div>
 </template>
