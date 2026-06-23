@@ -32,6 +32,7 @@ const router = createRouter({
       name: 'diagnosis',
       component: () => import('@/views/query/IntelligentQAPage.vue'),
     },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/auth/LoginPage.vue'),
