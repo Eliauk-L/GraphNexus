@@ -67,7 +67,7 @@ public class GdsAdapter {
                 "RETURN gds.util.asNode(nodeId).id AS nodeId, " +
                 "labels(gds.util.asNode(nodeId))[0] AS nodeType, " +
                 "coalesce(gds.util.asNode(nodeId).name, gds.util.asNode(nodeId).id) AS nodeName, " +
-                "coalesce(gds.util.asNode(nodeId).subject, '') AS subject, " +
+                "coalesce(head([(gds.util.asNode(nodeId))-[:BELONGS_TO_SUBJECT]->(s:Subject) | s.name]), '') AS subject, " +
                 "coalesce(gds.util.asNode(nodeId).className, '') AS className, " +
                 "score",
                 graphName, maxIterations, dampingFactor);
@@ -87,7 +87,7 @@ public class GdsAdapter {
                 "RETURN gds.util.asNode(nodeId).id AS nodeId, " +
                 "labels(gds.util.asNode(nodeId))[0] AS nodeType, " +
                 "coalesce(gds.util.asNode(nodeId).name, gds.util.asNode(nodeId).id) AS nodeName, " +
-                "coalesce(gds.util.asNode(nodeId).subject, '') AS subject, " +
+                "coalesce(head([(gds.util.asNode(nodeId))-[:BELONGS_TO_SUBJECT]->(s:Subject) | s.name]), '') AS subject, " +
                 "coalesce(gds.util.asNode(nodeId).className, '') AS className, " +
                 "score",
                 graphName, orientation);
