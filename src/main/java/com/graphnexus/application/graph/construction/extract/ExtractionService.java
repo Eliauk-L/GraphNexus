@@ -172,8 +172,7 @@ public class ExtractionService {
         if (raw.getKnowledgePoints() != null) {
             for (ExtractionRawResult.RawKnowledgePoint rkp : raw.getKnowledgePoints()) {
                 KnowledgePointNode kpNode = new KnowledgePointNode(
-                        rkp.getName(), rkp.getDescription(), rkp.getSubject(),
-                        rkp.getGradeLevel(), documentId);
+                        rkp.getName(), rkp.getDescription(), rkp.getGradeLevel(), documentId);
                 knowledgePoints.add(kpNode);
                 kpIds.add(kpNode.getId());
             }
