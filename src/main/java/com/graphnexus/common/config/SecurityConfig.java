@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**").hasAnyRole("ADMIN", "OPS_MANAGER", "OPS_STAFF")
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/v1/system/**").hasAnyRole("ADMIN", "OPS_MANAGER", "OPS_STAFF")
+                .requestMatchers("/api/v1/ops/**").hasAnyRole("ADMIN", "OPS_MANAGER")
                 .requestMatchers("/api/v1/**").authenticated()
                 .anyRequest().permitAll()
             )

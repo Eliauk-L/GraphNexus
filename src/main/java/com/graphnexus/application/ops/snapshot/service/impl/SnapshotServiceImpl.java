@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.neo4j.core.Neo4jClient;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -40,6 +41,7 @@ public class SnapshotServiceImpl implements SnapshotService {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Scheduled(cron = "${ops.snapshot.cron:0 0 2 * * ?}")
     public void takeDailySnapshot() {
         LocalDate today = LocalDate.now();
         log.info("开始每日统计快照采集: date={}", today);

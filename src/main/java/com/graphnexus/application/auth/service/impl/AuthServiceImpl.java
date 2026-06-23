@@ -6,6 +6,7 @@ import com.graphnexus.application.auth.model.TokenPair;
 import com.graphnexus.application.auth.model.UserInfo;
 import com.graphnexus.application.auth.service.AuthService;
 import com.graphnexus.application.auth.service.TokenService;
+import com.graphnexus.application.ops.audit.service.AuditLogService;
 import com.graphnexus.common.ApiResult;
 import com.graphnexus.common.PageResult;
 import com.graphnexus.common.exception.BusinessException;
@@ -17,6 +18,7 @@ import com.graphnexus.infrastructure.mysql.auth.entity.UserRoleDO;
 import com.graphnexus.infrastructure.mysql.auth.repository.RoleRepository;
 import com.graphnexus.infrastructure.mysql.auth.repository.UserAccountRepository;
 import com.graphnexus.infrastructure.mysql.auth.repository.UserRoleRepository;
+import com.graphnexus.infrastructure.mysql.ops.entity.OperationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -44,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
     private final TokenService tokenService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -79,6 +82,8 @@ public class AuthServiceImpl implements AuthService {
                 .status(user.getStatus().name())
                 .roles(roles)
                 .build();
+
+        auditLogService.record(user.getId(), OperationType.LOGIN);
 
         return new LoginResponse(tokenPair.getAccessToken(), tokenPair.getRefreshToken(),
                 tokenPair.getExpiresIn(), userInfo);

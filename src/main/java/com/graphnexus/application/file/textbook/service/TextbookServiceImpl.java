@@ -8,17 +8,20 @@ import com.graphnexus.application.file.textbook.model.ParseResult;
 import com.graphnexus.application.file.parse.FileParser;
 import com.graphnexus.application.file.parse.FileParserRegistry;
 import com.graphnexus.application.file.textbook.parser.TextbookParser;
+import com.graphnexus.application.ops.audit.service.AuditLogService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
+import com.graphnexus.infrastructure.mysql.ops.entity.OperationType;
 import com.graphnexus.infrastructure.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,12 +63,16 @@ public class TextbookServiceImpl implements TextbookService {
     private final FileParserRegistry fileParserRegistry;
     private final ApplicationEventPublisher eventPublisher;
     private final PlatformTransactionManager txManager;
+    private final AuditLogService auditLogService;
 
     // ======================== 上传（委托，自管理事务） ========================
 
     @Override
     public TextbookBO upload(MultipartFile file, String subject) {
-        return (TextbookBO) uploadService.upload(file, subject);
+        TextbookBO result = (TextbookBO) uploadService.upload(file, subject);
+        auditLogService.record(getCurrentUserId(), OperationType.DOCUMENT_UPLOAD,
+                result != null ? result.getId().toString() : null);
+        return result;
     }
 
     // ======================== 解析（短事务→无事务→短事务→事务外事件） ========================
@@ -328,5 +335,13 @@ public class TextbookServiceImpl implements TextbookService {
     private String truncate(String s, int maxLen) {
         if (s == null) return "";
         return s.length() <= maxLen ? s : s.substring(0, maxLen) + "...";
+    }
+
+    private Long getCurrentUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.graphnexus.common.security.UserPrincipal principal) {
+            return principal.getUserId();
+        }
+        return 0L;
     }
 }
