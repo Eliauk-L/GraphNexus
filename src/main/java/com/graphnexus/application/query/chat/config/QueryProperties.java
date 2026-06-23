@@ -41,7 +41,7 @@ public class QueryProperties {
     /** 输出格式 */
     private OutputFormat output = new OutputFormat();
 
-    private static final Set<String> VALID_FORMATS = Set.of("html-svg", "markdown");
+    private static final Set<String> VALID_FORMATS = Set.of("html", "markdown");
 
     @PostConstruct
     void validate() {
@@ -101,7 +101,7 @@ public class QueryProperties {
 
     @Data
     public static class OutputFormat {
-        /** 输出格式: html-svg (默认) | markdown (回滚) */
-        private String format = "html-svg";
+        /** 输出格式: html (默认) | markdown (回滚) */
+        private String format = "html";
     }
 }
