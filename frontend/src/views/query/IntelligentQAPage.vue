@@ -17,9 +17,9 @@ function handleSend(question: string) {
 
 const showErrorDetail = ref(false)
 
-// 诊断完成后自动加载子图
+// 诊断完成后自动加载子图（仅单个学生诊断需要知识结构子图）
 watch(() => store.status, (newStatus) => {
-  if (newStatus === 'completed' && store.taskId) {
+  if (newStatus === 'completed' && store.taskId && store.intent === 'STUDENT_DIAGNOSIS') {
     store.loadSubgraph(store.taskId)
   }
 })
@@ -70,9 +70,9 @@ watch(() => store.status, (newStatus) => {
         </div>
         <MarkdownReport :content="item.answer" :output-format="store.outputFormat" />
         <TokenUsageBar :token-usage="store.tokenUsage" />
-        <!-- 子图可视化：仅在最后一条诊断完成时展示 -->
+        <!-- 子图可视化：仅在学生诊断完成后展示 -->
         <DiagnosisSubgraph
-          v-if="idx === store.history.length - 1 && store.status === 'completed' && store.taskId"
+          v-if="idx === store.history.length - 1 && store.status === 'completed' && store.intent === 'STUDENT_DIAGNOSIS'"
           :task-id="store.taskId"
           @node-click="(node) => store.selectedKpNode = node"
         />

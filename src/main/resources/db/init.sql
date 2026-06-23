@@ -240,3 +240,32 @@ INSERT IGNORE INTO system_config (config_key, config_type, category, config_name
 ('llm.model', 'STRING', 'LLM_MODEL', 'LLM模型名称', '调用LLM API时使用的模型标识', 'deepseek-v4-flash', 1, 10),
 ('llm.temperature', 'NUMBER', 'LLM_MODEL', 'LLM温度参数', '生成温度(0~2)，越高越随机', '0.3', 0, '{"min":0,"max":2}', 11),
 ('llm.max-tokens', 'NUMBER', 'LLM_MODEL', 'LLM最大Token数', '单次生成最大token数', '4096', 0, '{"min":1,"max":128000}', 12);
+
+-- =============================================================================
+-- 运营管理模块 DDL（ops-analytics）
+-- =============================================================================
+
+-- 操作审计日志表
+CREATE TABLE IF NOT EXISTS audit_log (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '技术主键',
+    user_id         BIGINT          NOT NULL COMMENT '操作人ID（引用user_account.id）',
+    operation_type  VARCHAR(32)     NOT NULL COMMENT '操作类型：LOGIN/DOCUMENT_UPLOAD/DOCUMENT_PROCESS/QA_ASK',
+    resource_id     VARCHAR(128)    DEFAULT NULL COMMENT '关联资源ID（documentId/taskId）',
+    create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    INDEX idx_audit_user (user_id),
+    INDEX idx_audit_time (create_time),
+    INDEX idx_audit_type (operation_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作审计日志表';
+
+-- 统计快照表
+CREATE TABLE IF NOT EXISTS stats_snapshot (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '技术主键',
+    snapshot_date   DATE            NOT NULL COMMENT '快照日期',
+    snapshot_data   JSON            NOT NULL COMMENT '快照数据（usage+documents+graph三层嵌套JSON）',
+    status          VARCHAR(16)     NOT NULL DEFAULT 'COMPLETED' COMMENT '快照状态：COMPLETED/PARTIAL/FAILED',
+    fail_reason     VARCHAR(512)    DEFAULT NULL COMMENT '失败原因',
+    create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE INDEX idx_snapshot_date (snapshot_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='统计快照表';
