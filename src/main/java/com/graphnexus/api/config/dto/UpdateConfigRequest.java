@@ -1,6 +1,5 @@
 package com.graphnexus.api.config.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
@@ -12,6 +11,6 @@ import lombok.Data;
 @Data
 public class UpdateConfigRequest {
 
-    @NotBlank(message = "配置值不能为空")
+    /** 配置值。空字符串表示恢复默认值（仅非必填项允许）。 */
     private String configValue;
 }

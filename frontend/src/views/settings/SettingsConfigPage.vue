@@ -69,6 +69,20 @@ async function handleSave() {
   }
 }
 
+async function resetToDefault() {
+  if (!editingConfig.value) return
+  editLoading.value = true
+  try {
+    await configStore.updateConfig(editingConfig.value.configKey, '')
+    message.success('已恢复为系统默认值，请点击「应用配置」使其生效')
+    showEditModal.value = false
+  } catch (e: any) {
+    message.error(e?.response?.data?.userTip || '恢复失败')
+  } finally {
+    editLoading.value = false
+  }
+}
+
 // ── apply logic ──
 async function handleApply() {
   try {
@@ -248,6 +262,20 @@ const tabOptions = [
             v-model:value="editValue as string"
             style="width: 100%"
           />
+
+          <!-- 恢复默认值（仅已自定义的非必填项显示） -->
+          <div
+            v-if="!editingConfig.required && !isUsingDefault(editingConfig)"
+            style="margin-top: var(--spacing-sm)"
+          >
+            <span
+              class="config-row__edit"
+              style="font-size: 0.8125rem"
+              @click="resetToDefault()"
+            >
+              恢复默认值
+            </span>
+          </div>
         </div>
       </div>
 

@@ -131,14 +131,20 @@ public class ConfigServiceImpl implements ConfigService {
                     "配置项不存在: " + configKey);
         }
 
-        // 校验
-        configValidator.validateRequired(configKey, existing.getConfigType(),
-                configValue, Boolean.TRUE.equals(existing.getRequired()));
-        configValidator.validate(configKey, existing.getConfigType(),
-                configValue, existing.getValidationRule());
+        // 空值 = 恢复默认值（仅非必填项允许）
+        boolean resetToDefault = (configValue == null || configValue.isBlank());
+        if (resetToDefault && Boolean.TRUE.equals(existing.getRequired())) {
+            throw new BusinessException(ErrorCode.A0032,
+                    "配置项 [" + configKey + "] 为必填项，不能恢复默认值");
+        }
 
-        // 持久化
-        existing.setConfigValue(configValue);
+        if (!resetToDefault) {
+            configValidator.validate(configKey, existing.getConfigType(),
+                    configValue, existing.getValidationRule());
+        }
+
+        // 持久化：恢复默认值时 config_value 设为 NULL
+        existing.setConfigValue(resetToDefault ? null : configValue);
         systemConfigRepository.save(existing);
 
         // 更新缓存

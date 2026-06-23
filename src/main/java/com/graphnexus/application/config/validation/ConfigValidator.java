@@ -26,13 +26,19 @@ public class ConfigValidator {
     /**
      * 校验配置值。
      *
+     * <p>值为空（null 或 blank）时跳过类型校验，表示恢复默认值。</p>
+     *
      * @param configKey          配置键（仅用于日志和异常消息）
      * @param configType         配置类型：NUMBER|STRING|BOOLEAN|TEXT
-     * @param value              待校验的值
+     * @param value              待校验的值（null/blank = 恢复默认值）
      * @param validationRuleJson 校验规则 JSON（可为 null）
      * @throws BusinessException 校验失败时抛出对应 ErrorCode
      */
     public void validate(String configKey, String configType, String value, String validationRuleJson) {
+        // 空值 = 恢复默认值，跳过类型校验
+        if (value == null || value.isBlank()) {
+            return;
+        }
         switch (configType.toUpperCase()) {
             case "NUMBER":
                 validateNumber(configKey, value, validationRuleJson);
