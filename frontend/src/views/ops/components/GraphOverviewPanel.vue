@@ -61,6 +61,31 @@ function handleNodeClick(nodeId: string, nodeData: Record<string, unknown>) {
 }
 function closeDetail() { selectedNode.value = null }
 
+// ── 类型筛选 ──
+function handleNodeFilter(types: string[]) {
+  const g = graphInstance.value
+  const d = graphData.value
+  if (!g || !d) return
+  const ntSet = new Set(types)
+  g.updateNodeData(d.nodes.map(n => ({
+    id: n.id,
+    style: { visibility: ntSet.has(n.data.nodeType as string) ? 'visible' : 'hidden' as const },
+  })))
+  g.draw()
+}
+
+function handleEdgeFilter(types: string[]) {
+  const g = graphInstance.value
+  const d = graphData.value
+  if (!g || !d) return
+  const etSet = new Set(types)
+  g.updateEdgeData(d.edges.map(e => ({
+    id: e.id,
+    style: { visibility: etSet.has((e.data.edgeType ?? e.data.type) as string) ? 'visible' : 'hidden' as const },
+  })))
+  g.draw()
+}
+
 onMounted(loadGraph)
 </script>
 
@@ -95,8 +120,8 @@ onMounted(loadGraph)
         v-if="graphData"
         :node-types="allNodeTypes"
         :edge-types="allEdgeTypes"
-        @update:node-filter="() => {}"
-        @update:edge-filter="() => {}"
+        @update:node-filter="handleNodeFilter"
+        @update:edge-filter="handleEdgeFilter"
       />
 
       <NodeDetailPanel
