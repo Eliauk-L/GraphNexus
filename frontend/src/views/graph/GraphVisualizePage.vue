@@ -5,7 +5,6 @@ import { useGraphStore } from './graphStore'
 import { toGraphData, applyMetrics } from './graphAdapter'
 import type { G6GraphData } from './graphAdapter'
 import { useGraphInteraction } from './composables/useGraphInteraction'
-import { useMetrics } from './composables/useMetrics'
 import BaseSelect from '@/common/components/BaseSelect.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
 import GraphToolbar from './components/GraphToolbar.vue'
@@ -14,7 +13,6 @@ import NodeDetailPanel from './components/NodeDetailPanel.vue'
 import MetricsPanel from './components/MetricsPanel.vue'
 
 const store = useGraphStore()
-const metrics = useMetrics()
 const route = useRoute()
 const selectedNode = ref<{ id: string; data: Record<string, unknown> } | null>(null)
 const selectedDocId = ref<number | null>(null)
