@@ -49,6 +49,11 @@ export function getSubjectGraph(subjectName: string): Promise<GraphSubgraphVO> {
   })
 }
 
+/** 全量图谱 — Neo4j 所有节点和边 */
+export function getFullGraph(): Promise<GraphSubgraphVO> {
+  return client.get('/graph/construction/full', { timeout: 60000 })
+}
+
 /** 查询考试频次 */
 export function queryExamFrequency(subject?: string, documentId?: string): Promise<MetricResultVO[]> {
   return client.get('/graph/metrics/exam-frequency', {

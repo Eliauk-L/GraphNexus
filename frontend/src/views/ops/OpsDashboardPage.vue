@@ -84,7 +84,7 @@ const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-di
     <GraphStatsPanel />
 
     <!-- 全量图谱可视化 -->
-    <GraphOverviewPanel v-model:subject="store.subject" />
+    <GraphOverviewPanel />
 
     <!-- 历史趋势 -->
     <section class="stats-section">

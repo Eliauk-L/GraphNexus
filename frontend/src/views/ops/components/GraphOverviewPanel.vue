@@ -1,50 +1,28 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { NSelect, NSpin } from 'naive-ui'
-import { getSubjectGraph, listSubjects } from '@/api/graph'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { NSpin } from 'naive-ui'
+import { getFullGraph } from '@/api/graph'
 import { toGraphData } from '@/views/graph/graphAdapter'
 import type { GraphSubgraphVO } from '@/api/types'
 import { Graph } from '@antv/g6'
 
-const props = defineProps<{
-  subject: string
-}>()
-
-const emit = defineEmits<{
-  'update:subject': [value: string]
-}>()
-
-interface SubjectOption { label: string; value: string }
-const subjects = ref<SubjectOption[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const containerRef = ref<HTMLDivElement>()
 let graph: Graph | null = null
 
-const subjectOptions = [{ label: '全部学科', value: '' }, ...subjects.value]
-
-// 加载学科列表
-async function loadSubjects() {
-  try {
-    const data = await listSubjects()
-    subjects.value = data.map((s: string) => ({ label: s, value: s }))
-  } catch { /* ignore */ }
-}
-
-// 加载并渲染图谱
-async function loadGraph(subjectName: string) {
+// 加载并渲染全量图谱
+async function loadGraph() {
   if (!containerRef.value) return
   loading.value = true
   error.value = null
 
   try {
-    const data: GraphSubgraphVO = subjectName
-      ? await getSubjectGraph(subjectName)
-      : await getSubjectGraph('') // 全部学科走默认
+    const data: GraphSubgraphVO = await getFullGraph()
 
     const g6Data = toGraphData(data)
     if (!g6Data || !g6Data.nodes.length) {
-      error.value = subjectName ? `学科"${subjectName}"暂无图谱数据` : '暂无图谱数据'
+      error.value = '暂无图谱数据'
       loading.value = false
       return
     }
@@ -92,12 +70,7 @@ async function loadGraph(subjectName: string) {
   }
 }
 
-onMounted(() => {
-  loadSubjects()
-  if (props.subject) loadGraph(props.subject)
-})
-
-watch(() => props.subject, (val) => loadGraph(val))
+onMounted(loadGraph)
 
 onBeforeUnmount(() => {
   if (graph) { graph.destroy(); graph = null }
@@ -108,14 +81,7 @@ onBeforeUnmount(() => {
   <div class="graph-overview">
     <div class="graph-overview__header">
       <h3 class="title" style="margin:0">全量图谱可视化</h3>
-      <NSelect
-        :value="props.subject"
-        :options="[{ label: '全部学科', value: '' }, ...subjects]"
-        size="small"
-        style="width: 160px"
-        placeholder="选择学科"
-        @update:value="(v: string) => emit('update:subject', v)"
-      />
+      <span class="supporting" style="color:var(--color-text-tertiary)">Neo4j 全部节点和边</span>
     </div>
 
     <div class="graph-overview__body">
@@ -146,7 +112,7 @@ onBeforeUnmount(() => {
 }
 
 .graph-overview__body {
-  height: 480px;
+  height: 560px;
   position: relative;
 }
 
