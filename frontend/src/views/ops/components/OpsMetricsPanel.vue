@@ -4,132 +4,82 @@ import { queryPageRank, queryDegree } from '@/api/graph'
 import type { MetricResultVO } from '@/api/types'
 import { NTag } from 'naive-ui'
 
-interface MetricRow { name: string; value: number; nodeType: string }
-const kpPageRank = ref<MetricRow[]>([])
-const stPageRank = ref<MetricRow[]>([])
-const kpDegree = ref<MetricRow[]>([])
-const stDegree = ref<MetricRow[]>([])
+interface MetricRow { name: string; value: number; nodeType: string; subject: string; className: string }
+const kpPR = ref<MetricRow[]>([])
+const stPR = ref<MetricRow[]>([])
+const kpDeg = ref<MetricRow[]>([])
+const stDeg = ref<MetricRow[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-const NODE_TYPE_LABELS: Record<string, string> = { KnowledgePoint: '知识点', Student: '学生' }
-
-async function loadMetrics() {
-  loading.value = true
-  error.value = null
+async function load() {
+  loading.value = true; error.value = null
   try {
-    const [prKp, prSt, degKp, degSt] = await Promise.all([
+    const [a, b, c, d] = await Promise.all([
       queryPageRank(['KnowledgePoint']),
       queryPageRank(['Student', 'KnowledgePoint']),
       queryDegree(['KnowledgePoint']),
       queryDegree(['Student', 'KnowledgePoint']),
     ])
-    kpPageRank.value = top5(prKp, 'KnowledgePoint')
-    stPageRank.value = top5(prSt, 'Student')
-    kpDegree.value = top5(degKp, 'KnowledgePoint')
-    stDegree.value = top5(degSt, 'Student')
-  } catch (e: any) {
-    error.value = e?.message ?? '加载失败'
-  } finally {
-    loading.value = false
-  }
+    kpPR.value = top(a, 'KnowledgePoint'); stPR.value = top(b, 'Student')
+    kpDeg.value = top(c, 'KnowledgePoint'); stDeg.value = top(d, 'Student')
+  } catch (e: any) { error.value = e?.message ?? '加载失败' }
+  finally { loading.value = false }
 }
 
-function top5(list: MetricResultVO[], nodeType: string): MetricRow[] {
-  return (Array.isArray(list) ? list : [])
-    .filter(m => m.nodeType === nodeType)
-    .sort((a, b) => b.metricValue - a.metricValue)
-    .slice(0, 5)
-    .map(m => ({ name: m.nodeName ?? m.nodeId, value: m.metricValue, nodeType: m.nodeType }))
+function top(list: MetricResultVO[], t: string): MetricRow[] {
+  return list.filter(m => m.nodeType === t).sort((a, b) => b.metricValue - a.metricValue).slice(0, 5)
+    .map(m => ({ name: m.nodeName ?? m.nodeId, value: m.metricValue, nodeType: m.nodeType, subject: m.subject ?? '', className: m.className ?? '' }))
 }
 
 function fmt(v: number) { return v.toFixed(4) }
+function sub(r: MetricRow) { return r.nodeType === 'KnowledgePoint' ? r.subject : '' }
+function cls(r: MetricRow) { return r.nodeType === 'Student' ? r.className : '' }
 
-onMounted(loadMetrics)
+onMounted(load)
 </script>
 
 <template>
   <section class="panel">
     <h2 class="headline">图度量指标 <NTag size="tiny" :bordered="true" style="vertical-align:middle;margin-left:8px">Top 5</NTag></h2>
-
     <div v-if="error" class="supporting" style="color:var(--color-error)">{{ error }}</div>
 
-    <div class="metrics-grid">
-      <!-- PageRank · 知识点 -->
-      <div class="metric-col">
-        <div class="supporting" style="color:var(--color-text-tertiary);margin-bottom:4px">PageRank · 知识点</div>
-        <table class="metric-table" v-if="kpPageRank.length">
-          <tr v-for="(r, i) in kpPageRank" :key="r.name">
-            <td class="rank">{{ i + 1 }}</td>
-            <td class="name">{{ r.name }}</td>
-            <td class="mono val">{{ fmt(r.value) }}</td>
-          </tr>
-        </table>
-        <div v-else-if="!loading" class="supporting" style="color:var(--color-text-tertiary)">—</div>
+    <div class="grid">
+      <div class="col">
+        <div class="col-title">PageRank · 知识点</div>
+        <table v-if="kpPR.length"><tr v-for="(r,i) in kpPR" :key="i"><td class="rk">{{ i+1 }}</td><td class="nm">{{ r.name }}<span class="sub">{{ sub(r) }}</span></td><td class="vl mono">{{ fmt(r.value) }}</td></tr></table>
+        <div v-else class="empty">—</div>
       </div>
-
-      <!-- PageRank · 学生 -->
-      <div class="metric-col">
-        <div class="supporting" style="color:var(--color-text-tertiary);margin-bottom:4px">PageRank · 学生</div>
-        <table class="metric-table" v-if="stPageRank.length">
-          <tr v-for="(r, i) in stPageRank" :key="r.name">
-            <td class="rank">{{ i + 1 }}</td>
-            <td class="name">{{ r.name }}</td>
-            <td class="mono val">{{ fmt(r.value) }}</td>
-          </tr>
-        </table>
-        <div v-else-if="!loading" class="supporting" style="color:var(--color-text-tertiary)">—</div>
+      <div class="col">
+        <div class="col-title">PageRank · 学生</div>
+        <table v-if="stPR.length"><tr v-for="(r,i) in stPR" :key="i"><td class="rk">{{ i+1 }}</td><td class="nm">{{ r.name }}<span class="sub">{{ cls(r) }}</span></td><td class="vl mono">{{ fmt(r.value) }}</td></tr></table>
+        <div v-else class="empty">—</div>
       </div>
-
-      <!-- 度中心性 · 知识点 -->
-      <div class="metric-col">
-        <div class="supporting" style="color:var(--color-text-tertiary);margin-bottom:4px">度中心性 · 知识点</div>
-        <table class="metric-table" v-if="kpDegree.length">
-          <tr v-for="(r, i) in kpDegree" :key="r.name">
-            <td class="rank">{{ i + 1 }}</td>
-            <td class="name">{{ r.name }}</td>
-            <td class="mono val">{{ r.value }}</td>
-          </tr>
-        </table>
-        <div v-else-if="!loading" class="supporting" style="color:var(--color-text-tertiary)">—</div>
+      <div class="col">
+        <div class="col-title">度中心性 · 知识点</div>
+        <table v-if="kpDeg.length"><tr v-for="(r,i) in kpDeg" :key="i"><td class="rk">{{ i+1 }}</td><td class="nm">{{ r.name }}<span class="sub">{{ sub(r) }}</span></td><td class="vl mono">{{ r.value }}</td></tr></table>
+        <div v-else class="empty">—</div>
       </div>
-
-      <!-- 度中心性 · 学生 -->
-      <div class="metric-col">
-        <div class="supporting" style="color:var(--color-text-tertiary);margin-bottom:4px">度中心性 · 学生</div>
-        <table class="metric-table" v-if="stDegree.length">
-          <tr v-for="(r, i) in stDegree" :key="r.name">
-            <td class="rank">{{ i + 1 }}</td>
-            <td class="name">{{ r.name }}</td>
-            <td class="mono val">{{ r.value }}</td>
-          </tr>
-        </table>
-        <div v-else-if="!loading" class="supporting" style="color:var(--color-text-tertiary)">—</div>
+      <div class="col">
+        <div class="col-title">度中心性 · 学生</div>
+        <table v-if="stDeg.length"><tr v-for="(r,i) in stDeg" :key="i"><td class="rk">{{ i+1 }}</td><td class="nm">{{ r.name }}<span class="sub">{{ cls(r) }}</span></td><td class="vl mono">{{ r.value }}</td></tr></table>
+        <div v-else class="empty">—</div>
       </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.panel { display: flex; flex-direction: column; gap: var(--spacing-md); }
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-sm);
-}
-
-.metric-col {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--rounded-md);
-  padding: var(--spacing-md);
-}
-
-.metric-table { width: 100%; border-collapse: collapse; }
-.metric-table td { padding: 4px 0; font-size: 0.8125rem; border-bottom: 1px solid var(--color-border); }
-.metric-table tr:last-child td { border-bottom: none; }
-.rank { width: 20px; color: var(--color-text-tertiary); font-weight: 500; }
-.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0; }
-.val { text-align: right; white-space: nowrap; color: var(--color-text-primary); }
+.panel { display:flex;flex-direction:column;gap:var(--spacing-md); }
+.grid { display:grid;grid-template-columns:repeat(4,1fr);gap:var(--spacing-sm); }
+.col { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--rounded-md);padding:var(--spacing-md); }
+.col-title { font-size:0.75rem;color:var(--color-text-tertiary);margin-bottom:6px; }
+table { width:100%;border-collapse:collapse; }
+td { padding:3px 0;font-size:0.8125rem;border-bottom:1px solid var(--color-border); }
+tr:last-child td { border-bottom:none; }
+.rk { width:18px;color:var(--color-text-tertiary);font-weight:500; }
+.nm { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0; }
+.sub { color:var(--color-text-tertiary);font-size:0.6875rem;margin-left:4px; }
+.vl { text-align:right;white-space:nowrap; }
+.empty { color:var(--color-text-tertiary);font-size:0.75rem;padding:8px 0; }
 </style>
