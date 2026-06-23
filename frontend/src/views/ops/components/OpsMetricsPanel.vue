@@ -29,6 +29,8 @@ async function load() {
     console.log('[OpsMetrics] degree(St+KP):', d?.length, 'items, types:', [...new Set(d?.map(m => m.nodeType) ?? [])])
     kpPR.value = top(a, 'KnowledgePoint'); stPR.value = top(b, 'Student')
     kpDeg.value = top(c, 'KnowledgePoint'); stDeg.value = top(d, 'Student')
+    console.log('[OpsMetrics] top results: kpPR=%d stPR=%d kpDeg=%d stDeg=%d',
+      kpPR.value.length, stPR.value.length, kpDeg.value.length, stDeg.value.length)
   } catch (e: any) { error.value = e?.message ?? '加载失败' }
   finally { loading.value = false }
 }
