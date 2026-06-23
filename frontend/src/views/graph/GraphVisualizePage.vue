@@ -37,7 +37,7 @@ function refreshGraphData() {
   }
 }
 
-watch(store.currentGraph, () => {
+watch(() => store.currentGraph, () => {
   refreshGraphData()
 })
 
