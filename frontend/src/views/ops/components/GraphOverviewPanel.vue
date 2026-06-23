@@ -171,6 +171,7 @@ onBeforeUnmount(() => {
 
     <!-- 图例 -->
     <div class="graph-overview__legend">
+      <span class="legend-label supporting" style="color:var(--color-text-tertiary)">节点：</span>
       <span class="legend-item"><i style="background:#3B82F6"></i>知识点</span>
       <span class="legend-item"><i style="background:#F97316"></i>实体</span>
       <span class="legend-item"><i style="background:#EAB308"></i>分类</span>
@@ -178,6 +179,16 @@ onBeforeUnmount(() => {
       <span class="legend-item"><i style="background:#8B5CF6"></i>考试</span>
       <span class="legend-item"><i style="background:#10B981"></i>文档</span>
       <span class="legend-item"><i style="background:#06B6D4"></i>学科</span>
+    </div>
+    <div class="graph-overview__legend">
+      <span class="legend-label supporting" style="color:var(--color-text-tertiary)">边：</span>
+      <span class="legend-item"><i class="edge-line" style="border-color:#F97316"></i>ALIGNED_TO 实体对齐</span>
+      <span class="legend-item"><i class="edge-line" style="border-color:#3B82F6"></i>PREREQUISITE_OF 前置依赖</span>
+      <span class="legend-item"><i class="edge-line" style="border-color:#EC4899"></i>MASTERS 掌握度</span>
+      <span class="legend-item"><i class="edge-line" style="border-color:#8B5CF6"></i>TESTED 考试考查</span>
+      <span class="legend-item"><i class="edge-line" style="border-color:#10B981"></i>BELONGS_TO 归属</span>
+      <span class="legend-item"><i class="edge-line" style="border-color:#06B6D4"></i>BELONGS_TO_SUBJECT 学科</span>
+      <span class="legend-item"><i class="edge-line" style="border-color:#EAB308"></i>CHILD_OF 层级</span>
     </div>
   </div>
 </template>
@@ -273,5 +284,17 @@ onBeforeUnmount(() => {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+}
+
+.legend-label {
+  margin-right: 2px;
+}
+
+.legend-item i.edge-line {
+  width: 16px;
+  height: 0;
+  border-radius: 0;
+  border-top: 2.5px solid;
+  vertical-align: middle;
 }
 </style>
