@@ -239,7 +239,7 @@ INSERT IGNORE INTO system_config (config_key, config_type, category, config_name
 ('llm.api-key', 'STRING', 'LLM_MODEL', 'LLM API Key', 'LLM服务的认证密钥', '${LLM_API_KEY:}', 1, 6),
 ('llm.model', 'STRING', 'LLM_MODEL', 'LLM模型名称', '调用LLM API时使用的模型标识', 'deepseek-v4-flash', 1, 10),
 ('llm.temperature', 'NUMBER', 'LLM_MODEL', 'LLM温度参数', '生成温度(0~2)，越高越随机', '0.3', 0, '{"min":0,"max":2}', 11),
-('llm.max-tokens', 'NUMBER', 'LLM_MODEL', 'LLM最大Token数', '单次生成最大token数', '4096', 0, '{"min":1,"max":128000}', 12);
+('llm.max-tokens', 'NUMBER', 'LLM_MODEL', 'LLM最大Token数', '单次生成最大token数，-1表示不限制', '-1', 0, '{"min":-1}', 12);
 
 -- =============================================================================
 -- 运营管理模块 DDL（ops-analytics）

@@ -70,7 +70,7 @@ spring:
         options:
           model: deepseek-v4-flash
           temperature: 0.3
-          max-tokens: 4096
+          max-tokens: -1
 
     # ---------------------------------------------------------------------------
     # Ollama 本地（兜底）— 当 DeepSeek API 不可用时使用
@@ -82,7 +82,7 @@ spring:
 #        options:
 #          model: deepseek-r1:7b
 #          temperature: 0.3
-#          max-tokens: 4096
+#          max-tokens: -1
 
   # ---------------------------------------------------------------------------
   # MinIO 对象存储

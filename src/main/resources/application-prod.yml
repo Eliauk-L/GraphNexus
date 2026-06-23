@@ -63,7 +63,7 @@ spring:
         options:
           model: deepseek-v4-flash
           temperature: 0.3
-          max-tokens: 4096
+          max-tokens: -1
 
 # ---------------------------------------------------------------------------
 # MinIO 对象存储（自定义配置，无 Spring Boot 自动配置）

@@ -36,7 +36,7 @@ public class Langchain4jLlmGateway implements LlmGateway {
     @Value("${spring.ai.openai.chat.options.temperature:0.3}")
     private Double temperature;
 
-    @Value("${spring.ai.openai.chat.options.max-tokens:4096}")
+    @Value("${spring.ai.openai.chat.options.max-tokens:-1}")
     private Integer maxTokens;
 
     private volatile OpenAiChatModel chatModel;
@@ -85,16 +85,19 @@ public class Langchain4jLlmGateway implements LlmGateway {
     public void setMaxTokens(Integer maxTokens) { this.maxTokens = maxTokens; }
 
     private OpenAiChatModel buildChatModel(String modelName, Double temp, Integer tokens) {
-        return OpenAiChatModel.builder()
+        var builder = OpenAiChatModel.builder()
                 .baseUrl(baseUrl + "/v1")
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .temperature(temp)
-                .maxTokens(tokens)
                 .timeout(Duration.ofMinutes(5))
                 .logRequests(true)
-                .logResponses(true)
-                .build();
+                .logResponses(true);
+        // -1 或 null = 不限制，不传 max_tokens 参数给 API
+        if (tokens != null && tokens > 0) {
+            builder.maxTokens(tokens);
+        }
+        return builder.build();
     }
 
     @Override
