@@ -21,10 +21,12 @@ async function load() {
       queryDegree(['KnowledgePoint']),
       queryDegree(['Student', 'KnowledgePoint']),
     ])
-    console.log('[OpsMetrics] pagerank(KP):', a?.length, 'items, first:', a?.[0])
-    console.log('[OpsMetrics] pagerank(St+KP):', b?.length, 'items, first:', b?.[0])
-    console.log('[OpsMetrics] degree(KP):', c?.length, 'items, first:', c?.[0])
-    console.log('[OpsMetrics] degree(St+KP):', d?.length, 'items, first:', d?.[0])
+    console.log('[OpsMetrics] pagerank(KP):', a?.length, 'items')
+    console.log('[OpsMetrics]   types:', [...new Set(a?.map(m => m.nodeType) ?? [])])
+    console.log('[OpsMetrics]   KP count:', a?.filter(m => m.nodeType === 'KnowledgePoint').length ?? 0)
+    console.log('[OpsMetrics] pagerank(St+KP):', b?.length, 'items, types:', [...new Set(b?.map(m => m.nodeType) ?? [])])
+    console.log('[OpsMetrics] degree(KP):', c?.length, 'items, types:', [...new Set(c?.map(m => m.nodeType) ?? [])])
+    console.log('[OpsMetrics] degree(St+KP):', d?.length, 'items, types:', [...new Set(d?.map(m => m.nodeType) ?? [])])
     kpPR.value = top(a, 'KnowledgePoint'); stPR.value = top(b, 'Student')
     kpDeg.value = top(c, 'KnowledgePoint'); stDeg.value = top(d, 'Student')
   } catch (e: any) { error.value = e?.message ?? '加载失败' }
