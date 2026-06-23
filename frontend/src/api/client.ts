@@ -66,11 +66,12 @@ client.interceptors.response.use(
     const errorCode = errData?.errorCode
 
     // 判断是否为后端服务不可达（Vite proxy ECONNREFUSED / 网络不通）
+    // 注意：有 errorCode 的响应（即使 status>=502）是业务异常，不走 isServerDown
     const isServerDown =
       !error.response ||
       error.code === 'ECONNREFUSED' ||
       error.code === 'ERR_BAD_RESPONSE' ||
-      (error.response?.status && error.response.status >= 502)
+      (error.response?.status && error.response.status >= 502 && !errorCode)
 
     // 请求超时：由调用方自己处理（如学情诊断大模型重试），不弹全局 toast
     const isTimeout = error.code === 'ECONNABORTED'
