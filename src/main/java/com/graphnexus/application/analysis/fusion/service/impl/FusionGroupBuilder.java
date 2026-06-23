@@ -51,15 +51,13 @@ public class FusionGroupBuilder {
         int[] parent = new int[n];
         for (int i = 0; i < n; i++) parent[i] = i;
 
-        // 前置 pass：跨源精确名称匹配（name 归一化后 equals + 跨源 DOCUMENT↔CSV_IMPORT）
-        // 确保文档 KP 和考试 KP 同名必然合并，不依赖 FuzzyMatch 阈值
+        // 前置 pass：精确名称匹配 — 同名 KP 必然合并（不限跨源），不依赖 FuzzyMatch 阈值
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
                 KpCandidate a = candidates.get(i);
                 KpCandidate b = candidates.get(j);
                 if (a.name() != null && b.name() != null
-                        && a.name().trim().equalsIgnoreCase(b.name().trim())
-                        && !a.fusionSource().equals(b.fusionSource())) {
+                        && a.name().trim().equalsIgnoreCase(b.name().trim())) {
                     union(parent, i, j);
                 }
             }
