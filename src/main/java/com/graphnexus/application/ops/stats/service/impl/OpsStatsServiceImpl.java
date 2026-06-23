@@ -3,6 +3,7 @@ package com.graphnexus.application.ops.stats.service.impl;
 import com.graphnexus.application.ops.stats.model.OpsSummaryResponse;
 import com.graphnexus.application.ops.stats.model.OpsTrendResponse;
 import com.graphnexus.application.ops.stats.service.OpsStatsService;
+import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
 import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.ops.entity.OperationType;
 import com.graphnexus.infrastructure.mysql.ops.repository.AuditLogRepository;
@@ -37,7 +38,8 @@ public class OpsStatsServiceImpl implements OpsStatsService {
 
     private final AuditLogRepository auditLogRepository;
     private final TextbookRepository textbookRepository;
-        private final StatsSnapshotRepository statsSnapshotRepository;
+    private final ExamRecordRepository examRecordRepository;
+    private final StatsSnapshotRepository statsSnapshotRepository;
     private final QueryGraphRepository queryGraphRepository;
     private final Neo4jClient neo4jClient;
     private final ObjectMapper objectMapper;
@@ -82,6 +84,7 @@ public class OpsStatsServiceImpl implements OpsStatsService {
 
     private OpsSummaryResponse.DocumentSummary buildDocumentSummary() {
         long total = textbookRepository.count();
+        long examTotal = examRecordRepository.count();
         // 按状态分布
         List<Object[]> statusRows = textbookRepository.countGroupByStatus();
         Map<String, Long> byStatus = new LinkedHashMap<>();
@@ -97,6 +100,7 @@ public class OpsStatsServiceImpl implements OpsStatsService {
 
         return OpsSummaryResponse.DocumentSummary.builder()
                 .total(total)
+                .examTotal(examTotal)
                 .byStatus(byStatus)
                 .bySubject(bySubject)
                 .build();

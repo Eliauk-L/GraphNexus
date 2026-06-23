@@ -59,11 +59,11 @@ const trendText = computed(() => {
 .metric-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--rounded-lg);
-  padding: var(--spacing-lg);
+  border-radius: var(--rounded-md);
+  padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: 4px;
 }
 
 .metric-card__label {

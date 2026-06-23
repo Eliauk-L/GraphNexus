@@ -106,7 +106,7 @@ const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-di
 .ops-dashboard {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2xl);
+  gap: var(--spacing-xl);
   max-width: 1400px;
 }
 

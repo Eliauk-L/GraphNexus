@@ -13,6 +13,7 @@ export interface OpsUsageSummary {
 /** 运营摘要 — 文档处理量 */
 export interface OpsDocumentSummary {
   total: number
+  examTotal: number
   byStatus: Record<string, number>
   bySubject: Record<string, number>
 }

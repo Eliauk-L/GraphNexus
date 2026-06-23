@@ -43,6 +43,7 @@ public class SnapshotData {
     @AllArgsConstructor
     public static class DocumentData {
         private long total;
+        private long examTotal;
         private Map<String, Long> byStatus;
         private Map<String, Long> bySubject;
     }

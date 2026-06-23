@@ -2,6 +2,7 @@ package com.graphnexus.application.ops.snapshot.service.impl;
 
 import com.graphnexus.application.ops.snapshot.model.SnapshotData;
 import com.graphnexus.application.ops.snapshot.service.SnapshotService;
+import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
 import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.ops.entity.OperationType;
 import com.graphnexus.infrastructure.mysql.ops.entity.StatsSnapshotDO;
@@ -35,6 +36,7 @@ public class SnapshotServiceImpl implements SnapshotService {
 
     private final AuditLogRepository auditLogRepository;
     private final TextbookRepository textbookRepository;
+    private final ExamRecordRepository examRecordRepository;
     private final StatsSnapshotRepository statsSnapshotRepository;
     private final Neo4jClient neo4jClient;
     private final QueryGraphRepository queryGraphRepository;
@@ -124,6 +126,7 @@ public class SnapshotServiceImpl implements SnapshotService {
 
     private SnapshotData.DocumentData collectDocumentData() {
         long total = textbookRepository.count();
+        long examTotal = examRecordRepository.count();
         List<Object[]> statusRows = textbookRepository.countGroupByStatus();
         Map<String, Long> byStatus = new LinkedHashMap<>();
         for (Object[] row : statusRows) {
@@ -134,7 +137,7 @@ public class SnapshotServiceImpl implements SnapshotService {
         for (Object[] row : subjectRows) {
             bySubject.put(row[0].toString(), (Long) row[1]);
         }
-        return SnapshotData.DocumentData.builder().total(total).byStatus(byStatus).bySubject(bySubject).build();
+        return SnapshotData.DocumentData.builder().total(total).examTotal(examTotal).byStatus(byStatus).bySubject(bySubject).build();
     }
 
     @SuppressWarnings("unchecked")

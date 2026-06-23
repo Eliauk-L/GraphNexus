@@ -52,11 +52,16 @@ function mergedOption(): EChartsOption {
 .ops-chart {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--rounded-lg);
-  padding: var(--spacing-lg);
+  border-radius: var(--rounded-md);
+  padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
+}
+
+.ops-chart__title {
+  margin: 0;
+  font-size: 0.875rem;
 }
 
 .ops-chart__title {

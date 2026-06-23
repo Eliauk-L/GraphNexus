@@ -53,6 +53,7 @@ public class OpsSummaryResponse {
     @AllArgsConstructor
     public static class DocumentSummary {
         private long total;
+        private long examTotal;
         private Map<String, Long> byStatus;
         private Map<String, Long> bySubject;
     }

@@ -3,63 +3,38 @@ import { computed } from 'vue'
 import { useOpsStore } from '@/stores/opsStore'
 import OpsChart from './OpsChart.vue'
 import { CHART_COLORS } from '@/common/components/chartTheme'
-import { NSelect } from 'naive-ui'
+import { NSelect, NTag } from 'naive-ui'
 
 const store = useOpsStore()
-
-const graph = computed(() => store.summary?.graph)
-const loading = computed(() => store.loading)
-const subjectOptions = computed(() =>
-  [{ label: '全部学科', value: '全部学科' },
-    ...store.subjects.map(s => ({ label: s, value: s }))]
-)
-
-const nodesByType = computed(() => {
-  const data = graph.value?.bySubject?.[store.subject]?.nodes ?? graph.value?.nodesByType ?? {}
-  return data
+const g = computed(() => store.summary?.graph)
+const l = computed(() => store.loading)
+const subs = computed(() => [{ label: '全部学科', value: '全部学科' }, ...store.subjects.map(s => ({ label: s, value: s }))])
+const nodes = computed(() => g.value?.bySubject?.[store.subject]?.nodes ?? g.value?.nodesByType ?? {})
+const edges = computed(() => g.value?.bySubject?.[store.subject]?.edges ?? g.value?.edgesByType ?? {})
+const barOption = (data: Record<string, number>) => ({
+  tooltip: { trigger: 'axis' as const },
+  grid: { top: 8, right: 8, bottom: 32, left: 40 },
+  xAxis: { type: 'category' as const, data: Object.keys(data), axisLabel: { rotate: 30, fontSize: 10 } },
+  yAxis: { type: 'value' as const },
+  series: [{ type: 'bar' as const, data: Object.values(data), itemStyle: { color: CHART_COLORS[0], borderRadius: [4, 4, 0, 0] } }],
 })
-const edgesByType = computed(() => {
-  const data = graph.value?.bySubject?.[store.subject]?.edges ?? graph.value?.edgesByType ?? {}
-  return data
-})
-
-function barOption(data: Record<string, number>) {
-  const keys = Object.keys(data)
-  return {
-    tooltip: { trigger: 'axis' as const },
-    xAxis: { type: 'category' as const, data: keys, axisLabel: { rotate: 30 } },
-    yAxis: { type: 'value' as const },
-    series: [{
-      type: 'bar' as const,
-      data: Object.values(data),
-      itemStyle: { color: CHART_COLORS[0], borderRadius: [4, 4, 0, 0] },
-    }],
-  }
-}
 </script>
 
 <template>
-  <section class="stats-section">
-    <div class="section-header">
-      <h2 class="headline">图谱分布</h2>
-      <NSelect
-        v-model:value="store.subject"
-        :options="subjectOptions"
-        size="small"
-        style="width: 160px"
-        @update:value="store.setSubject"
-      />
+  <section class="panel">
+    <div class="head">
+      <h2 class="headline" style="margin:0">图谱分布 <NTag size="tiny" :bordered="true" style="vertical-align:middle;margin-left:8px">当前</NTag></h2>
+      <NSelect v-model:value="store.subject" :options="subs" size="small" style="width:140px" @update:value="store.setSubject" />
     </div>
-    <div class="chart-row">
-      <OpsChart title="节点类型分布" :option="barOption(nodesByType)" :loading="loading" height="300px" />
-      <OpsChart title="边类型分布" :option="barOption(edgesByType)" :loading="loading" height="300px" />
+    <div class="charts">
+      <OpsChart title="节点类型" :option="barOption(nodes)" :loading="l" height="220px" />
+      <OpsChart title="边类型" :option="barOption(edges)" :loading="l" height="220px" />
     </div>
   </section>
 </template>
 
 <style scoped>
-.stats-section { display: flex; flex-direction: column; gap: var(--spacing-lg); }
-.section-header { display: flex; align-items: center; justify-content: space-between; }
-.section-header .headline { margin: 0; }
-.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
+.panel { display: flex; flex-direction: column; gap: var(--spacing-md); }
+.head { display: flex; align-items: center; justify-content: space-between; }
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm); }
 </style>
