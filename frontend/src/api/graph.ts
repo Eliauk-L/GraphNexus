@@ -1,5 +1,5 @@
 import client from './client'
-import type { ExtractionResultVO, GraphSubgraphVO } from './types'
+import type { ExtractionResultVO, GraphSubgraphVO, MetricResultVO } from './types'
 
 /** 触发文档知识图谱抽取 */
 export function extractGraph(documentId: number): Promise<ExtractionResultVO> {
@@ -11,6 +11,32 @@ export function getDocumentSubgraph(documentId: number): Promise<GraphSubgraphVO
   return client.get(`/graph/construction/document/${documentId}`)
 }
 
+/** 查询 PageRank（支持 subject 或 documentId 过滤） */
+export function queryPageRank(
+  nodeTypes?: string[],
+  edgeTypes?: string[],
+  subject?: string,
+  documentId?: string,
+): Promise<MetricResultVO[]> {
+  return client.get('/graph/metrics/pagerank', {
+    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(','), subject, documentId },
+    paramsSerializer: { indexes: null },
+  })
+}
+
+/** 查询度中心性（支持 subject 或 documentId 过滤） */
+export function queryDegree(
+  nodeTypes?: string[],
+  edgeTypes?: string[],
+  subject?: string,
+  documentId?: string,
+): Promise<MetricResultVO[]> {
+  return client.get('/graph/metrics/degree', {
+    params: { nodeTypes: nodeTypes?.join(','), edgeTypes: edgeTypes?.join(','), subject, documentId },
+    paramsSerializer: { indexes: null },
+  })
+}
+
 /** 学科列表 */
 export function listSubjects(): Promise<string[]> {
   return client.get('/graph/construction/subjects')
@@ -20,5 +46,13 @@ export function listSubjects(): Promise<string[]> {
 export function getSubjectGraph(subjectName: string): Promise<GraphSubgraphVO> {
   return client.get(`/graph/construction/subject/${encodeURIComponent(subjectName)}`, {
     timeout: 30000,
+  })
+}
+
+/** 查询考试频次 */
+export function queryExamFrequency(subject?: string, documentId?: string): Promise<MetricResultVO[]> {
+  return client.get('/graph/metrics/exam-frequency', {
+    params: { subject, documentId },
+    paramsSerializer: { indexes: null },
   })
 }
