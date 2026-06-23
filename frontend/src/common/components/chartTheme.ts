@@ -2,7 +2,21 @@
  * ECharts 主题配置 —— 运营仪表盘图表默认样式。
  * 按 UI-DESIGN §3 图表色板 + §6 ECharts 容器规约。
  * 色值从 tokens.css 派生（硬编码保持一致性，不依赖 getComputedStyle）。
+ *
+ * 注：ECharts 6.x 需要显式注册 renderer 和组件。
  */
+
+// 注册 ECharts 渲染器和核心组件（必须在任何图表实例化前执行）
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart, PieChart, LineChart } from 'echarts/charts'
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+} from 'echarts/components'
+
+use([CanvasRenderer, BarChart, PieChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
 /** 图表 6 色色板，与 tokens.css --chart-c0~c5 一致 */
 export const CHART_COLORS = [
@@ -75,34 +89,4 @@ export function getDefaultChartOption() {
       },
     },
   }
-}
-
-/** 饼图专用默认 option 覆盖 */
-export function getPieChartOption() {
-  return {
-    ...getDefaultChartOption(),
-    grid: undefined,
-    xAxis: undefined,
-    yAxis: undefined,
-    series: [{
-      type: 'pie',
-      radius: ['40%', '70%'],
-      center: ['50%', '50%'],
-      label: {
-        color: CHART_TEXT_SECONDARY,
-        fontSize: 12,
-      },
-      emphasis: {
-        label: { fontSize: 14, fontWeight: 'bold' as const },
-      },
-    }],
-  }
-}
-
-/**
- * 对已配置的 ECharts option 合并默认样式。
- * 调用方的 option 优先级更高（Object.assign 后者覆盖前者）。
- */
-export function mergeDefaultOption(option: Record<string, unknown>) {
-  return Object.assign({}, getDefaultChartOption(), option)
 }
