@@ -216,6 +216,10 @@
 | 掌握度颜色映射阈值 | 四档暖色梯度：weight < 0.4 → 红，0.4~0.6 → 橙，0.6~0.8 → 黄，≥ 0.8 → 绿。无 MASTERS 边的节点使用中性灰。节点大小同步按 weight 线性映射 | 2026-06-22 | `diagnosis-subgraph-viz` REQUIREMENT |
 | 诊断子图渲染方案 | DESIGN 阶段从 AntV G6 v5（已有依赖，WebGL 渲染）和纯 SVG（轻量，≤30 节点场景更合适）中选型 | 2026-06-22 | `diagnosis-subgraph-viz` CHANGE |
 | MASTERS description 透传 | `StudentDiagnosisStrategy.buildResult()` 当前 MASTERS 边 description 传 null，需补齐为 TimeDecayStrategy 生成的考试历史 JSON，使前端可消费历次考试数据 | 2026-06-22 | `diagnosis-subgraph-viz` CHANGE |
+| 操作审计日志写入策略 | 异步非阻塞写入（`@Async` + 独立短事务），失败仅记 WARN 日志不抛异常不阻塞主流程。记录范围：登录 + 文档上传/处理 + 智能问答四种操作类型 | 2026-06-23 | `ops-analytics` REQUIREMENT |
+| 运营统计时间粒度 | 三种粒度：天（按日聚合）、周（周一至周日聚合）、月（自然月聚合）。仪表盘默认展示"月"粒度 | 2026-06-23 | `ops-analytics` REQUIREMENT |
+| 统计快照策略 | 每日凌晨 2:00（可配置）执行全量统计采集，持久化到 `stats_snapshot` 表。历史趋势图表基于快照数据渲染，实时数字卡片直查现网。两者在 UI 上明确区分标注 | 2026-06-23 | `ops-analytics` REQUIREMENT |
+| 运营仪表盘角色权限 | 仅 ADMIN 和 OPS_MANAGER 可查看运营仪表盘。后端 API 通过 `@PreAuthorize` 保护，前端导航通过角色判断过滤菜单项。非授权角色直接访问 URL 返回 403 | 2026-06-23 | `ops-analytics` REQUIREMENT |
 
 ## 默认行为
 
