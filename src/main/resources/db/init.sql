@@ -156,3 +156,15 @@ INSERT IGNORE INTO role (id, code, name, description) VALUES
     (3, 'STUDENT',     '学生',       '感知自身学习状态，仅查看个人数据'),
     (4, 'OPS_STAFF',   '运维人员',   '保障系统稳定运行，管理 LLM 配置与日志'),
     (5, 'OPS_MANAGER', '运营人员',   '度量系统使用效果，查看运营数据');
+
+-- up: 创建默认管理员 admin / admin123
+INSERT IGNORE INTO user_account (id, username, password, real_name, status) VALUES
+    (1, 'admin', '$2b$10$Hl5BMmyPxNBMvcfW6fD5du/5jo.zC8EOgGzQN1ogbZwTtAiFtgCMO', '管理员', 'ENABLED');
+
+-- up: 为默认管理员分配所有角色
+INSERT IGNORE INTO user_role (user_id, role_id) VALUES
+    (1, 1), (1, 2), (1, 3), (1, 4), (1, 5);
+
+-- down: 删除默认管理员及其角色关联
+-- DELETE FROM user_role WHERE user_id = 1;
+-- DELETE FROM user_account WHERE id = 1;
