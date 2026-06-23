@@ -227,7 +227,6 @@ onBeforeUnmount(() => {
     <div class="graph-overview__header">
       <h3 class="title" style="margin:0">全量图谱可视化</h3>
       <div class="graph-overview__actions">
-        <span class="supporting" style="color:var(--color-text-tertiary)">Neo4j 全部节点和边</span>
         <button class="btn-fullscreen" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏'">
           <Minimize v-if="isFullscreen" :size="16" />
           <Maximize v-else :size="16" />
