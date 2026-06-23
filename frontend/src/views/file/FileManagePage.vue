@@ -123,7 +123,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div>
+  <div class="file-page">
     <div class="page-header">
       <h1 class="headline">教材管理</h1>
       <NSpace align="center">
@@ -155,6 +155,13 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.file-page {
+  background: var(--color-surface);
+  border-radius: var(--rounded-md);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-border);
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
