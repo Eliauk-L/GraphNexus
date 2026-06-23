@@ -92,7 +92,7 @@ async function loadGraph() {
   error.value = null
   try {
     const data: GraphSubgraphVO = await getFullGraph()
-    const g6Data = toGraphData(data)
+    const g6Data = toGraphData(data, { full: true })
     if (!g6Data || !g6Data.nodes.length) {
       error.value = '暂无图谱数据'
       loading.value = false

@@ -56,9 +56,13 @@ export interface G6GraphEdge {
  */
 export function toGraphData(
   input: GraphSubgraphVO | SubgraphResponse,
+  opts?: { full?: boolean },
 ): G6GraphData {
   if ('taskId' in input) {
     return transformPruningSubgraph(input as SubgraphResponse)
+  }
+  if (opts?.full) {
+    return transformFullGraph(input as GraphSubgraphVO)
   }
   return transformDocumentSubgraph(input as GraphSubgraphVO)
 }
@@ -96,6 +100,39 @@ function transformDocumentSubgraph(vo: GraphSubgraphVO): G6GraphData {
         target: e.targetNodeId,
         data: {
           type: e.edgeType,
+          color: EDGE_COLORS[e.edgeType] ?? DEFAULT_EDGE_COLOR,
+          width: EDGE_WIDTHS[e.edgeType] ?? DEFAULT_EDGE_WIDTH,
+          lineStyle: EDGE_LINE_STYLES[e.edgeType] ?? 'solid' as const,
+        },
+      })),
+  }
+}
+
+// ── 全量图谱转换（不过滤节点类型，包含 Student/Exam）──
+
+function transformFullGraph(vo: GraphSubgraphVO): G6GraphData {
+  const nodeIds = new Set(vo.nodes.map((n) => n.id))
+
+  return {
+    nodes: vo.nodes.map((n) => ({
+      id: n.id,
+      data: {
+        ...n.properties,
+        label: n.name ?? n.nodeType,
+        nodeType: n.nodeType,
+        color: NODE_COLORS[n.nodeType] ?? DEFAULT_NODE_COLOR,
+        size: NODE_SIZES[n.nodeType] ?? DEFAULT_NODE_SIZE,
+      },
+    })),
+    edges: vo.edges
+      .filter((e) => nodeIds.has(e.sourceNodeId) && nodeIds.has(e.targetNodeId))
+      .map((e, i) => ({
+        id: `e-${i}`,
+        source: e.sourceNodeId,
+        target: e.targetNodeId,
+        data: {
+          edgeType: e.edgeType,
+          ...e.properties,
           color: EDGE_COLORS[e.edgeType] ?? DEFAULT_EDGE_COLOR,
           width: EDGE_WIDTHS[e.edgeType] ?? DEFAULT_EDGE_WIDTH,
           lineStyle: EDGE_LINE_STYLES[e.edgeType] ?? 'solid' as const,
