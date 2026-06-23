@@ -66,18 +66,19 @@ public class MetricsServiceImpl implements MetricsService {
         Set<String> projNodes = normalizedNodes.contains(KP_LABEL) ? Set.of("*") : normalizedNodes;
 
         MetricsQuery query = new MetricsQuery(projNodes, normalizedEdges, "pagerank");
-        return cache.get(query.toCacheKey(), key -> {
+        List<MetricResultBO> results = cache.get(query.toCacheKey(), key -> {
             log.debug("缓存未命中，执行 PageRank 计算（nodeTypes={}, edgeTypes={}）", projNodes, normalizedEdges);
             String graphName = gdsAdapter.projectGraph(projNodes, normalizedEdges);
             try {
                 return gdsAdapter.runPageRank(graphName).stream()
-                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), r.subject(), r.className(), "pagerank", r.score()))
+                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), "", r.className(), "pagerank", r.score()))
                         .sorted(Comparator.comparingDouble(MetricResultBO::metricValue).reversed())
                         .collect(Collectors.toList());
             } finally {
                 gdsAdapter.dropGraph(graphName);
             }
         });
+        return enrichSubjects(results);
     }
 
     @Override
@@ -87,22 +88,23 @@ public class MetricsServiceImpl implements MetricsService {
         Set<String> projNodes = normalizedNodes.contains(KP_LABEL) ? Set.of("*") : normalizedNodes;
 
         MetricsQuery query = new MetricsQuery(projNodes, normalizedEdges, "degree");
-        return cache.get(query.toCacheKey(), key -> {
+        List<MetricResultBO> results = cache.get(query.toCacheKey(), key -> {
             log.debug("缓存未命中，执行度中心性计算（nodeTypes={}, edgeTypes={}）", projNodes, normalizedEdges);
             String graphName = gdsAdapter.projectGraph(projNodes, normalizedEdges);
             try {
-                List<MetricResultBO> results = new ArrayList<>();
-                results.addAll(gdsAdapter.runDegreeStream(graphName, "NATURAL").stream()
-                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), r.subject(), r.className(), "outDegree", r.score()))
+                List<MetricResultBO> list = new ArrayList<>();
+                list.addAll(gdsAdapter.runDegreeStream(graphName, "NATURAL").stream()
+                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), "", r.className(), "outDegree", r.score()))
                         .collect(Collectors.toList()));
-                results.addAll(gdsAdapter.runDegreeStream(graphName, "REVERSE").stream()
-                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), r.subject(), r.className(), "inDegree", r.score()))
+                list.addAll(gdsAdapter.runDegreeStream(graphName, "REVERSE").stream()
+                        .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), "", r.className(), "inDegree", r.score()))
                         .collect(Collectors.toList()));
-                return results;
+                return list;
             } finally {
                 gdsAdapter.dropGraph(graphName);
             }
         });
+        return enrichSubjects(results);
     }
 
     @Override
@@ -276,5 +278,35 @@ public class MetricsServiceImpl implements MetricsService {
                             normalized, normalizedNodes, allowed));
         }
         return result;
+    }
+
+    /**
+     * 后置填充 subject 字段：通过 BELONGS_TO_SUBJECT 边查询节点所属学科。
+     * GDS Cypher 不支持关联查询，因此在 Java 层补齐。
+     */
+    private List<MetricResultBO> enrichSubjects(List<MetricResultBO> results) {
+        if (results == null || results.isEmpty()) return results;
+        try {
+            Set<String> nodeIds = results.stream()
+                    .filter(r -> "KnowledgePoint".equals(r.nodeType()))
+                    .map(MetricResultBO::nodeId)
+                    .collect(Collectors.toSet());
+            if (nodeIds.isEmpty()) return results;
+
+            Map<String, String> idToSubject = constructionGraphRepository.findSubjectByNodeIds(nodeIds);
+            return results.stream()
+                    .map(r -> {
+                        String subj = idToSubject.get(r.nodeId());
+                        if (subj != null) {
+                            return new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(),
+                                    subj, r.className(), r.metricName(), r.metricValue());
+                        }
+                        return r;
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("subject 字段补齐失败: {}", e.getMessage());
+            return results;
+        }
     }
 }

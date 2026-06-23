@@ -288,6 +288,29 @@ public class ConstructionGraphRepository {
         }
     }
 
+    /**
+     * 批量查询节点的所属学科名（按 BELONGS_TO_SUBJECT 边）。
+     *
+     * @param nodeIds 节点 ID 集合
+     * @return nodeId → subjectName 映射
+     */
+    public Map<String, String> findSubjectByNodeIds(Set<String> nodeIds) {
+        if (nodeIds == null || nodeIds.isEmpty()) return Collections.emptyMap();
+        try {
+            return neo4jClient.query(
+                    "MATCH (n)-[:BELONGS_TO_SUBJECT]->(s:Subject) WHERE n.id IN $ids " +
+                    "RETURN n.id AS nodeId, s.name AS subject"
+            ).bindAll(Map.of("ids", nodeIds)).fetch().all().stream()
+                    .collect(Collectors.toMap(
+                            row -> (String) row.get("nodeId"),
+                            row -> (String) row.get("subject"),
+                            (a, b) -> a));
+        } catch (Exception e) {
+            log.warn("批量查询节点学科失败: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
     // ======================== 学科全景图查询 ========================
 
     /**
