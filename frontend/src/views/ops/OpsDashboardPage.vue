@@ -4,6 +4,7 @@ import { useOpsStore } from '@/stores/opsStore'
 import UsageStatsPanel from './components/UsageStatsPanel.vue'
 import DocumentStatsPanel from './components/DocumentStatsPanel.vue'
 import GraphStatsPanel from './components/GraphStatsPanel.vue'
+import GraphOverviewPanel from './components/GraphOverviewPanel.vue'
 import OpsChart from './components/OpsChart.vue'
 import { CHART_COLORS } from '@/common/components/chartTheme'
 import { NButtonGroup, NButton, NTag, NAlert } from 'naive-ui'
@@ -81,6 +82,9 @@ const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-di
     <UsageStatsPanel />
     <DocumentStatsPanel />
     <GraphStatsPanel />
+
+    <!-- 全量图谱可视化 -->
+    <GraphOverviewPanel v-model:subject="store.subject" />
 
     <!-- 历史趋势 -->
     <section class="stats-section">
