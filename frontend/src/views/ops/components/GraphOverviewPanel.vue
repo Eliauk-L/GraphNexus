@@ -120,8 +120,8 @@ onMounted(loadGraph)
         v-if="graphData"
         :node-types="allNodeTypes"
         :edge-types="allEdgeTypes"
-        @update:node-filter="handleNodeFilter"
-        @update:edge-filter="handleEdgeFilter"
+        @update:node-filter="() => {}"
+        @update:edge-filter="() => {}"
       />
 
       <NodeDetailPanel
