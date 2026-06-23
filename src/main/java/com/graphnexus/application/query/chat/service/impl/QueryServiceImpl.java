@@ -943,7 +943,7 @@ public class QueryServiceImpl implements QueryService {
                 if (attempt > 0) {
                     String hint = isMarkdown
                             ? "请务必以 ## 标题开头，直接开始报告正文，不要有任何前导语。确保包含至少一个列表（- 或 1. ）。"
-                            : "请务必以 HTML 标签开头（如 <h2>），包含至少一个 <svg> 元素。禁止 Markdown 标记和前导语。";
+                            : "请务必以 HTML 标签开头（如 <h2>），必须包含至少一个 <svg> 雷达图（含 xmlns 和 viewBox），禁止 Markdown 标记和前导语。";
                     currentSystemPrompt = systemPrompt + "\n\n【重要】上次输出格式不正确。" + hint;
                 }
 
@@ -952,7 +952,7 @@ public class QueryServiceImpl implements QueryService {
 
                 boolean valid = isMarkdown
                         ? validateMarkdownResponse(response)
-                        : validateHtmlSvgResponse(response);
+                        : validateHtmlSvgResponse(response, attempt == maxRetries);
 
                 if (valid) return response;
 
@@ -988,21 +988,23 @@ public class QueryServiceImpl implements QueryService {
     }
 
     /** HTML+SVG 格式校验（新增） */
-    boolean validateHtmlSvgResponse(String response) {
+    boolean validateHtmlSvgResponse(String response, boolean lastAttempt) {
         if (response == null || response.isBlank()) return false;
         String trimmed = response.trim();
         // 必须以 HTML 标签开头
         if (!trimmed.startsWith("<")) return false;
-        // 必须包含至少 1 个 <svg> 元素
-        String lower = trimmed.toLowerCase();
-        if (!lower.contains("<svg")) return false;
-        // SVG 必须含 xmlns
-        if (lower.contains("<svg") && !lower.contains("xmlns")) return false;
         // 不含 Markdown 标记
         if (trimmed.startsWith("##") || trimmed.startsWith("# ")) return false;
         // 不含常见前导语
+        String lower = trimmed.toLowerCase();
         String first100 = lower.substring(0, Math.min(100, lower.length()));
-        return !first100.contains("根据提供") && !first100.contains("以下是");
+        if (first100.contains("根据提供") || first100.contains("以下是")) return false;
+        // SVG 校验：前几轮严格要求，最后一轮放松（有 HTML 总比什么都没有好）
+        if (!lastAttempt) {
+            if (!lower.contains("<svg")) return false;
+            if (!lower.contains("xmlns")) return false;
+        }
+        return true;
     }
 
     // ======================== 持久化辅助 ========================
