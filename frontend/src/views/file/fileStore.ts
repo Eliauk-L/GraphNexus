@@ -30,11 +30,11 @@ export const useFileStore = defineStore('file', () => {
     files.value.some((f) => INTERMEDIATE_STATES.includes(f.status)),
   )
 
-  async function loadFiles(pageNum = 1, pageSize = 10, fileType?: string, name?: string) {
+  async function loadFiles(pageNum = 1, pageSize = 10, fileType?: string, name?: string, subject?: string) {
     loading.value = true
     error.value = null
     try {
-      const result = await listFiles(pageNum, pageSize, fileType, name)
+      const result = await listFiles(pageNum, pageSize, fileType, name, subject)
       files.value = result.list
       total.value = result.total
     } catch {

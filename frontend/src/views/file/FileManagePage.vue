@@ -18,6 +18,14 @@ const page = ref(1)
 const pageSize = ref(10)
 const searchName = ref('')
 const filterFileType = ref<string | null>(null)
+const searchSubject = ref('')
+
+const fileTypeOptions = [
+  { label: '全部类型', value: null },
+  { label: 'PDF', value: 'PDF' },
+  { label: 'TXT', value: 'TXT' },
+  { label: 'CSV', value: 'CSV' },
+]
 
 const columns: DataTableColumns<TextbookVO> = [
   { title: '文件名', key: 'name', width: 260, ellipsis: { tooltip: true } },
@@ -71,6 +79,7 @@ function load() {
   store.loadFiles(page.value, pageSize.value,
     filterFileType.value || undefined,
     searchName.value || undefined,
+    searchSubject.value || undefined,
   )
 }
 
@@ -132,10 +141,23 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="search-bar">
+      <BaseSelect
+        v-model="filterFileType"
+        :options="fileTypeOptions"
+        placeholder="文件类型"
+        style="width: 120px"
+        @update:model-value="load"
+      />
+      <BaseInput
+        v-model="searchSubject"
+        placeholder="学科..."
+        style="width: 100px"
+        @keyup.enter="load"
+      />
       <BaseInput
         v-model="searchName"
         placeholder="搜索文件名..."
-        style="width: 200px"
+        style="width: 180px"
         @keyup.enter="load"
       />
       <BaseButton @click="load">搜索</BaseButton>

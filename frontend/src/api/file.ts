@@ -17,8 +17,8 @@ export function parseFile(id: number): Promise<TextbookParseResultVO> {
 }
 
 /** 分页查询文件列表 */
-export function listFiles(pageNum = 1, pageSize = 10, fileType?: string, name?: string): Promise<PageResult<TextbookVO>> {
-  return client.get('/file/textbooks', { params: { pageNum, pageSize, fileType, name } })
+export function listFiles(pageNum = 1, pageSize = 10, fileType?: string, name?: string, subject?: string): Promise<PageResult<TextbookVO>> {
+  return client.get('/file/textbooks', { params: { pageNum, pageSize, fileType, name, subject } })
 }
 
 /** 查询单个文件 */
