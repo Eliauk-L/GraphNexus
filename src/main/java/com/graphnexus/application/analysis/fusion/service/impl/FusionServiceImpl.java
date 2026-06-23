@@ -88,10 +88,15 @@ public class FusionServiceImpl implements FusionService {
                     log.info("全量融合前 Student 去重: 合并 {} 个重复节点", mergedStudents);
                 }
 
-                int mastersCount = 0;
+                // ②b KP 融合 — 仅当有融合组时执行
                 for (var entry : groupsBySubject.entrySet()) {
                     groupBuilder.merge(entry.getValue());
-                    mastersCount += mastersService.recalculateAll(entry.getKey());
+                }
+
+                // ②c MASTERS 重算 — 始终对每个 subject 执行，不依赖是否有 KP 融合
+                int mastersCount = 0;
+                for (String subject : subjects) {
+                    mastersCount += mastersService.recalculateAll(subject);
                 }
                 return mastersCount;
             });
