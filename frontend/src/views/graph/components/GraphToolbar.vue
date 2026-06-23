@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * GraphToolbar — 图谱工具栏：学科选择 + 搜索 + PageRank 开关 + 度量排行按钮。
+ * GraphToolbar — 图谱工具栏：学科选择 + 搜索 + 度量排行按钮。
  */
 import { ref, computed } from 'vue'
 import BaseInput from '@/common/components/BaseInput.vue'
@@ -11,14 +11,12 @@ const props = defineProps<{
   searchResults?: { id: string; label: string; nodeType: string }[]
   subjects?: string[]
   currentSubject?: string | null
-  pagerankEnabled?: boolean
 }>()
 
 const emit = defineEmits<{
   'search': [query: string]
   'select-node': [nodeId: string]
   'select-subject': [subject: string]
-  'toggle-pagerank': []
   'toggle-metrics-panel': []
 }>()
 
@@ -90,20 +88,7 @@ function nodeTypeColor(type: string): string {
       </div>
     </div>
 
-    <!-- PageRank Toggle -->
-    <label class="toggle-wrapper" title="切换 PageRank 显示">
-      <span
-        class="toggle-track"
-        :class="{ 'toggle-track--on': pagerankEnabled }"
-        @click="emit('toggle-pagerank')"
-      >
-        <span class="toggle-thumb" />
-      </span>
-      <span class="toggle-label">PageRank</span>
-    </label>
-
-    <!-- 度量排行按钮 -->
-    <button class="btn-toolbar" title="度量排行" @click="emit('toggle-metrics-panel')">
+    <button class="btn-toolbar" title="考试频次排行" @click="emit('toggle-metrics-panel')">
       <BarChart3 :size="18" />
     </button>
   </div>
@@ -174,51 +159,6 @@ function nodeTypeColor(type: string): string {
   flex-shrink: 0;
 }
 
-/* ── Toggle 开关 ── */
-.toggle-wrapper {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  flex-shrink: 0;
-  user-select: none;
-}
-
-.toggle-track {
-  position: relative;
-  width: 30px;
-  height: 18px;
-  border-radius: var(--rounded-full);
-  background: var(--color-border);
-  transition: background var(--duration-fast) var(--ease-out);
-}
-
-.toggle-track--on {
-  background: var(--color-brand);
-}
-
-.toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: var(--rounded-full);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-hover-lift);
-  transition: transform var(--duration-fast) var(--ease-out);
-}
-
-.toggle-track--on .toggle-thumb {
-  transform: translateX(12px);
-}
-
-.toggle-label {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-}
-
-/* ── 工具栏按钮 ── */
 .btn-toolbar {
   flex-shrink: 0;
   width: 36px;

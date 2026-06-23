@@ -1,18 +1,14 @@
 <script setup lang="ts">
 /**
- * MetricsPanel — 度量排行面板。
+ * MetricsPanel — 考试频次排行面板。
  * 右侧滑出 320px，与 NodeDetailPanel 互斥，slide 动画。
  */
-import { ref, computed } from 'vue'
-import BaseSelect from '@/common/components/BaseSelect.vue'
+import { computed } from 'vue'
 import type { MetricResultVO } from '@/api/types'
 
 const props = defineProps<{
   visible: boolean
-  degreeData: MetricResultVO[]
-  pagerankData: MetricResultVO[]
-  pagerankEnabled: boolean
-  examFrequencyData?: MetricResultVO[]
+  examFrequencyData: MetricResultVO[]
   nodeNames?: Record<string, string>
 }>()
 
@@ -21,84 +17,33 @@ const emit = defineEmits<{
   'select-node': [nodeId: string]
 }>()
 
-type SortField = 'totalDegree' | 'inDegree' | 'outDegree' | 'pagerank' | 'examFrequency'
-const sortField = ref<SortField>('totalDegree')
-
-const sortOptions = computed(() => {
-  const opts: { label: string; value: SortField }[] = [
-    { label: '总度数 ↓', value: 'totalDegree' },
-    { label: '入度 ↓', value: 'inDegree' },
-    { label: '出度 ↓', value: 'outDegree' },
-    { label: '考试频次 ↓', value: 'examFrequency' },
-  ]
-  if (props.pagerankEnabled) {
-    opts.push({ label: 'PageRank ↓', value: 'pagerank' })
-  }
-  return opts
-})
-
 interface RankRow {
   nodeId: string
   label: string
-  inDegree: number
-  outDegree: number
-  totalDegree: number
-  pagerank: number | null
   examFrequency: number
 }
 
 const rankedRows = computed<RankRow[]>(() => {
-  // 从 degreeData 聚合
-  const map = new Map<string, { inDeg: number; outDeg: number }>()
-  for (const d of props.degreeData) {
-    if (d.nodeType !== 'KnowledgePoint') continue
-    const e = map.get(d.nodeId) ?? { inDeg: 0, outDeg: 0 }
-    if (d.metricName === 'inDegree') e.inDeg = d.metricValue
-    else if (d.metricName === 'outDegree') e.outDeg = d.metricValue
-    map.set(d.nodeId, e)
-  }
-  // PageRank 查找表
-  const prMap = new Map<string, number>()
-  for (const p of props.pagerankData) {
-    if (p.nodeType === 'KnowledgePoint') prMap.set(p.nodeId, p.metricValue)
-  }
-  // 考试频次查找表
-  const examFreqMap = new Map<string, number>()
-  for (const ef of (props.examFrequencyData ?? [])) {
-    examFreqMap.set(ef.nodeId, ef.metricValue)
-  }
-
   const rows: RankRow[] = []
-  for (const [nodeId, deg] of map) {
+  for (const d of props.examFrequencyData) {
     rows.push({
-      nodeId,
-      label: props.nodeNames?.[nodeId] ?? (nodeId.length > 8 ? nodeId.substring(0, 8) : nodeId),
-      inDegree: deg.inDeg,
-      outDegree: deg.outDeg,
-      totalDegree: deg.inDeg + deg.outDeg,
-      pagerank: prMap.get(nodeId) ?? null,
-      examFrequency: examFreqMap.get(nodeId) ?? 0,
+      nodeId: d.nodeId,
+      label: props.nodeNames?.[d.nodeId] ?? (d.nodeId.length > 8 ? d.nodeId.substring(0, 8) : d.nodeId),
+      examFrequency: d.metricValue,
     })
   }
-
-  // 排序
-  rows.sort((a, b) => {
-    const va = sortField.value === 'pagerank' ? (a.pagerank ?? 0) : a[sortField.value]
-    const vb = sortField.value === 'pagerank' ? (b.pagerank ?? 0) : b[sortField.value]
-    return vb - va
-  })
-
+  rows.sort((a, b) => b.examFrequency - a.examFrequency)
   return rows.slice(0, 20)
 })
 
-const isEmpty = computed(() => props.degreeData.length === 0)
+const isEmpty = computed(() => props.examFrequencyData.length === 0)
 </script>
 
 <template>
   <Transition name="slide">
     <div v-if="visible" class="metrics-panel">
       <div class="metrics-header">
-        <h3 class="metrics-title">度量排行</h3>
+        <h3 class="metrics-title">考试频次排行</h3>
         <button class="metrics-close" @click="emit('close')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18" />
@@ -109,54 +54,32 @@ const isEmpty = computed(() => props.degreeData.length === 0)
 
       <div class="metrics-divider" />
 
-      <!-- 空/错误态 -->
       <div v-if="isEmpty" class="metrics-empty">
-        该学科暂无度量数据
+        该学科暂无考试记录
       </div>
 
-      <template v-else>
-        <div class="metrics-sort">
-          <BaseSelect
-            :model-value="sortField"
-            :options="sortOptions"
-            style="width: 160px"
-            @update:model-value="(v) => (sortField = v as SortField)"
-          />
-        </div>
-
-        <div class="metrics-table-wrap">
-          <table class="metrics-table">
-            <thead>
-              <tr>
-                <th class="col-rank">#</th>
-                <th class="col-name">知识点</th>
-                <th class="col-num">入度</th>
-                <th class="col-num">出度</th>
-                <th class="col-num">总度</th>
-                <th v-if="pagerankEnabled" class="col-num">PR</th>
-                <th class="col-num">考次</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(row, i) in rankedRows"
-                :key="row.nodeId"
-                @click="emit('select-node', row.nodeId)"
-              >
-                <td class="col-rank">{{ i + 1 }}</td>
-                <td class="col-name">{{ row.label }}</td>
-                <td class="col-num mono">{{ row.inDegree }}</td>
-                <td class="col-num mono">{{ row.outDegree }}</td>
-                <td class="col-num mono">{{ row.totalDegree }}</td>
-                <td v-if="pagerankEnabled" class="col-num mono">
-                  {{ row.pagerank != null ? row.pagerank.toFixed(4) : '-' }}
-                </td>
-                <td class="col-num mono">{{ row.examFrequency }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </template>
+      <div v-else class="metrics-table-wrap">
+        <table class="metrics-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-name">知识点</th>
+              <th class="col-num">考试频次</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(row, i) in rankedRows"
+              :key="row.nodeId"
+              @click="emit('select-node', row.nodeId)"
+            >
+              <td class="col-rank">{{ i + 1 }}</td>
+              <td class="col-name">{{ row.label }}</td>
+              <td class="col-num mono">{{ row.examFrequency }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </Transition>
 </template>
@@ -205,10 +128,6 @@ const isEmpty = computed(() => props.degreeData.length === 0)
   height: 1px;
   background: var(--color-border);
   margin: var(--spacing-md) 0;
-}
-
-.metrics-sort {
-  margin-bottom: var(--spacing-sm);
 }
 
 .metrics-empty {
@@ -265,7 +184,7 @@ const isEmpty = computed(() => props.degreeData.length === 0)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 120px;
+  max-width: 160px;
 }
 .col-num {
   text-align: right;
@@ -276,7 +195,6 @@ const isEmpty = computed(() => props.degreeData.length === 0)
   font-family: var(--font-mono);
 }
 
-/* slide transition — 与 NodeDetailPanel 一致 */
 .slide-enter-active,
 .slide-leave-active {
   transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);

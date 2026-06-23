@@ -1,90 +1,29 @@
 /**
- * useMetrics — 度量数据管理 composable。
+ * useMetrics — 度量数据管理 composable（v2 · 仅考试频次）。
  *
- * 管理度中心性和 PageRank 数据的加载、缓存和开关状态。
- * PageRank 开关持久化到 localStorage（key: 'graphviz.pagerank'），默认关闭。
- *
- * 参照 useGraphInteraction 的同目录、同风格。
+ * 度中心性和 PageRank 后端保留但前端不再展示，
+ * 当前仅通过考试频次反映知识点在实际考试中的重要程度。
  */
 import { ref } from 'vue'
-import { queryDegree, queryPageRank, queryExamFrequency } from '@/api/graph'
+import { queryExamFrequency } from '@/api/graph'
 import type { MetricResultVO } from '@/api/types'
 
-const STORAGE_KEY = 'graphviz.pagerank'
-
-function readStoredPagerankEnabled(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === 'true'
-  } catch {
-    return false  // 隐私模式降级
-  }
-}
-
-function writeStoredPagerankEnabled(enabled: boolean): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, String(enabled))
-  } catch {
-    // 隐私模式静默降级
-  }
-}
-
 export function useMetrics() {
-  const degreeData = ref<MetricResultVO[]>([])
-  const pagerankData = ref<MetricResultVO[]>([])
   const examFrequencyData = ref<MetricResultVO[]>([])
-  const pagerankEnabled = ref(readStoredPagerankEnabled())
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function loadDegreeMetrics(subject?: string, documentId?: string): Promise<void> {
+  async function loadExamFrequency(subject?: string, documentId?: string): Promise<void> {
     loading.value = true
     error.value = null
     try {
-      degreeData.value = await queryDegree(['KnowledgePoint'], undefined, subject, documentId)
+      examFrequencyData.value = await queryExamFrequency(subject, documentId)
     } catch (e: any) {
-      error.value = e?._backendMessage ?? '度量数据加载失败'
-      degreeData.value = []
+      error.value = e?._backendMessage ?? '考试频次加载失败'
+      examFrequencyData.value = []
     } finally {
       loading.value = false
     }
-  }
-
-  async function loadPageRankMetrics(subject?: string, documentId?: string): Promise<void> {
-    try {
-      pagerankData.value = await queryPageRank(['KnowledgePoint'], undefined, subject, documentId)
-    } catch (e: any) {
-      pagerankData.value = []
-    }
-  }
-
-  async function loadExamFrequency(subject?: string, documentId?: string): Promise<void> {
-    try {
-      examFrequencyData.value = await queryExamFrequency(subject, documentId)
-    } catch (e: any) {
-      examFrequencyData.value = []
-    }
-  }
-
-  function togglePageRank(): void {
-    pagerankEnabled.value = !pagerankEnabled.value
-    writeStoredPagerankEnabled(pagerankEnabled.value)
-  }
-
-  function getNodeDegree(nodeId: string): { inDegree: number; outDegree: number; totalDegree: number } {
-    let inDeg = 0
-    let outDeg = 0
-    for (const d of degreeData.value) {
-      if (d.nodeId === nodeId) {
-        if (d.metricName === 'inDegree') inDeg = d.metricValue
-        else if (d.metricName === 'outDegree') outDeg = d.metricValue
-      }
-    }
-    return { inDegree: inDeg, outDegree: outDeg, totalDegree: inDeg + outDeg }
-  }
-
-  function getNodePageRank(nodeId: string): number | null {
-    const entry = pagerankData.value.find((p) => p.nodeId === nodeId)
-    return entry ? entry.metricValue : null
   }
 
   function getNodeExamFrequency(nodeId: string): number {
@@ -93,18 +32,10 @@ export function useMetrics() {
   }
 
   return {
-    degreeData,
-    pagerankData,
     examFrequencyData,
-    pagerankEnabled,
     loading,
     error,
-    loadDegreeMetrics,
-    loadPageRankMetrics,
     loadExamFrequency,
-    togglePageRank,
-    getNodeDegree,
-    getNodePageRank,
     getNodeExamFrequency,
   }
 }

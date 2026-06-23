@@ -7,7 +7,7 @@
 defineProps<{
   node: { id: string; data: Record<string, unknown> } | null
   visible: boolean
-  metrics?: { inDegree: number; outDegree: number; totalDegree: number; pagerank?: number; examFrequency?: number } | null
+  metrics?: { examFrequency?: number } | null
 }>()
 
 defineEmits<{
@@ -101,28 +101,12 @@ function formatValue(value: unknown): string {
         </template>
       </div>
 
-      <!-- 度量指标区 -->
-      <template v-if="metrics">
+      <!-- 考试频次 -->
+      <template v-if="metrics?.examFrequency != null">
         <div class="detail-divider" />
         <div class="detail-fields">
           <span class="detail-field-label supporting">度量指标</span>
           <div class="detail-field">
-            <span class="detail-field-label supporting">入度</span>
-            <span class="detail-field-value body mono">{{ metrics.inDegree }}</span>
-          </div>
-          <div class="detail-field">
-            <span class="detail-field-label supporting">出度</span>
-            <span class="detail-field-value body mono">{{ metrics.outDegree }}</span>
-          </div>
-          <div class="detail-field">
-            <span class="detail-field-label supporting">总度</span>
-            <span class="detail-field-value body mono">{{ metrics.totalDegree }}</span>
-          </div>
-          <div v-if="metrics.pagerank != null" class="detail-field">
-            <span class="detail-field-label supporting">PageRank</span>
-            <span class="detail-field-value body mono">{{ metrics.pagerank.toFixed(4) }}</span>
-          </div>
-          <div v-if="metrics.examFrequency != null" class="detail-field">
             <span class="detail-field-label supporting">考试频次</span>
             <span class="detail-field-value body mono">{{ metrics.examFrequency }}</span>
           </div>

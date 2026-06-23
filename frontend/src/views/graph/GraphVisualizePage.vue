@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGraphStore } from './graphStore'
-import { toGraphData, applyMetrics } from './graphAdapter'
+import { toGraphData } from './graphAdapter'
 import type { G6GraphData } from './graphAdapter'
 import { useGraphInteraction } from './composables/useGraphInteraction'
 import { useMetrics } from './composables/useMetrics'
@@ -31,53 +31,22 @@ const isFullscreen = ref(false)
 function refreshGraphData() {
   if (store.currentGraph) {
     graphData.value = toGraphData(store.currentGraph)
-    applyMetricsToGraph()
     console.debug('[GraphViz] graphData:', graphData.value.nodes.length, 'nodes,', graphData.value.edges.length, 'edges')
   } else {
     graphData.value = null
   }
 }
 
-function applyMetricsToGraph() {
-  if (!graphData.value) return
-  if (metrics.degreeData.value.length === 0) return
-  const updated = applyMetrics(
-    graphData.value,
-    metrics.degreeData.value,
-    metrics.pagerankEnabled.value ? metrics.pagerankData.value : undefined,
-  )
-  graphData.value = updated
-}
-
-watch(() => store.currentGraph, () => {
+watch(store.currentGraph, () => {
   refreshGraphData()
-})
-
-watch([() => metrics.degreeData.value, () => metrics.pagerankData.value, () => metrics.pagerankEnabled.value], () => {
-  if (graphData.value) {
-    const updated = applyMetrics(
-      toGraphData(store.currentGraph!),
-      metrics.degreeData.value,
-      metrics.pagerankEnabled.value ? metrics.pagerankData.value : undefined,
-    )
-    graphData.value = updated
-    const g = canvasRef.value?.getGraph?.()
-    if (g) {
-      try {
-        g.updateNodeData(updated.nodes.map((n) => ({
-          id: n.id,
-          data: { size: n.data.size, color: n.data.color },
-        })))
-        g.draw()
-      } catch { /* G6 update degrade */ }
-    }
-  }
 })
 
 const interaction = useGraphInteraction(
   () => canvasRef.value?.getGraph?.() ?? null,
   () => graphData.value,
 )
+
+// ── 全屏切换 ──
 
 async function toggleFullscreen() {
   if (!graphContainer.value) return
@@ -100,57 +69,41 @@ function onFullscreenChange() {
   }, 300)
 }
 
+// ── 文档选择 → 子图 ──
+
 const docOptions = computed(() =>
   store.documents.map((d) => ({ label: `${d.name} (ID: ${d.documentId})`, value: d.documentId })),
 )
 
 async function handleDocSelect(docId: number | null) {
-  // 清空文档选择 → 回到初始状态
   if (docId == null) {
     store.clearGraph()
-    metrics.degreeData.value = []
-    metrics.pagerankData.value = []
+    metrics.examFrequencyData.value = []
     return
   }
   selectedDocId.value = docId
   selectedNode.value = null
   ctrlClickedNodeId.value = null
   await store.loadDocumentSubgraph(docId)
-  // 文档模式下加载该文档关联 KP 的指标
-  metrics.loadDegreeMetrics(undefined, String(docId))
   metrics.loadExamFrequency(undefined, String(docId))
-  if (metrics.pagerankEnabled.value) {
-    metrics.loadPageRankMetrics(undefined, String(docId))
-  }
 }
 
+// ── 学科选择 → 全景图 ──
+
 async function handleSubjectSelect(subject: string | null) {
-  // 清空学科选择 → 退回文档模式
   if (!subject) {
     store.clearGraph()
-    metrics.degreeData.value = []
-    metrics.pagerankData.value = []
+    metrics.examFrequencyData.value = []
     return
   }
   selectedNode.value = null
   ctrlClickedNodeId.value = null
   selectedDocId.value = null
   await store.loadSubjectGraph(subject)
-  metrics.loadDegreeMetrics(subject)
   metrics.loadExamFrequency(subject)
-  if (metrics.pagerankEnabled.value) {
-    metrics.loadPageRankMetrics(subject)
-  }
 }
 
-watch(() => metrics.pagerankEnabled.value, (enabled) => {
-  if (!enabled) return
-  if (store.viewMode === 'subject' && store.currentSubject) {
-    metrics.loadPageRankMetrics(store.currentSubject)
-  } else if (store.viewMode === 'document' && store.currentDocId) {
-    metrics.loadPageRankMetrics(undefined, String(store.currentDocId))
-  }
-})
+// ── 搜索 ──
 
 function handleSearch(query: string) {
   searchResults.value = interaction.search(query)
@@ -169,6 +122,8 @@ function handleSelectNode(nodeId: string) {
   }
 }
 
+// ── 节点点击 ──
+
 function handleNodeClick(nodeId: string, nodeData: Record<string, unknown>) {
   ctrlClickedNodeId.value = null
   selectedNode.value = { id: nodeId, data: nodeData }
@@ -186,6 +141,8 @@ function handleNodeCtrlClick(nodeId: string) {
   }
 }
 
+// ── 度量面板 ──
+
 function handleToggleMetricsPanel() {
   showMetricsPanel.value = !showMetricsPanel.value
   if (showMetricsPanel.value) {
@@ -194,7 +151,17 @@ function handleToggleMetricsPanel() {
   }
 }
 
-// nodeId → 显示名称映射（供 MetricsPanel 用）
+// ── 选中节点的考试频次 ──
+
+const selectedNodeMetrics = computed(() => {
+  if (!selectedNode.value) return null
+  const freq = metrics.getNodeExamFrequency(selectedNode.value.id)
+  if (freq === 0) return null
+  return { examFrequency: freq }
+})
+
+// ── nodeId → 显示名称 ──
+
 const nodeNameMap = computed<Record<string, string>>(() => {
   if (!graphData.value) return {}
   const map: Record<string, string> = {}
@@ -205,20 +172,7 @@ const nodeNameMap = computed<Record<string, string>>(() => {
   return map
 })
 
-const selectedNodeMetrics = computed(() => {
-  if (!selectedNode.value) return null
-  const deg = metrics.getNodeDegree(selectedNode.value.id)
-  const freq = metrics.getNodeExamFrequency(selectedNode.value.id)
-  if (deg.totalDegree === 0 && deg.inDegree === 0 && deg.outDegree === 0 && freq === 0) return null
-  const pr = metrics.getNodePageRank(selectedNode.value.id)
-  return {
-    inDegree: deg.inDegree,
-    outDegree: deg.outDegree,
-    totalDegree: deg.totalDegree,
-    pagerank: pr ?? undefined,
-    examFrequency: freq,
-  }
-})
+// ── 图例筛选 ──
 
 function handleNodeFilter(types: string[]) {
   const edgeTypes = interaction.allEdgeTypes.value
@@ -239,6 +193,8 @@ function nodeColor(type: string) { return NODE_TYPE_COLORS[type] ?? '#9CA3AF' }
 function handleCanvasReady(g: any) {
   graphInstance.value = g
 }
+
+// ── Escape ──
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
@@ -271,11 +227,9 @@ onBeforeUnmount(() => {
         :search-results="searchResults"
         :subjects="store.subjects"
         :current-subject="store.currentSubject"
-        :pagerank-enabled="metrics.pagerankEnabled.value"
         @search="handleSearch"
         @select-node="handleSelectNode"
         @select-subject="handleSubjectSelect"
-        @toggle-pagerank="metrics.togglePageRank()"
         @toggle-metrics-panel="handleToggleMetricsPanel"
       />
       <button class="btn-fullscreen" :title="isFullscreen ? '退出全屏' : '全屏'" @click="toggleFullscreen">
@@ -322,7 +276,6 @@ onBeforeUnmount(() => {
         v-if="graphData"
         :node-types="interaction.allNodeTypes.value"
         :edge-types="interaction.allEdgeTypes.value"
-        :pagerank-enabled="metrics.pagerankEnabled.value"
         @update:node-filter="handleNodeFilter"
         @update:edge-filter="handleEdgeFilter"
       />
@@ -347,9 +300,6 @@ onBeforeUnmount(() => {
 
     <MetricsPanel
       :visible="showMetricsPanel"
-      :degree-data="metrics.degreeData.value"
-      :pagerank-data="metrics.pagerankData.value"
-      :pagerank-enabled="metrics.pagerankEnabled.value"
       :exam-frequency-data="metrics.examFrequencyData.value"
       :node-names="nodeNameMap"
       @close="showMetricsPanel = false"
