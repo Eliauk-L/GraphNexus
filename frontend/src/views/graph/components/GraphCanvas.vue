@@ -37,11 +37,12 @@ const wrapperStyle = computed(() => ({
 }))
 
 const canvasStyle = computed(() => ({
-  position: 'absolute' as const,
-  inset: '0',
+  width: '100%',
+  height: '100%',
 }))
 let graph: Graph | null = null
 let lastNodeCount = 0
+let resizeObserver: ResizeObserver | null = null
 const LOADING_STYLE_ID = 'g6-loading-overlay'
 
 function showLoading() {
@@ -112,6 +113,8 @@ async function createGraph() {
   try {
     graph = new Graph({
       container: container.value,
+      width: rect.width,
+      height: rect.height,
       data: elements,
       autoFit: 'view' as const,
       node: {
@@ -270,10 +273,23 @@ onMounted(() => {
       await createGraph()
     }
   })
+  // 容器尺寸变化时同步 G6 canvas 大小
+  if (container.value) {
+    resizeObserver = new ResizeObserver(() => {
+      if (graph && container.value) {
+        const r = container.value.getBoundingClientRect()
+        if (r.width > 0 && r.height > 0) {
+          try { graph.setSize(r.width, r.height) } catch { /* ignore */ }
+        }
+      }
+    })
+    resizeObserver.observe(container.value)
+  }
 })
 
 onBeforeUnmount(() => {
   hideLoading()
+  if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null }
   if (graph) {
     graph.destroy()
     graph = null
@@ -316,6 +332,7 @@ defineExpose({ getGraph: () => graph })
   border-radius: var(--rounded-md);
   overflow: hidden;
   background: var(--color-surface);
+  box-sizing: border-box;
 }
 
 .graph-empty,
