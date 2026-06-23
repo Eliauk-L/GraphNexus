@@ -1,5 +1,6 @@
 package com.graphnexus.infrastructure.neo4j.repository;
 
+import com.graphnexus.infrastructure.neo4j.edge.EdgeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.neo4j.core.Neo4jClient;
@@ -229,6 +230,7 @@ public class FusionGraphRepository {
             m.put("kpId", e.kpId());
             m.put("weight", e.weight());
             m.put("description", e.description() != null ? e.description() : "");
+            m.put("displayName", EdgeType.MASTERS.getDisplayName());
             return m;
         }).collect(Collectors.toList());
         neo4jClient.query(
@@ -236,7 +238,8 @@ public class FusionGraphRepository {
                 "MATCH (s:Student {id: edge.studentId}), (kp:KnowledgePoint {id: edge.kpId}) " +
                 "MERGE (s)-[r:MASTERS]->(kp) " +
                 "SET r.weight = edge.weight, r.description = edge.description, " +
-                "r.edgeType = 'MASTERS', r.createdAt = datetime()"
+                "r.edgeType = 'MASTERS', r.createdAt = datetime(), " +
+                "r.displayName = edge.displayName"
         ).bindAll(Map.of("edges", edgeParams)).run();
         log.debug("批量 upsert {} 条 MASTERS 边完成（student={}）", edges.size(), studentNodeId);
     }

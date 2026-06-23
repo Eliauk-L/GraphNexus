@@ -1,5 +1,6 @@
 package com.graphnexus.infrastructure.neo4j.repository;
 
+import com.graphnexus.infrastructure.neo4j.edge.EdgeType;
 import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
 import com.graphnexus.infrastructure.neo4j.node.*;
 import lombok.RequiredArgsConstructor;
@@ -80,10 +81,11 @@ public class ConstructionGraphRepository {
      * 保存一条边 — 通过 Cypher CREATE 创建关系。
      */
     public void saveEdge(GraphEdge edge) {
+        String displayName = EdgeType.fromType(edge.getEdgeType()).getDisplayName();
         String cypher = String.format(
                 "MATCH (a {id: $sourceId}), (b {id: $targetId}) " +
                 "CREATE (a)-[r:%s]->(b) " +
-                "SET r.createdAt = $createdAt, r.edgeType = $edgeType, r.weight = $weight, r.description = $description",
+                "SET r.createdAt = $createdAt, r.edgeType = $edgeType, r.weight = $weight, r.description = $description, r.displayName = $displayName",
                 edge.getEdgeType());
         neo4jClient.query(cypher).bindAll(Map.of(
                 "sourceId", edge.getSourceNodeId(),
@@ -91,7 +93,8 @@ public class ConstructionGraphRepository {
                 "createdAt", edge.getCreatedAt(),
                 "edgeType", edge.getEdgeType(),
                 "weight", edge.getWeight(),
-                "description", edge.getDescription() != null ? edge.getDescription() : ""
+                "description", edge.getDescription() != null ? edge.getDescription() : "",
+                "displayName", displayName != null ? displayName : ""
         )).run();
     }
 
@@ -112,13 +115,14 @@ public class ConstructionGraphRepository {
                 m.put("createdAt", e.getCreatedAt());
                 m.put("weight", e.getWeight());
                 m.put("description", e.getDescription() != null ? e.getDescription() : "");
+                m.put("displayName", EdgeType.fromType(type).getDisplayName());
                 return m;
             }).collect(Collectors.toList());
             String cypher = "UNWIND $edges AS edge " +
                     "MATCH (a {id: edge.sourceId}), (b {id: edge.targetId}) " +
                     "CREATE (a)-[r:" + type + "]->(b) " +
                     "SET r.createdAt = edge.createdAt, r.edgeType = $type, " +
-                    "r.weight = edge.weight, r.description = edge.description";
+                    "r.weight = edge.weight, r.description = edge.description, r.displayName = edge.displayName";
             neo4jClient.query(cypher).bindAll(Map.of("edges", edgeParams, "type", type)).run();
         }
         log.debug("批量保存 {} 条边完成，共 {} 种类型", edges.size(), byType.size());
