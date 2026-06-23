@@ -72,12 +72,12 @@ public class GradeGraphEventListener {
             constructionGraphRepository.saveEdge(new AttendedEdge(studentNode.getId(), examNode.getId()));
         }
 
-        // ④ MERGE KnowledgePointNode + TestedEdge + BELONGS_TO_SUBJECT
+        // ④ MERGE KnowledgePointNode（按 name+Subject 去重）+ TestedEdge
+        // BELONGS_TO_SUBJECT 边由 findOrCreateKnowledgePoint 内部 MERGE 创建，无需重复建边
         for (String kpName : event.getKnowledgePoints()) {
-            KnowledgePointNode kpNode = new KnowledgePointNode(kpName);
-            kpNode = constructionGraphRepository.save(kpNode);
+            KnowledgePointNode kpNode = constructionGraphRepository.findOrCreateKnowledgePoint(
+                    kpName, subjectNode.getId());
             constructionGraphRepository.saveEdge(new TestedEdge(examNode.getId(), kpNode.getId()));
-            constructionGraphRepository.saveEdge(new BelongsToSubjectEdge(kpNode.getId(), subjectNode.getId()));
         }
 
         // 发布 GraphConstructedEvent（构建完成后触发融合 · DESIGN D5）

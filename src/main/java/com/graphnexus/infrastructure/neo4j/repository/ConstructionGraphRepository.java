@@ -519,6 +519,40 @@ public class ConstructionGraphRepository {
     }
 
     /**
+     * 按知识点名称 + Subject 节点查找已有 KnowledgePointNode，若无则创建（考试版本）。
+     *
+     * <p>MERGE 键为 {@code (name, BELONGS_TO_SUBJECT)} 组合——同一 Subject 下同名 KP 复用同一节点。
+     * 不同 Subject 下同名 KP 各自独立。解决多次考试成绩上传产生重复 KP 节点的问题。</p>
+     * <p>已存在时追加 CSV_IMPORT 来源标记。</p>
+     */
+    public KnowledgePointNode findOrCreateKnowledgePoint(String kpName, String subjectNodeId) {
+        String id = UUID.nameUUIDFromBytes(("KP:" + kpName + ":" + subjectNodeId).getBytes()).toString();
+
+        String cypher = "MATCH (s:Subject {id: $subjectNodeId}) "
+                + "MERGE (kp:KnowledgePoint {name: $name})-[:BELONGS_TO_SUBJECT]->(s) "
+                + "ON CREATE SET kp.id = $id, kp.fusionSource = $fusionSource, "
+                + "kp.nodeType = 'KnowledgePoint', kp.description = '', kp.gradeLevel = '', kp.documentId = '' "
+                + "ON MATCH SET kp.fusionSource = "
+                + "CASE WHEN kp.fusionSource IS NULL OR kp.fusionSource = '' THEN $fusionSource "
+                + "     WHEN kp.fusionSource CONTAINS $fusionSource THEN kp.fusionSource "
+                + "     ELSE kp.fusionSource + ',' + $fusionSource END "
+                + "RETURN kp.id AS id";
+
+        var rows = neo4jClient.query(cypher).bindAll(Map.of(
+                "subjectNodeId", subjectNodeId,
+                "name", kpName,
+                "id", id,
+                "fusionSource", "CSV_IMPORT"
+        )).fetch().all();
+
+        KnowledgePointNode node = new KnowledgePointNode(kpName);
+        if (!rows.isEmpty()) {
+            node.setId((String) rows.iterator().next().get("id"));
+        }
+        return node;
+    }
+
+    /**
      * 按知识点名称 + Subject 节点查找已有 KnowledgePointNode（文档版本）。
      *
      * <p>MERGE 键为 {@code (name, BELONGS_TO_SUBJECT)} 组合——同一 Subject 下同名 KP 复用同一节点。
