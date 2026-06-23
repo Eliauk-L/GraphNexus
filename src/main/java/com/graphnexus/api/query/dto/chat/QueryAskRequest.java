@@ -23,5 +23,8 @@ public record QueryAskRequest(
 
         @NotBlank
         @Schema(description = "学科", example = "数学", requiredMode = Schema.RequiredMode.REQUIRED)
-        String subject
+        String subject,
+
+        @Schema(description = "班级名称（班级概览时使用，与 studentName/studentNo 互斥）", example = "初三(1)班")
+        String className
 ) {}

@@ -11,8 +11,8 @@ import java.util.Map;
  * <p>{@code intent} 使用 String 而非 query 模块的枚举类型，
  * 确保 analysis 模块不反向依赖 query 模块，维持单向依赖链。</p>
  *
- * @param intent   查询意图标识（如 "STUDENT_DIAGNOSIS"），由调用方传入
- * @param entityId 目标实体标识（如 studentNo）
+ * @param intent   查询意图标识（如 "STUDENT_DIAGNOSIS"、"CLASS_WEAKNESS_OVERVIEW"），由调用方传入
+ * @param entityId 目标实体标识（STUDENT_DIAGNOSIS→studentNo，CLASS_WEAKNESS_OVERVIEW→className）
  * @param subject  学科（如"数学"）
  * @param params   扩展参数（如 weakThreshold、maxHops）
  * @author Jay

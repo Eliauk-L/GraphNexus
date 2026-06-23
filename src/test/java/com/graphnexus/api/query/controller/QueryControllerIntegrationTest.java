@@ -201,7 +201,7 @@ class QueryControllerIntegrationTest {
 
         QueryAskRequest request = new QueryAskRequest(
                 "分析学生" + TEST_STUDENT_NAME + "的" + TEST_SUBJECT + "薄弱点",
-                TEST_STUDENT_NAME, TEST_STUDENT_NO, TEST_SUBJECT);
+                TEST_STUDENT_NAME, TEST_STUDENT_NO, TEST_SUBJECT, null);
 
         ResponseEntity<Map<String, Object>> response = longTimeoutRestTemplate.exchange(
                 baseUrl + "/ask",
@@ -237,7 +237,7 @@ class QueryControllerIntegrationTest {
 
         QueryAskRequest request = new QueryAskRequest(
                 "诊断" + TEST_STUDENT_NAME + TEST_SUBJECT + "学习问题",
-                TEST_STUDENT_NAME, TEST_STUDENT_NO, TEST_SUBJECT);
+                TEST_STUDENT_NAME, TEST_STUDENT_NO, TEST_SUBJECT, null);
 
         // 提交异步任务
         ResponseEntity<Map<String, Object>> asyncResp = longTimeoutRestTemplate.exchange(
@@ -328,7 +328,7 @@ class QueryControllerIntegrationTest {
     void shouldReturn404ForNonexistentStudent() {
         QueryAskRequest request = new QueryAskRequest(
                 "分析不存在的学生的薄弱点",
-                "不存在学生ABC123", null, "数学");
+                "不存在学生ABC123", null, "数学", null);
 
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 baseUrl + "/ask",
@@ -351,7 +351,7 @@ class QueryControllerIntegrationTest {
     void shouldReturnErrorForUnrecognizableIntent() {
         QueryAskRequest request = new QueryAskRequest(
                 "今天天气怎么样",
-                TEST_STUDENT_NAME, TEST_STUDENT_NO, TEST_SUBJECT);
+                TEST_STUDENT_NAME, TEST_STUDENT_NO, TEST_SUBJECT, null);
 
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 baseUrl + "/ask",

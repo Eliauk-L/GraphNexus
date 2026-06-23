@@ -54,6 +54,18 @@ public interface ExamRecordRepository extends JpaRepository<ExamRecordDO, Long>,
     List<Object[]> findStudentByNo(String studentNo);
 
     /**
+     * 按班级名查询该班级所有不重复的学生。
+     */
+    @Query("SELECT DISTINCT e.studentNo AS studentNo, e.name AS name, e.className AS className " +
+           "FROM ExamRecordDO e WHERE e.className = :className")
+    List<Object[]> findDistinctStudentsByClassName(String className);
+
+    /**
+     * 按学号列表批量查询学生考试记录（班级概览降级路径用）。
+     */
+    List<ExamRecordDO> findByStudentNoIn(List<String> studentNos);
+
+    /**
      * 分页查询不重复的考试元数据（按 examNo 分组）。
      */
     @Query("SELECT DISTINCT e.examNo AS examNo, e.examName AS examName, "

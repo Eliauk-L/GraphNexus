@@ -33,6 +33,26 @@ class KeywordIntentRecognitionStrategyTest {
     }
 
     @Test
+    void shouldRecognizeClassWeaknessOverviewByKeyword() {
+        // 不含"薄弱""掌握""诊断""分析学生"等 STUDENT_DIAGNOSIS 关键词，仅含班级关键词
+        assertEquals(QueryIntent.CLASS_WEAKNESS_OVERVIEW,
+                strategy.recognize("初三(1)班全班情况"));
+        assertEquals(QueryIntent.CLASS_WEAKNESS_OVERVIEW,
+                strategy.recognize("某班数据分析"));
+        assertEquals(QueryIntent.CLASS_WEAKNESS_OVERVIEW,
+                strategy.recognize("看看三(1)班班级整体情况"));
+    }
+
+    @Test
+    void shouldPrioritizeStudentDiagnosisOverClassOverview() {
+        // "薄弱" 和 "分析学生" 在 LinkedHashMap 中先于 "班级"，应优先匹配 STUDENT_DIAGNOSIS
+        assertEquals(QueryIntent.STUDENT_DIAGNOSIS,
+                strategy.recognize("分析学生张三的数学薄弱点"));
+        assertEquals(QueryIntent.STUDENT_DIAGNOSIS,
+                strategy.recognize("分析初三(1)班全班数学薄弱点"));
+    }
+
+    @Test
     void shouldReturnNullForNullOrEmpty() {
         assertNull(strategy.recognize(null));
         assertNull(strategy.recognize(""));

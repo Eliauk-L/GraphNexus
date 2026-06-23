@@ -110,6 +110,24 @@ public class QueryGraphRepository {
         }
     }
 
+    /**
+     * 批量查询多个学生对指定学科的 MASTERS 边（班级概览用，一次 Cypher 替代 N 次逐生查询）。
+     */
+    public List<Map<String, Object>> findMastersByStudentNos(List<String> studentNos, String subjectName) {
+        if (studentNos == null || studentNos.isEmpty()) return Collections.emptyList();
+        try {
+            return new ArrayList<>(neo4jClient.query(
+                    "MATCH (s:Student)-[m:MASTERS]->(kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(sub:Subject {name: $name}) " +
+                    "WHERE s.studentNo IN $studentNos " +
+                    "RETURN s.studentNo AS studentNo, s.name AS studentName, kp.id AS kpId, " +
+                    "COALESCE(kp.name, '未命名知识点') AS kpName, m.weight AS weight, m.description AS description"
+            ).bindAll(Map.of("studentNos", studentNos, "name", subjectName)).fetch().all());
+        } catch (Exception e) {
+            log.warn("批量查询 MASTERS 边失败: studentNos.size={}, subject={}, {}", studentNos.size(), subjectName, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     // ======================== 前置依赖链查询 ========================
 
     /**

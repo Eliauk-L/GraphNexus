@@ -21,11 +21,14 @@ public enum QueryIntent {
     STUDENT_DIAGNOSIS(
             "学生薄弱点诊断",
             "分析学生在指定学科上的薄弱知识点，追溯前置依赖根因，生成学习建议"
+    ),
+    CLASS_WEAKNESS_OVERVIEW(
+            "班级薄弱概览",
+            "聚合全班学生在指定学科上的 MASTERS 数据，统计薄弱知识点排行，分析共性根因"
     );
 
     // ====== v2 预留 ======
     // KP_ANALYSIS("知识点分析", "分析某知识点的班级整体掌握度分布与教学风险"),
-    // CLASS_OVERVIEW("班级概览", "按知识模块聚合展示班级整体掌握水平"),
     // PREREQUISITE_CHAIN("依赖链追溯", "沿 PREREQUISITE_OF 双向遍历，展示完整前置依赖链路"),
     // GENERAL("通用查询", "LLM 自主判断剪枝路径，适用于无法归类的自由提问");
 

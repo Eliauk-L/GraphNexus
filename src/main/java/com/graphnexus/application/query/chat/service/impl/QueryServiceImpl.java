@@ -75,6 +75,28 @@ public class QueryServiceImpl implements QueryService {
 
     @Override
     public QueryResultBO ask(String question, String studentName, String studentNo, String subject) {
+        // 如果提供了 className 信息（通过 question 中的意图识别判断），走班级流程
+        // ask() 端点显式调用时，className 通过 QueryAskRequest 传递但此处无法直接获取。
+        // 使用意图识别 + 正则提取 className 来路由：若意图为 CLASS_WEAKNESS_OVERVIEW 且能从 question 中提取 className，则走班级流程
+        QueryIntent intent = recognizeIntent(question);
+        if (intent == QueryIntent.CLASS_WEAKNESS_OVERVIEW) {
+            // 尝试从 question 中正则提取班级名
+            String className = extractClassName(question);
+            if (className != null && !className.isBlank()) {
+                List<String> subjects = getKnownSubjects();
+                String extractedSubject = extractSubject(question,
+                        java.util.regex.Pattern.compile("(" + String.join("|", subjects.stream()
+                                .sorted((a, b) -> b.length() - a.length()).toList()) + ")"));
+                String resolvedSubject = extractedSubject != null ? extractedSubject : subject;
+                return askClassWithIntent(question, className, resolvedSubject, intent);
+            }
+        }
+        // 否则走学生诊断流程（现有逻辑不变）
+        return askStudent(question, studentName, studentNo, subject);
+    }
+
+    /** 学生诊断流程（原 ask() 逻辑，提取出来避免重复） */
+    private QueryResultBO askStudent(String question, String studentName, String studentNo, String subject) {
         long startTime = System.currentTimeMillis();
         String taskId = UUID.randomUUID().toString();
         log.info("同步问答开始: taskId={}, question={}, studentName={}, studentNo={}, subject={}",
@@ -259,7 +281,7 @@ public class QueryServiceImpl implements QueryService {
     private volatile List<String> cachedSubjects;
 
     /** LLM 实体提取结果 */
-    private record ExtractedEntities(String studentName, String studentNo, String subject) {}
+    private record ExtractedEntities(String studentName, String studentNo, String className, String subject) {}
 
     @Override
     public QueryResultBO chat(String question) {
@@ -285,6 +307,26 @@ public class QueryServiceImpl implements QueryService {
             entities = extractViaRegex(question, subjects);
         }
 
+        // 4. 按意图类型校验实体 + 路由
+        if (intent == QueryIntent.CLASS_WEAKNESS_OVERVIEW) {
+            // 班级概览路径：需 className + subject
+            if (entities == null || entities.subject() == null || entities.className() == null) {
+                throw new BusinessException(ErrorCode.A0019,
+                        "无法从问题中识别班级名称和学科，当前系统已有学科：" + String.join("、", subjects)
+                        + "。示例：分析初三(1)班数学薄弱知识点");
+            }
+            if (!subjects.contains(entities.subject())) {
+                throw new BusinessException(ErrorCode.A0019,
+                        "学科\"" + entities.subject() + "\"在系统中暂无数据，当前已有学科："
+                        + String.join("、", subjects)
+                        + "。请先导入对应学科的考试记录或文档图谱");
+            }
+            log.info("chat 完成(班级): intent={}, className={}, subject={}",
+                    intent, entities.className(), entities.subject());
+            return askClassWithIntent(question, entities.className(), entities.subject(), intent);
+        }
+
+        // 学生诊断路径（默认）
         if (entities == null || entities.subject() == null
                 || (entities.studentName() == null && entities.studentNo() == null)) {
             throw new BusinessException(ErrorCode.A0019,
@@ -381,13 +423,89 @@ public class QueryServiceImpl implements QueryService {
         }
     }
 
+    /**
+     * 使用预识别意图执行班级概览问答。
+     */
+    private QueryResultBO askClassWithIntent(String question, String className,
+                                            String subject, QueryIntent intent) {
+        long startTime = System.currentTimeMillis();
+        String taskId = UUID.randomUUID().toString();
+        log.info("班级概览开始(预识别意图): taskId={}, intent={}, className={}, subject={}",
+                taskId, intent, className, subject);
+
+        try {
+            // 实体解析：班级
+            ClassInfo classInfo = resolveClass(className);
+
+            // 图剪枝
+            Map<String, Object> params = Map.of(
+                    "weakThreshold", queryProperties.getPruning().getWeakThreshold(),
+                    "maxHops", (double) queryProperties.getPruning().getMaxPrerequisiteHops()
+            );
+            PruningRequest pruningRequest = new PruningRequest(
+                    intent.name(), className, subject, params);
+            PrunedSubgraph subgraph = pruningStrategyRegistry.get(intent.name()).prune(pruningRequest);
+
+            if (subgraph.nodes().isEmpty() && "CLASS_NOT_FOUND".equals(subgraph.meta().strategy())) {
+                throw new BusinessException(ErrorCode.A0006, "未找到班级: " + className);
+            }
+
+            // 班级子图序列化
+            String subgraphText = serializeClassSubgraph(subgraph, className, classInfo.classSize());
+
+            // Token 预算控制
+            int maxInputTokens = queryProperties.getTokenBudget().getMaxInputTokens();
+            int charsPerToken = queryProperties.getTokenBudget().getCharsPerToken();
+            if (subgraphText.length() > maxInputTokens * charsPerToken) {
+                var result = truncateSubgraph(subgraphText, maxInputTokens * charsPerToken);
+                subgraphText = result.text();
+            }
+            int estimatedTokens = subgraphText.length() / charsPerToken;
+
+            // Prompt 组装（格式感知）
+            String outputFormat = queryProperties.getOutput().getFormat();
+            Map<String, String> templateVars = buildClassTemplateVars(
+                    question, className, classInfo.classSize(), subject, subgraphText, subgraph);
+            var promptPair = promptTemplateService.buildPrompt(intent, templateVars, outputFormat);
+
+            // LLM 调用
+            String answer = callLlmWithRetry(promptPair.systemPrompt(), promptPair.userMessage(), outputFormat);
+
+            // 持久化
+            long elapsedMs = System.currentTimeMillis() - startTime;
+            persistTask(taskId, question, null, null, subject, intent,
+                    QueryTaskStatus.COMPLETED, answer, subgraph, estimatedTokens,
+                    (int) (promptPair.systemPrompt().length() / charsPerToken + estimatedTokens),
+                    estimatedTokens, null, elapsedMs);
+
+            return new QueryResultBO(taskId, "COMPLETED", question, intent.name(),
+                    answer, outputFormat, new TokenUsage(subgraph.meta().totalNodes(), subgraph.meta().totalEdges(),
+                    estimatedTokens, null, null), null, LocalDateTime.now(), LocalDateTime.now());
+
+        } catch (BusinessException e) {
+            log.error("班级概览失败: taskId={}, {}", taskId, e.getMessage());
+            long elapsedMs = System.currentTimeMillis() - startTime;
+            persistTask(taskId, question, null, null, subject, null,
+                    QueryTaskStatus.FAILED, null, null, 0, 0, 0, e.getMessage(), elapsedMs);
+            throw e;
+        } catch (Exception e) {
+            log.error("班级概览异常: taskId={}", taskId, e);
+            long elapsedMs = System.currentTimeMillis() - startTime;
+            persistTask(taskId, question, null, null, subject, null,
+                    QueryTaskStatus.FAILED, null, null, 0, 0, 0,
+                    e.getMessage() != null ? e.getMessage() : "未知异常", elapsedMs);
+            throw new BusinessException(ErrorCode.C0001, "问答失败: " + e.getMessage());
+        }
+    }
+
     /** LLM 提取：调用大模型从问题中抽取学生姓名/学号和学科，返回 JSON */
     private ExtractedEntities extractViaLlm(String question, List<String> subjects) {
         String systemPrompt = """
-                你是一个信息提取助手。从用户问题中提取学生标识（姓名或学号）和学科名称。
-                仅返回一个 JSON 对象，格式为 {"studentName":"...","studentNo":"...","subject":"..."}，
-                不要返回其他内容。studentName 和 studentNo 至少提取一个，无法确定的字段设为 null。
+                你是一个信息提取助手。从用户问题中提取学生标识（姓名或学号）或班级名称，以及学科名称。
+                仅返回一个 JSON 对象，格式为 {"studentName":"...","studentNo":"...","className":"...","subject":"..."}，
+                不要返回其他内容。studentName/studentNo 和 className 互斥（至少提取一组），无法确定的字段设为 null。
                 学号通常是字母+数字组合（如 S2024001），姓名通常是2-4个中文字符。
+                班级名称通常包含"班"字，如"初三(1)班"、"高一3班"、"九年级1班"。
                 学科必须是以下之一：%s
                 """.formatted(String.join("、", subjects));
 
@@ -408,14 +526,16 @@ public class QueryServiceImpl implements QueryService {
                     ? node.get("studentName").asText() : null;
             String studentNo = node.has("studentNo") && !node.get("studentNo").isNull()
                     ? node.get("studentNo").asText() : null;
+            String className = node.has("className") && !node.get("className").isNull()
+                    ? node.get("className").asText() : null;
             String subject = node.has("subject") && !node.get("subject").isNull()
                     ? node.get("subject").asText() : null;
 
             if (subject != null && subjects.contains(subject)
-                    && (studentName != null || studentNo != null)) {
-                log.debug("LLM 实体提取成功: studentName={}, studentNo={}, subject={}",
-                        studentName, studentNo, subject);
-                return new ExtractedEntities(studentName, studentNo, subject);
+                    && (studentName != null || studentNo != null || className != null)) {
+                log.debug("LLM 实体提取成功: studentName={}, studentNo={}, className={}, subject={}",
+                        studentName, studentNo, className, subject);
+                return new ExtractedEntities(studentName, studentNo, className, subject);
             }
         } catch (Exception e) {
             log.warn("LLM 实体提取异常，将降级为规则提取: {}", e.getMessage());
@@ -429,14 +549,23 @@ public class QueryServiceImpl implements QueryService {
                 .sorted((a, b) -> b.length() - a.length()).toList();
         String subjectOr = String.join("|", sorted);
         java.util.regex.Pattern subjectRegex = java.util.regex.Pattern.compile("(" + subjectOr + ")");
-        String boundaryTokens = subjectOr + "|薄弱|掌握|诊断|分析|的";
+        String boundaryTokens = subjectOr + "|薄弱|掌握|诊断|分析|的|班级|全班";
 
         String subject = extractSubject(question, subjectRegex);
         String studentName = extractStudentName(question, boundaryTokens, subjects);
         String studentNo = extractStudentNo(question);
+        String className = extractClassName(question);
 
-        if (subject == null || (studentName == null && studentNo == null)) return null;
-        return new ExtractedEntities(studentName, studentNo, subject);
+        // 学生信息或班级信息至少有一组
+        if (subject == null || (studentName == null && studentNo == null && className == null)) return null;
+        return new ExtractedEntities(studentName, studentNo, className, subject);
+    }
+
+    /** 正则提取班级名（如 初三(1)班、高一3班、九年级1班、初一(12)班） */
+    String extractClassName(String question) {
+        var matcher = java.util.regex.Pattern.compile(
+                "([\\u4e00-\\u9fa5]{0,6}年级?[\\u4e00-\\u9fa5]?\\d+班)").matcher(question);
+        return matcher.find() ? matcher.group(1) : null;
     }
 
     /** 正则提取学号（字母+数字组合，如 S2024001、2024001） */
@@ -547,6 +676,32 @@ public class QueryServiceImpl implements QueryService {
         return new StudentNode(studentNo, name, className, null);
     }
 
+    // ======================== 班级实体解析 ========================
+
+    /**
+     * 班级信息 — 班级名称 + 学生人数 + 学号列表。
+     */
+    private record ClassInfo(String className, int classSize, List<String> studentNos) {}
+
+    /**
+     * 按班级名从 MySQL 验证班级存在并获取学生列表。
+     */
+    private ClassInfo resolveClass(String className) {
+        if (className == null || className.isBlank()) {
+            throw new BusinessException(ErrorCode.A0002, "请提供班级名称");
+        }
+        List<Object[]> rows = examRecordRepository.findDistinctStudentsByClassName(className);
+        if (rows.isEmpty()) {
+            throw new BusinessException(ErrorCode.A0006, "未找到班级: " + className);
+        }
+        List<String> studentNos = rows.stream()
+                .map(r -> (String) r[0])
+                .distinct()
+                .collect(Collectors.toList());
+        log.info("班级解析成功: className={}, classSize={}", className, studentNos.size());
+        return new ClassInfo(className, studentNos.size(), studentNos);
+    }
+
     // ======================== 子图序列化 ========================
 
     String serializeSubgraph(PrunedSubgraph subgraph, StudentNode student) {
@@ -621,6 +776,89 @@ public class QueryServiceImpl implements QueryService {
         // MASTERS 数据质量标记
         if (!subgraph.meta().mastersAvailable()) {
             sb.append("⚠️ 以上掌握度为原始考试得分率（融合数据不可用），未做时间衰减加权。\n\n");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 班级聚合子图序列化 — 班级信息 + KP 薄弱排行表 + 前置依赖链。
+     * 与学生版的逐生列举不同，此处输出聚合统计视图。
+     */
+    String serializeClassSubgraph(PrunedSubgraph subgraph, String className, int classSize) {
+        StringBuilder sb = new StringBuilder();
+
+        // 班级信息
+        sb.append("## 班级信息\n");
+        sb.append("- 班级: ").append(className).append("\n");
+        sb.append("- 学生人数: ").append(classSize).append("\n\n");
+
+        // 节点索引
+        var nodeMap = subgraph.nodes().stream()
+                .collect(Collectors.toMap(GraphNodeData::id, n -> n, (a, b) -> a));
+
+        // 聚合 MASTERS 边（含聚合统计数据在节点 properties 中）
+        var mastersEdges = subgraph.edges().stream()
+                .filter(e -> "MASTERS".equals(e.edgeType())).collect(Collectors.toList());
+        var prereqEdges = subgraph.edges().stream()
+                .filter(e -> "PREREQUISITE_OF".equals(e.edgeType())).collect(Collectors.toList());
+
+        if (!mastersEdges.isEmpty()) {
+            sb.append("## 薄弱知识点排行\n\n");
+            sb.append("| 排名 | 知识点 | 薄弱人数 | 平均掌握度 | 最低 | 最高 |\n");
+            sb.append("|------|--------|---------|-----------|------|------|\n");
+
+            int rank = 1;
+            for (var edge : mastersEdges) {
+                var kpNode = nodeMap.get(edge.targetNodeId());
+                if (kpNode == null) continue;
+                String kpName = extractKpName(kpNode);
+                Map<String, Object> props = kpNode.properties();
+                int weakCount = props != null && props.get("weakCount") instanceof Number n
+                        ? n.intValue() : 0;
+                int totalCount = props != null && props.get("totalCount") instanceof Number n
+                        ? n.intValue() : 0;
+                double avgWeight = props != null && props.get("avgWeight") instanceof Number n
+                        ? n.doubleValue() : 0;
+                double minWeight = props != null && props.get("minWeight") instanceof Number n
+                        ? n.doubleValue() : 0;
+                double maxWeight = props != null && props.get("maxWeight") instanceof Number n
+                        ? n.doubleValue() : 0;
+
+                sb.append("| ").append(rank++).append(" | **").append(kpName).append("** | ")
+                        .append(weakCount).append("/").append(totalCount).append("人 | ")
+                        .append((int) (avgWeight * 100)).append("% | ")
+                        .append((int) (minWeight * 100)).append("% | ")
+                        .append((int) (maxWeight * 100)).append("% |\n");
+            }
+            sb.append("\n");
+        }
+
+        // 前置依赖关系
+        if (!prereqEdges.isEmpty()) {
+            sb.append("## 前置依赖关系\n\n");
+            for (var edge : prereqEdges) {
+                var fromNode = nodeMap.get(edge.sourceNodeId());
+                var toNode = nodeMap.get(edge.targetNodeId());
+                String fromName = fromNode != null ? extractKpName(fromNode) : edge.sourceNodeId();
+                String toName = toNode != null ? extractKpName(toNode) : edge.targetNodeId();
+                // 标注仅依赖节点
+                boolean fromDepOnly = fromNode != null && fromNode.properties() != null
+                        && Boolean.TRUE.equals(fromNode.properties().get("dependencyOnly"));
+                boolean toDepOnly = toNode != null && toNode.properties() != null
+                        && Boolean.TRUE.equals(toNode.properties().get("dependencyOnly"));
+                String fromTag = fromDepOnly ? "（仅依赖）" : "";
+                String toTag = toDepOnly ? "（仅依赖）" : "";
+                double strength = edge.weight() != null ? edge.weight() : 0;
+                sb.append("- **").append(fromName).append(fromTag).append("** → **")
+                        .append(toName).append(toTag)
+                        .append("**（依赖强度: ").append(String.format("%.2f", strength)).append("）\n");
+            }
+            sb.append("\n");
+        }
+
+        // MASTERS 数据质量标记
+        if (!subgraph.meta().mastersAvailable()) {
+            sb.append("⚠️ 以上掌握度为原始考试得分率统计（融合数据不可用），未做时间衰减加权。\n\n");
         }
         return sb.toString();
     }
@@ -804,6 +1042,23 @@ public class QueryServiceImpl implements QueryService {
         vars.put("studentName", student.getName() != null ? student.getName() : "");
         vars.put("studentNo", student.getStudentNo());
         vars.put("className", student.getClassName() != null ? student.getClassName() : "");
+        vars.put("subject", subject);
+        vars.put("subgraphText", subgraphText);
+        vars.put("userQuestion", question);
+        vars.put("weakThreshold", String.valueOf(queryProperties.getPruning().getWeakThreshold()));
+        vars.put("maxHops", String.valueOf(queryProperties.getPruning().getMaxPrerequisiteHops()));
+        vars.put("mastersAvailable", String.valueOf(subgraph.meta().mastersAvailable()));
+        return vars;
+    }
+
+    /**
+     * 班级概览模板变量组装 — 班级级变量集，与学生版对称。
+     */
+    Map<String, String> buildClassTemplateVars(String question, String className, int classSize,
+                                              String subject, String subgraphText, PrunedSubgraph subgraph) {
+        Map<String, String> vars = new HashMap<>();
+        vars.put("className", className);
+        vars.put("classSize", String.valueOf(classSize));
         vars.put("subject", subject);
         vars.put("subgraphText", subgraphText);
         vars.put("userQuestion", question);

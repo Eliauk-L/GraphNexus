@@ -46,12 +46,16 @@ public class KeywordIntentRecognitionStrategy implements IntentRecognitionStrate
      */
     private static Map<String, QueryIntent> buildKeywordMap() {
         Map<String, QueryIntent> map = new LinkedHashMap<>();
-        // STUDENT_DIAGNOSIS 关键词
+        // STUDENT_DIAGNOSIS 关键词（优先匹配，含学生姓名的问题先命中此类）
         map.put("薄弱", QueryIntent.STUDENT_DIAGNOSIS);
         map.put("加强", QueryIntent.STUDENT_DIAGNOSIS);
         map.put("掌握", QueryIntent.STUDENT_DIAGNOSIS);
         map.put("诊断", QueryIntent.STUDENT_DIAGNOSIS);
         map.put("分析学生", QueryIntent.STUDENT_DIAGNOSIS);
+        // CLASS_WEAKNESS_OVERVIEW 关键词（班级维度，放在学生关键词之后）
+        map.put("全班", QueryIntent.CLASS_WEAKNESS_OVERVIEW);
+        map.put("班级", QueryIntent.CLASS_WEAKNESS_OVERVIEW);
+        map.put("某班", QueryIntent.CLASS_WEAKNESS_OVERVIEW);
         return map;
     }
 }
