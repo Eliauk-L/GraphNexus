@@ -9,6 +9,7 @@ import com.graphnexus.infrastructure.mysql.file.entity.TextbookDO;
 import org.springframework.data.repository.query.Param;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -47,4 +48,12 @@ public interface TextbookRepository extends JpaRepository<TextbookDO, Long> {
     Page<TextbookDO> findByConditions(@Param("fileType") String fileType,
                                   @Param("name") String name,
                                   Pageable pageable);
+
+    /** 按处理状态分组统计文档数（排除 DELETING 状态）。 */
+    @Query("SELECT d.status, COUNT(d) FROM TextbookDO d WHERE d.status <> 'DELETING' GROUP BY d.status")
+    List<Object[]> countGroupByStatus();
+
+    /** 按学科分组统计文档数（排除 DELETING 状态）。 */
+    @Query("SELECT d.subject, COUNT(d) FROM TextbookDO d WHERE d.status <> 'DELETING' GROUP BY d.subject ORDER BY COUNT(d) DESC")
+    List<Object[]> countGroupBySubject();
 }
