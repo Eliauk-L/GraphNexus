@@ -168,3 +168,75 @@ INSERT IGNORE INTO user_role (user_id, role_id) VALUES
 -- down: 删除默认管理员及其角色关联
 -- DELETE FROM user_role WHERE user_id = 1;
 -- DELETE FROM user_account WHERE id = 1;
+
+-- =============================================================================
+-- GraphNexus 系统配置表 DDL（config-management）
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS system_config (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '技术主键',
+    config_key      VARCHAR(128)    NOT NULL COMMENT '配置键（如 fusion.kp-matching.threshold）',
+    config_value    TEXT            DEFAULT NULL COMMENT '自定义值，NULL表示使用yml默认值',
+    config_type     VARCHAR(16)     NOT NULL DEFAULT 'STRING' COMMENT '值类型：NUMBER|STRING|BOOLEAN|TEXT',
+    category        VARCHAR(32)     NOT NULL COMMENT '分类：BUSINESS_PARAM|LLM_PROMPT|LLM_MODEL',
+    config_name     VARCHAR(64)     NOT NULL COMMENT '中文显示名',
+    description     VARCHAR(256)    DEFAULT '' COMMENT '配置说明',
+    default_value   VARCHAR(512)    DEFAULT NULL COMMENT 'yml默认值，前端展示用',
+    required        TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否必填',
+    validation_rule JSON            DEFAULT NULL COMMENT '校验规则JSON，如{"min":0,"max":1}',
+    sort_order      INT             NOT NULL DEFAULT 0 COMMENT '前端展示排序',
+    create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_config_key (config_key),
+    INDEX idx_category_sort (category, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
+
+-- Seed data: 所有可管理配置项（config_value=NULL 表示使用 yml 默认值）
+-- BUSINESS_PARAM 类（约 18 项）
+INSERT IGNORE INTO system_config (config_key, config_type, category, config_name, description, default_value, required, validation_rule, sort_order) VALUES
+('fusion.kp-matching.strategy', 'STRING', 'BUSINESS_PARAM', 'KP匹配策略', '融合时使用的知识点匹配策略名称：fuzzy/exact', 'fuzzy', 1, NULL, 10),
+('fusion.kp-matching.threshold', 'NUMBER', 'BUSINESS_PARAM', '融合匹配阈值', 'KP匹配相似度阈值(0~1)，越大匹配越严格', '0.85', 1, '{"min":0,"max":1}', 11),
+('fusion.weight.strategy', 'STRING', 'BUSINESS_PARAM', '权重计算策略', 'MASTERS权重计算策略名称：time-decay/simple-average', 'time-decay', 1, NULL, 12),
+('fusion.strategy.fuzzy.alpha', 'NUMBER', 'BUSINESS_PARAM', '模糊匹配α权重', '字符Jaccard权重(0~1)', '0.3', 0, '{"min":0,"max":1}', 20),
+('fusion.strategy.fuzzy.beta', 'NUMBER', 'BUSINESS_PARAM', '模糊匹配β权重', 'Bigram Jaccard权重(0~1)', '0.5', 0, '{"min":0,"max":1}', 21),
+('fusion.strategy.fuzzy.gamma', 'NUMBER', 'BUSINESS_PARAM', '模糊匹配γ权重', '归一化编辑距离权重(0~1)', '0.2', 0, '{"min":0,"max":1}', 22),
+('fusion.strategy.time-decay.factor', 'NUMBER', 'BUSINESS_PARAM', '时间衰减因子', '月衰减因子(0~1)', '0.9', 0, '{"min":0,"max":1}', 30),
+('graph.metrics.cache.ttl-minutes', 'NUMBER', 'BUSINESS_PARAM', '指标缓存TTL', 'Caffeine缓存TTL（分钟）', '5', 0, '{"min":1,"max":1440}', 40),
+('graph.metrics.cache.max-size', 'NUMBER', 'BUSINESS_PARAM', '指标缓存上限', '最大缓存条目数', '50', 0, '{"min":1,"max":1000}', 41),
+('graph.metrics.page-rank.max-iterations', 'NUMBER', 'BUSINESS_PARAM', 'PageRank最大迭代', 'PageRank算法最大迭代次数', '20', 0, '{"min":1,"max":100}', 42),
+('graph.metrics.page-rank.damping-factor', 'NUMBER', 'BUSINESS_PARAM', 'PageRank阻尼因子', 'PageRank算法阻尼因子(0~1)', '0.85', 0, '{"min":0,"max":1}', 43),
+('mineru.enabled', 'BOOLEAN', 'BUSINESS_PARAM', 'MinerU开关', '是否启用MinerU PDF解析', 'true', 1, NULL, 50),
+('mineru.api.poll-timeout', 'STRING', 'BUSINESS_PARAM', 'MinerU轮询超时', 'MinerU解析轮询超时时间', '300s', 0, NULL, 51),
+('mineru.api.poll-interval', 'STRING', 'BUSINESS_PARAM', 'MinerU轮询间隔', 'MinerU解析轮询间隔时间', '3s', 0, NULL, 52),
+('query.token-budget.max-input-tokens', 'NUMBER', 'BUSINESS_PARAM', 'Token预算上限', 'LLM输入token上限', '8000', 1, '{"min":100,"max":128000}', 60),
+('query.token-budget.chars-per-token', 'NUMBER', 'BUSINESS_PARAM', '字符/Token比', '中文≈2,英文≈4，取3', '3', 0, '{"min":1,"max":10}', 61),
+('query.pruning.weak-threshold', 'NUMBER', 'BUSINESS_PARAM', '薄弱点阈值', '掌握度低于此值视为薄弱点(0~1)', '0.6', 0, '{"min":0,"max":1}', 62),
+('query.pruning.max-prerequisite-hops', 'NUMBER', 'BUSINESS_PARAM', '前置依赖最大跳数', 'PREREQUISITE_OF遍历最大跳数', '2', 0, '{"min":1,"max":5}', 63),
+('query.retry.max-retries', 'NUMBER', 'BUSINESS_PARAM', 'LLM重试次数', 'LLM调用失败最大重试次数', '2', 0, '{"min":0,"max":10}', 64),
+('query.retry.retry-delay-ms', 'NUMBER', 'BUSINESS_PARAM', '重试间隔', 'LLM重试间隔（毫秒）', '1000', 0, '{"min":0,"max":30000}', 65),
+('query.output-format', 'STRING', 'BUSINESS_PARAM', '问答输出格式', 'LLM输出格式：html-svg|markdown', 'html-svg', 1, NULL, 66);
+
+-- LLM_PROMPT 类（13 个提示词模板）
+INSERT IGNORE INTO system_config (config_key, config_type, category, config_name, description, default_value, required, sort_order) VALUES
+('prompt.extraction-system', 'TEXT', 'LLM_PROMPT', '抽取System Prompt', 'LLM知识抽取的角色设定和指令', 'classpath:/prompts/extraction-system.md', 0, 10),
+('prompt.extraction-user', 'TEXT', 'LLM_PROMPT', '抽取User Prompt', 'LLM知识抽取的用户消息模板', 'classpath:/prompts/extraction-user.md', 0, 11),
+('prompt.extraction-fewshot-default', 'TEXT', 'LLM_PROMPT', '抽取Few-shot(默认)', '抽取few-shot示例-默认学科', 'classpath:/prompts/extraction-fewshot-default.md', 0, 12),
+('prompt.extraction-fewshot-math', 'TEXT', 'LLM_PROMPT', '抽取Few-shot(数学)', '抽取few-shot示例-数学学科', 'classpath:/prompts/extraction-fewshot-math.md', 0, 13),
+('prompt.student-diagnosis-system', 'TEXT', 'LLM_PROMPT', '诊断System Prompt', '学生诊断问答的角色设定(Markdown)', 'classpath:/prompts/student-diagnosis-system.md', 0, 20),
+('prompt.student-diagnosis-user', 'TEXT', 'LLM_PROMPT', '诊断User Prompt', '学生诊断问答的用户消息模板(Markdown)', 'classpath:/prompts/student-diagnosis-user.md', 0, 21),
+('prompt.student-diagnosis-system-html', 'TEXT', 'LLM_PROMPT', '诊断System Prompt(HTML)', '学生诊断问答的角色设定(HTML+SVG)', 'classpath:/prompts/student-diagnosis-system-html.md', 0, 22),
+('prompt.student-diagnosis-user-html', 'TEXT', 'LLM_PROMPT', '诊断User Prompt(HTML)', '学生诊断问答的用户消息模板(HTML+SVG)', 'classpath:/prompts/student-diagnosis-user-html.md', 0, 23),
+('prompt.class-weakness-overview-system', 'TEXT', 'LLM_PROMPT', '班级概览System Prompt', '班级薄弱概览的角色设定(Markdown)', 'classpath:/prompts/class-weakness-overview-system.md', 0, 24),
+('prompt.class-weakness-overview-user', 'TEXT', 'LLM_PROMPT', '班级概览User Prompt', '班级薄弱概览的用户消息模板(Markdown)', 'classpath:/prompts/class-weakness-overview-user.md', 0, 25),
+('prompt.class-weakness-overview-system-html', 'TEXT', 'LLM_PROMPT', '班级概览System Prompt(HTML)', '班级薄弱概览的角色设定(HTML+SVG)', 'classpath:/prompts/class-weakness-overview-system-html.md', 0, 26),
+('prompt.class-weakness-overview-user-html', 'TEXT', 'LLM_PROMPT', '班级概览User Prompt(HTML)', '班级薄弱概览的用户消息模板(HTML+SVG)', 'classpath:/prompts/class-weakness-overview-user-html.md', 0, 27),
+('prompt.intent-classification-system', 'TEXT', 'LLM_PROMPT', '意图分类System Prompt', 'LLM意图分类的角色设定和指令', 'classpath:/prompts/intent-classification-system.md', 0, 30);
+
+-- LLM_MODEL 类（5 个模型参数）
+INSERT IGNORE INTO system_config (config_key, config_type, category, config_name, description, default_value, required, sort_order) VALUES
+('llm.base-url', 'STRING', 'LLM_MODEL', 'LLM API地址', 'LLM服务的基础URL', 'https://dashscope.aliyuncs.com/compatible-mode', 1, 5),
+('llm.api-key', 'STRING', 'LLM_MODEL', 'LLM API Key', 'LLM服务的认证密钥', '${LLM_API_KEY:}', 1, 6),
+('llm.model', 'STRING', 'LLM_MODEL', 'LLM模型名称', '调用LLM API时使用的模型标识', 'deepseek-v4-flash', 1, 10),
+('llm.temperature', 'NUMBER', 'LLM_MODEL', 'LLM温度参数', '生成温度(0~2)，越高越随机', '0.3', 0, '{"min":0,"max":2}', 11),
+('llm.max-tokens', 'NUMBER', 'LLM_MODEL', 'LLM最大Token数', '单次生成最大token数', '4096', 0, '{"min":1,"max":128000}', 12);

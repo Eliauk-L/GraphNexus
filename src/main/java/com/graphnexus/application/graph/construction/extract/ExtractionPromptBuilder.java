@@ -46,6 +46,7 @@ public class ExtractionPromptBuilder {
 
     private final ResourceLoader resourceLoader;
     private final ExtractionNodeHandlerRegistry nodeHandlerRegistry;
+    private final com.graphnexus.application.config.service.ConfigService configService;
 
     /** 模板内容缓存（启动期首次加载后常驻，避免每次抽取读盘） */
     private volatile String systemTemplate;
@@ -153,11 +154,22 @@ public class ExtractionPromptBuilder {
     }
 
     /**
-     * 从 classpath 加载模板原文。
+     * 加载模板原文 — 优先查 DB（ConfigService），未自定义时 fallback classpath。
      *
      * @throws BusinessException 模板不存在时 C0001
      */
     private String loadTemplateRaw(String name) {
+        // 1. 优先查 DB（ConfigService 为 null 时跳过，用于测试场景）
+        if (configService != null) {
+            String configKey = "prompt." + name;
+            String dbValue = configService.getPromptText(configKey);
+            if (dbValue != null) {
+                log.debug("使用 DB 自定义模板: {}", name);
+                return dbValue;
+            }
+        }
+
+        // 2. Fallback classpath
         String location = TEMPLATE_BASE_PATH + name + ".md";
         try {
             var resource = resourceLoader.getResource(location);

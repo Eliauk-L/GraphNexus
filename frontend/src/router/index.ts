@@ -49,6 +49,12 @@ const router = createRouter({
       component: () => import('@/views/auth/UserManagePage.vue'),
       meta: { roles: ['ADMIN'] },
     },
+    {
+      path: '/settings/config',
+      name: 'settings-config',
+      component: () => import('@/views/settings/SettingsConfigPage.vue'),
+      meta: { roles: ['ADMIN'] },
+    },
   ],
 })
 

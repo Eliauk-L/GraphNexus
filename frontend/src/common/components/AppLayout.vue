@@ -21,6 +21,7 @@ const navItems = [
 
 const settingsItems = [
   { path: '/settings/users', label: '用户管理', icon: User, roles: ['ADMIN'] },
+  { path: '/settings/config', label: '系统配置', icon: Settings, roles: ['ADMIN'] },
 ]
 
 // 按角色过滤

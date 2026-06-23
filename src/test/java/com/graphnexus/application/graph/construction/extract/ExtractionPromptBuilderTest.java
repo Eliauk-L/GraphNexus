@@ -30,7 +30,7 @@ class ExtractionPromptBuilderTest {
     @BeforeEach
     void setUp() {
         builder = new ExtractionPromptBuilder(new DefaultResourceLoader(),
-                new ExtractionNodeHandlerRegistry(List.of()));
+                new ExtractionNodeHandlerRegistry(List.of()), null);
     }
 
     @Test
@@ -83,7 +83,7 @@ class ExtractionPromptBuilderTest {
     void extensionSectionContainsHandlerSchema() {
         ExtractionNodeHandlerRegistry registry = new ExtractionNodeHandlerRegistry(List.of());
         registry.register(new StubSchemaHandler());
-        ExtractionPromptBuilder b = new ExtractionPromptBuilder(new DefaultResourceLoader(), registry);
+        ExtractionPromptBuilder b = new ExtractionPromptBuilder(new DefaultResourceLoader(), registry, null);
         String prompt = b.buildSystemPrompt(null);
         assertTrue(prompt.contains("扩展节点（testNodes"), "扩展段应含 handler schema");
     }

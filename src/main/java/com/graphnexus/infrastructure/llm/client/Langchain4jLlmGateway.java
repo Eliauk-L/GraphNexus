@@ -39,7 +39,7 @@ public class Langchain4jLlmGateway implements LlmGateway {
     @Value("${spring.ai.openai.chat.options.max-tokens:4096}")
     private Integer maxTokens;
 
-    private OpenAiChatModel chatModel;
+    private volatile OpenAiChatModel chatModel;
 
     @PostConstruct
     public void init() {
@@ -48,17 +48,53 @@ public class Langchain4jLlmGateway implements LlmGateway {
             this.chatModel = null;
             return;
         }
-        this.chatModel = OpenAiChatModel.builder()
+        this.chatModel = buildChatModel(model, temperature, maxTokens);
+    }
+
+    /**
+     * 热重建 ChatModel — 供 ConfigService.apply() 在 LLM 参数变更时调用。
+     *
+     * <p>创建新实例成功后原子替换 chatModel（volatile 保证并发可见性）。
+     * 创建失败时保留旧实例，记录 ERROR 日志并抛异常。</p>
+     */
+    public void reinitialize(String newModel, Double newTemperature, Integer newMaxTokens) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new BusinessException(ErrorCode.C0001,
+                    "LLM 网关不可用：API Key 未配置，无法重建 ChatModel");
+        }
+        OpenAiChatModel newChatModel = buildChatModel(newModel, newTemperature, newMaxTokens);
+        this.model = newModel;
+        this.temperature = newTemperature;
+        this.maxTokens = newMaxTokens;
+        this.chatModel = newChatModel;
+        log.info("ChatModel 已重建: baseUrl={}, model={}, temperature={}, maxTokens={}",
+                baseUrl, newModel, newTemperature, newMaxTokens);
+    }
+
+    public String getCurrentModelName() { return model; }
+    public Double getCurrentTemperature() { return temperature; }
+    public Integer getCurrentMaxTokens() { return maxTokens; }
+    public String getCurrentBaseUrl() { return baseUrl; }
+    public String getCurrentApiKey() { return apiKey; }
+
+    // ── Setters for ConfigService dynamic management ──
+    public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
+    public void setApiKey(String apiKey) { this.apiKey = apiKey; }
+    public void setModel(String model) { this.model = model; }
+    public void setTemperature(Double temperature) { this.temperature = temperature; }
+    public void setMaxTokens(Integer maxTokens) { this.maxTokens = maxTokens; }
+
+    private OpenAiChatModel buildChatModel(String modelName, Double temp, Integer tokens) {
+        return OpenAiChatModel.builder()
                 .baseUrl(baseUrl + "/v1")
                 .apiKey(apiKey)
-                .modelName(model)
-                .temperature(temperature)
-                .maxTokens(maxTokens)
+                .modelName(modelName)
+                .temperature(temp)
+                .maxTokens(tokens)
                 .timeout(Duration.ofMinutes(5))
                 .logRequests(true)
                 .logResponses(true)
                 .build();
-        log.info("LangChain4j OpenAiChatModel 初始化: baseUrl={}, model={}", baseUrl, model);
     }
 
     @Override

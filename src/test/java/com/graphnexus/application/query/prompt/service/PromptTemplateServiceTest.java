@@ -21,7 +21,7 @@ class PromptTemplateServiceTest {
      */
     private static class TestablePromptTemplateService extends PromptTemplateService {
         TestablePromptTemplateService() {
-            super(null); // ResourceLoader not needed for assemble/withMastersDegradation
+            super(null, null); // ResourceLoader + ConfigService not needed for assemble tests
         }
 
         @Override

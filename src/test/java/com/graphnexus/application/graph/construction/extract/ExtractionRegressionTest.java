@@ -35,7 +35,7 @@ class ExtractionRegressionTest {
         when(llmGateway.chat(anyString(), anyString())).thenReturn(llmResponse);
         ExtractionNodeHandlerRegistry nodeHandlerRegistry = new ExtractionNodeHandlerRegistry(List.of());
         return new ExtractionService(llmGateway,
-                new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry),
+                new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry, null),
                 new ExtractionValidator(), new ExtractionJsonParser(),
                 new ExtractionEdgeFactoryRegistry(List.of(
                         new DerivesEdgeFactory(), new ContainsEdgeFactory(), new ReferencesEdgeFactory())),

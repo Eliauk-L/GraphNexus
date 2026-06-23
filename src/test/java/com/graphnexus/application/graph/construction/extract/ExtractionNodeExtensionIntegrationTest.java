@@ -43,7 +43,7 @@ class ExtractionNodeExtensionIntegrationTest {
 
         // 2. 组装 service（沿用各真实组件 + mock LlmGateway）
         ExtractionPromptBuilder promptBuilder =
-                new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry);
+                new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry, null);
         ExtractionEdgeFactoryRegistry edgeFactoryRegistry =
                 new ExtractionEdgeFactoryRegistry(List.of(
                         new DerivesEdgeFactory(), new ContainsEdgeFactory(), new ReferencesEdgeFactory()));
@@ -83,7 +83,7 @@ class ExtractionNodeExtensionIntegrationTest {
         nodeHandlerRegistry.register(testNodeHandler);
 
         ExtractionPromptBuilder promptBuilder =
-                new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry);
+                new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry, null);
         ExtractionEdgeFactoryRegistry edgeFactoryRegistry =
                 new ExtractionEdgeFactoryRegistry(List.of(
                         new DerivesEdgeFactory(), new ContainsEdgeFactory(), new ReferencesEdgeFactory()));

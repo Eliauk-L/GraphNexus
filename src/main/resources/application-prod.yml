@@ -83,8 +83,6 @@ fusion:
     threshold: 0.85
   weight:
     strategy: time-decay
-  rollback:
-    weight-tolerance: 0.01
 
 fusion.strategy.fuzzy:
   alpha: 0.3

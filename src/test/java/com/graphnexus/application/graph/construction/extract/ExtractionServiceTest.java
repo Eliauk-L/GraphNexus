@@ -47,7 +47,7 @@ class ExtractionServiceTest {
         ExtractionValidator validator = new ExtractionValidator();
         ExtractionPromptBuilder promptBuilder =
                 new ExtractionPromptBuilder(new DefaultResourceLoader(),
-                        new ExtractionNodeHandlerRegistry(List.of()));
+                        new ExtractionNodeHandlerRegistry(List.of()), null);
         ExtractionEdgeFactoryRegistry edgeFactoryRegistry =
                 new ExtractionEdgeFactoryRegistry(List.of(
                         new com.graphnexus.application.graph.construction.extract.registry.DerivesEdgeFactory(),
@@ -83,7 +83,7 @@ class ExtractionServiceTest {
             LlmGateway llm = mock(LlmGateway.class);
             when(llm.chat(anyString(), anyString())).thenReturn(json);
             ExtractionService svc = new ExtractionService(llm,
-                    new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry),
+                    new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry, null),
                     new ExtractionValidator(), new ExtractionJsonParser(),
                     new ExtractionEdgeFactoryRegistry(List.of(
                             new com.graphnexus.application.graph.construction.extract.registry.DerivesEdgeFactory(),
@@ -108,7 +108,7 @@ class ExtractionServiceTest {
         LlmGateway llm = mock(LlmGateway.class);
         when(llm.chat(anyString(), anyString())).thenReturn(SAMPLE_JSON_EXT);
         ExtractionService svc = new ExtractionService(llm,
-                new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry),
+                new ExtractionPromptBuilder(new DefaultResourceLoader(), nodeHandlerRegistry, null),
                 new ExtractionValidator(), new ExtractionJsonParser(),
                 new ExtractionEdgeFactoryRegistry(List.of(
                         new com.graphnexus.application.graph.construction.extract.registry.DerivesEdgeFactory(),

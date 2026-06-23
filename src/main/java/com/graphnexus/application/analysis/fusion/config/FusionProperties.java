@@ -26,9 +26,6 @@ public class FusionProperties {
     /** 权重计算策略选择 */
     private Weight weight = new Weight();
 
-    /** 回滚配置 */
-    private Rollback rollback = new Rollback();
-
     @Data
     public static class KpMatching {
         /** 策略名称：fuzzy / exact / vector-similarity（未来） */
@@ -42,11 +39,5 @@ public class FusionProperties {
     public static class Weight {
         /** 策略名称：time-decay / simple-average / ewma（未来） */
         private String strategy = "time-decay";
-    }
-
-    @Data
-    public static class Rollback {
-        /** MASTERS weight 一致性校验容差 */
-        private double weightTolerance = 0.01;
     }
 }

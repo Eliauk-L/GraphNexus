@@ -107,8 +107,6 @@ fusion:
     threshold: 0.85             # 融合相似度阈值
   weight:
     strategy: time-decay        # time-decay（时间衰减）/ simple-average（简单平均）/ ewma（未来）
-  rollback:
-    weight-tolerance: 0.01      # MASTERS weight 回滚校验容差
 
 # ---------------------------------------------------------------------------
 # 策略专属配置 — 各策略独立绑定前缀，新增策略只需加新配置块
@@ -182,7 +180,7 @@ query:
 # ---------------------------------------------------------------------------
 jwt:
   secret: graphnexus-jwt-secret-key-dev-only
-  access-token-ttl: 30m
+  access-token-ttl: 1d
   refresh-token-ttl: 7d
 
 # ---------------------------------------------------------------------------

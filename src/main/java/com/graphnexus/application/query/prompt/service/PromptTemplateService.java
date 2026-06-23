@@ -15,12 +15,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Prompt 模板服务 — 从 classpath 加载 Markdown 模板文件，执行变量替换，组装最终 Prompt。
+ * Prompt 模板服务 — 从 DB（优先）或 classpath（fallback）加载 Markdown 模板文件，执行变量替换，组装最终 Prompt。
  *
- * <p>模板文件位于 {@code classpath:/prompts/}，命名规则：{@code {intent小写}-{system|user}.md}。
+ * <p>双源加载策略见 ADR-043：优先查 ConfigService DB 缓存 → 未自定义时 fallback classpath 文件。
+ * 模板文件位于 {@code classpath:/prompts/}，命名规则：{@code {intent小写}-{system|user}.md}。
  * 占位符格式：{@code {{variableName}}}。不引入模板引擎，纯字符串替换。</p>
  *
- * <p>设计决策见 ADR-011。</p>
+ * <p>设计决策见 ADR-011、ADR-043。</p>
  *
  * @author Jay
  * @date 2026/06/17
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 public class PromptTemplateService {
 
     private final ResourceLoader resourceLoader;
+    private final com.graphnexus.application.config.service.ConfigService configService;
 
     private static final String TEMPLATE_BASE_PATH = "classpath:/prompts/";
     private static final String MASTERS_DEGRADATION_WARNING =
@@ -66,13 +68,24 @@ public class PromptTemplateService {
     }
 
     /**
-     * 加载 classpath 下的模板文件。
+     * 加载模板 — 优先查 DB（ConfigService），未自定义时 fallback classpath。
      *
      * @param name 模板文件名（不含路径前缀），如 "student-diagnosis-system"
      * @return 模板文件全文
      * @throws BusinessException 模板文件不存在时抛 C0001
      */
     public String loadTemplate(String name) {
+        // 1. 优先查 DB（ConfigService 为 null 时跳过，用于测试场景）
+        if (configService != null) {
+            String configKey = "prompt." + name;
+            String dbValue = configService.getPromptText(configKey);
+            if (dbValue != null) {
+                log.debug("使用 DB 自定义模板: {}", name);
+                return dbValue;
+            }
+        }
+
+        // 2. Fallback classpath
         String location = TEMPLATE_BASE_PATH + name + ".md";
         try {
             var resource = resourceLoader.getResource(location);
