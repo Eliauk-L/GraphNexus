@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi, type LoginParams, type LoginResult } from '@/api/auth'
-import { useRouter } from 'vue-router'
 
 const USER_KEY = 'userInfo'
 const EXPIRES_KEY = 'tokenExpiresAt'
