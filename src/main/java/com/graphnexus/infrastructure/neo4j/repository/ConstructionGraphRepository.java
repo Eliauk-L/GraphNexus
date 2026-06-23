@@ -518,6 +518,71 @@ public class ConstructionGraphRepository {
         return node;
     }
 
+    /**
+     * 按知识点名称 + Subject 节点查找已有 KnowledgePointNode（文档版本）。
+     *
+     * <p>MERGE 键为 {@code (name, BELONGS_TO_SUBJECT)} 组合——同一 Subject 下同名 KP 复用同一节点。
+     * 文档 KP 携带完整属性（description/gradeLevel/documentId），ON MATCH 时覆盖（文档数据质量更高）。
+     * 已存在时追加 DOCUMENT 来源标记。</p>
+     */
+    public KnowledgePointNode findOrCreateDocumentKnowledgePoint(String kpName, String description,
+                                                                  String gradeLevel, String documentId,
+                                                                  String subjectNodeId) {
+        String id = UUID.nameUUIDFromBytes(("KP:" + kpName + ":" + subjectNodeId).getBytes()).toString();
+
+        String cypher = "MATCH (s:Subject {id: $subjectNodeId}) "
+                + "MERGE (kp:KnowledgePoint {name: $name})-[:BELONGS_TO_SUBJECT]->(s) "
+                + "ON CREATE SET kp.id = $id, kp.description = $description, "
+                + "kp.gradeLevel = $gradeLevel, kp.documentId = $documentId, "
+                + "kp.fusionSource = $fusionSource, kp.nodeType = 'KnowledgePoint' "
+                + "ON MATCH SET kp.description = $description, kp.gradeLevel = $gradeLevel, "
+                + "kp.documentId = $documentId, "
+                + "kp.fusionSource = CASE WHEN kp.fusionSource IS NULL OR kp.fusionSource = '' THEN $fusionSource "
+                + "     WHEN kp.fusionSource CONTAINS $fusionSource THEN kp.fusionSource "
+                + "     ELSE kp.fusionSource + ',' + $fusionSource END "
+                + "RETURN kp.id AS id";
+
+        var rows = neo4jClient.query(cypher).bindAll(Map.of(
+                "subjectNodeId", subjectNodeId,
+                "name", kpName,
+                "id", id,
+                "description", description != null ? description : "",
+                "gradeLevel", gradeLevel != null ? gradeLevel : "",
+                "documentId", documentId != null ? documentId : "",
+                "fusionSource", "DOCUMENT"
+        )).fetch().all();
+
+        KnowledgePointNode node = new KnowledgePointNode(kpName, description, gradeLevel, documentId, "DOCUMENT");
+        if (!rows.isEmpty()) {
+            node.setId((String) rows.iterator().next().get("id"));
+        }
+        return node;
+    }
+
+    /**
+     * 按知识点名称 + Subject 查找已有 KnowledgePointNode（只读查询，不创建）。
+     *
+     * <p>用于文档路径在创建 KP 前检查是否已有考试 KP 存在，复用其 id 避免重复节点。</p>
+     *
+     * @return 已有 KP 节点，若无则返回 null
+     */
+    public KnowledgePointNode findExistingKnowledgePoint(String kpName, String subjectNodeId) {
+        try {
+            var rows = neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint {name: $name})-[:BELONGS_TO_SUBJECT]->(s:Subject {id: $subjectNodeId}) "
+                    + "RETURN kp.id AS id"
+            ).bindAll(Map.of("name", kpName, "subjectNodeId", subjectNodeId)).fetch().all();
+            if (!rows.isEmpty()) {
+                KnowledgePointNode node = new KnowledgePointNode(kpName);
+                node.setId((String) rows.iterator().next().get("id"));
+                return node;
+            }
+        } catch (Exception e) {
+            log.debug("查找已有 KnowledgePoint 失败: name={}", kpName, e);
+        }
+        return null;
+    }
+
     // ======================== 内部类 ========================
 
     /**

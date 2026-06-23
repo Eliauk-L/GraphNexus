@@ -173,8 +173,18 @@ public class ConstructionServiceImpl implements ConstructionService {
             constructionGraphRepository.saveEdge(new ExtractsEdge(documentNode.getId(), entity.getId()));
         }
         for (var kp : extracted.knowledgePoints()) {
+            // 查找同 Subject 下同名 KP（可能来自考试上传），复用其节点避免重复
+            KnowledgePointNode existing = constructionGraphRepository.findExistingKnowledgePoint(
+                    kp.getName(), subjectNode.getId());
+            if (existing != null) {
+                // 复用已有节点 id，同时更新文档属性（文档数据质量更高）
+                kp.setId(existing.getId());
+            }
             constructionGraphRepository.save(kp);
-            constructionGraphRepository.saveEdge(new BelongsToSubjectEdge(kp.getId(), subjectNode.getId()));
+            // BELONGS_TO_SUBJECT 边已在已有节点上存在（或由 save 后的 saveEdge 创建）
+            if (existing == null) {
+                constructionGraphRepository.saveEdge(new BelongsToSubjectEdge(kp.getId(), subjectNode.getId()));
+            }
         }
         for (var cat : extracted.categories()) {
             constructionGraphRepository.save(cat);

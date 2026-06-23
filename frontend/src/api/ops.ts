@@ -47,14 +47,14 @@ export interface OpsTrendResponse {
 /** 运营统计 API */
 export const opsApi = {
   getSummary(): Promise<OpsSummaryResponse> {
-    return client.get('/api/v1/ops/stats/summary')
+    return client.get('/ops/stats/summary')
   },
 
   getTrend(metric: string, granularity: string, range: number): Promise<OpsTrendResponse> {
-    return client.get('/api/v1/ops/stats/trend', { params: { metric, granularity, range } })
+    return client.get('/ops/stats/trend', { params: { metric, granularity, range } })
   },
 
   getSubjects(): Promise<string[]> {
-    return client.get('/api/v1/ops/stats/subjects')
+    return client.get('/ops/stats/subjects')
   },
 }

@@ -105,13 +105,27 @@ public class FusionGraphRepository {
     }
 
     /**
-     * 删除指定的 KnowledgePoint 节点（DETACH DELETE，幂等）。
+     * 删除指定的 KnowledgePoint 节点（DETACH DELETE 兜底，幂等）。
+     *
+     * <p>优先使用 DETACH DELETE 确保即使 redirectEdges 遗漏边也能删除。
+     * 记录实际删除节点数以辅助排查融合后 KP 未删除问题。</p>
      */
     public void deleteKnowledgePoints(List<String> kpIds) {
         if (kpIds == null || kpIds.isEmpty()) return;
-        neo4jClient.query("MATCH (kp:KnowledgePoint) WHERE kp.id IN $ids DETACH DELETE kp")
-                .bindAll(Map.of("ids", kpIds)).run();
-        log.debug("已删除 {} 个冗余 KP 节点", kpIds.size());
+        try {
+            var summary = neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint) WHERE kp.id IN $ids DETACH DELETE kp"
+            ).bindAll(Map.of("ids", kpIds)).run();
+            int deleted = summary.counters().nodesDeleted();
+            if (deleted > 0) {
+                log.info("已删除 {} 个冗余 KP 节点（预期 {} 个）", deleted, kpIds.size());
+            }
+            if (deleted < kpIds.size()) {
+                log.warn("KP 删除数量不足：实际删除 {} 个，预期 {} 个，ids={}", deleted, kpIds.size(), kpIds);
+            }
+        } catch (Exception e) {
+            log.error("删除冗余 KP 节点失败: ids={}, error={}", kpIds, e.getMessage(), e);
+        }
     }
 
     // ======================== Student 去重融合 ========================
