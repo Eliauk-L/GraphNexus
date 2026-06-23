@@ -62,12 +62,13 @@ public class MetricsServiceImpl implements MetricsService {
     public List<MetricResultBO> queryPageRank(Set<String> nodeTypes, Set<String> edgeTypes) {
         Set<String> normalizedNodes = validateAndConstrainNodes(nodeTypes);
         Set<String> normalizedEdges = constrainEdgeTypes(normalizedNodes, edgeTypes);
-        Set<String> allNodes = expandNodeTypesForProjection(normalizedNodes, normalizedEdges);
+        // KP 中心时投影全图节点（Category/Entity/Subject 等标签可能尚不存在）
+        Set<String> projNodes = normalizedNodes.contains(KP_LABEL) ? Set.of("*") : normalizedNodes;
 
-        MetricsQuery query = new MetricsQuery(allNodes, normalizedEdges, "pagerank");
+        MetricsQuery query = new MetricsQuery(projNodes, normalizedEdges, "pagerank");
         return cache.get(query.toCacheKey(), key -> {
-            log.debug("缓存未命中，执行 PageRank 计算（nodeTypes={}, edgeTypes={}）", allNodes, normalizedEdges);
-            String graphName = gdsAdapter.projectGraph(allNodes, normalizedEdges);
+            log.debug("缓存未命中，执行 PageRank 计算（nodeTypes={}, edgeTypes={}）", projNodes, normalizedEdges);
+            String graphName = gdsAdapter.projectGraph(projNodes, normalizedEdges);
             try {
                 return gdsAdapter.runPageRank(graphName).stream()
                         .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), "pagerank", r.score()))
@@ -83,12 +84,12 @@ public class MetricsServiceImpl implements MetricsService {
     public List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes) {
         Set<String> normalizedNodes = validateAndConstrainNodes(nodeTypes);
         Set<String> normalizedEdges = constrainEdgeTypes(normalizedNodes, edgeTypes);
-        Set<String> allNodes = expandNodeTypesForProjection(normalizedNodes, normalizedEdges);
+        Set<String> projNodes = normalizedNodes.contains(KP_LABEL) ? Set.of("*") : normalizedNodes;
 
-        MetricsQuery query = new MetricsQuery(allNodes, normalizedEdges, "degree");
+        MetricsQuery query = new MetricsQuery(projNodes, normalizedEdges, "degree");
         return cache.get(query.toCacheKey(), key -> {
-            log.debug("缓存未命中，执行度中心性计算（nodeTypes={}, edgeTypes={}）", allNodes, normalizedEdges);
-            String graphName = gdsAdapter.projectGraph(allNodes, normalizedEdges);
+            log.debug("缓存未命中，执行度中心性计算（nodeTypes={}, edgeTypes={}）", projNodes, normalizedEdges);
+            String graphName = gdsAdapter.projectGraph(projNodes, normalizedEdges);
             try {
                 List<MetricResultBO> results = new ArrayList<>();
                 results.addAll(gdsAdapter.runDegreeStream(graphName, "NATURAL").stream()
@@ -222,36 +223,6 @@ public class MetricsServiceImpl implements MetricsService {
                     "以学生为中心需同时包含 KnowledgePoint（MASTERS 边连接 Student→KP，缺 KP 则成空图）");
         }
         return normalized;
-    }
-
-    /**
-     * GDS 投影所需的全量节点类型——不仅包含中心节点，还包含边连接的目标节点。
-     * 例如 KP 的 CHILD_OF 连到 KnowledgeCategory，GDS 需要 Category 也在投影中。
-     */
-    private Set<String> expandNodeTypesForProjection(Set<String> centerNodes, Set<String> edgeTypes) {
-        Set<String> allNodes = new HashSet<>(centerNodes);
-        for (String et : edgeTypes) {
-            switch (et) {
-                case "CHILD_OF":
-                    allNodes.add(NodeType.KNOWLEDGE_CATEGORY.getLabel());
-                    break;
-                case "BELONGS_TO_SUBJECT":
-                    allNodes.add("Subject");
-                    break;
-                case "ALIGNED_TO":
-                    allNodes.add(NodeType.ENTITY.getLabel());
-                    break;
-                case "MASTERS":
-                    allNodes.add(NodeType.STUDENT.getLabel());
-                    break;
-                case "TESTED":
-                    allNodes.add(NodeType.EXAM.getLabel());
-                    break;
-                default:
-                    break;
-            }
-        }
-        return allNodes;
     }
 
     /**
