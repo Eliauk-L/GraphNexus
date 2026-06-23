@@ -156,7 +156,7 @@ public class ConstructionGraphRepository {
                 node.setProperties(new HashMap<>(n.asMap()));
                 nodes.add(node);
             }
-            return nodes;
+            return dedupeById(nodes);
         } catch (Exception e) {
             log.warn("按 documentId={} 查询节点失败: {}", documentId, e.getMessage());
             return Collections.emptyList();
