@@ -9,6 +9,7 @@ import com.graphnexus.application.graph.metrics.service.MetricsService;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.neo4j.edge.EdgeType;
+import com.graphnexus.infrastructure.neo4j.edge.GraphEdge;
 import com.graphnexus.infrastructure.neo4j.gds.GdsAdapter;
 import com.graphnexus.infrastructure.neo4j.gds.model.GdsResult;
 import com.graphnexus.infrastructure.neo4j.node.NodeType;
@@ -123,8 +124,51 @@ public class MetricsServiceImpl implements MetricsService {
 
     @Override
     public List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName, String documentId) {
+        // 子图模式：直接从子图边计算度数，不走 GDS
+        if (subjectName != null && !subjectName.isBlank()) {
+            return computeSubgraphDegreeBySubject(subjectName);
+        }
+        if (documentId != null && !documentId.isBlank()) {
+            return computeSubgraphDegreeByDocument(documentId);
+        }
+        // 全局模式：走 GDS
         List<MetricResultBO> fullResults = queryDegree(nodeTypes, edgeTypes);
         return filterByScope(fullResults, subjectName, documentId);
+    }
+
+    /** 从学科子图边直接计算每个 KP 的度数（入度/出度）。 */
+    private List<MetricResultBO> computeSubgraphDegreeBySubject(String subjectName) {
+        List<GraphEdge> edges = constructionGraphRepository.findEdgesBySubject(subjectName);
+        return buildDegreeFromEdges(edges);
+    }
+
+    /** 从文档子图边直接计算每个 KP 的度数。 */
+    private List<MetricResultBO> computeSubgraphDegreeByDocument(String documentId) {
+        List<GraphEdge> edges = constructionGraphRepository.findEdgesByDocumentId(documentId);
+        return buildDegreeFromEdges(edges);
+    }
+
+    /** 从边列表聚合每个节点的 inDegree / outDegree。 */
+    private List<MetricResultBO> buildDegreeFromEdges(List<GraphEdge> edges) {
+        Map<String, int[]> map = new LinkedHashMap<>(); // nodeId -> [inDeg, outDeg]
+        for (GraphEdge e : edges) {
+            if (e.getSourceNodeId() != null) {
+                map.computeIfAbsent(e.getSourceNodeId(), k -> new int[2])[1]++; // outDegree
+            }
+            if (e.getTargetNodeId() != null) {
+                map.computeIfAbsent(e.getTargetNodeId(), k -> new int[2])[0]++; // inDegree
+            }
+        }
+        List<MetricResultBO> results = new ArrayList<>();
+        for (var entry : map.entrySet()) {
+            int[] deg = entry.getValue();
+            String nodeId = entry.getKey();
+            results.add(new MetricResultBO(nodeId, "KnowledgePoint", "inDegree", (double) deg[0]));
+            results.add(new MetricResultBO(nodeId, "KnowledgePoint", "outDegree", (double) deg[1]));
+        }
+        return results.stream()
+                .sorted(Comparator.comparingDouble(MetricResultBO::metricValue).reversed())
+                .collect(Collectors.toList());
     }
 
     /**
