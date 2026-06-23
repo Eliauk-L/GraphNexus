@@ -21,28 +21,21 @@ async function load() {
       queryDegree(['KnowledgePoint']),
       queryDegree(['Student', 'KnowledgePoint']),
     ])
-    console.log('[OpsMetrics] pagerank(KP):', a?.length, 'items')
-    console.log('[OpsMetrics]   types:', [...new Set(a?.map(m => m.nodeType) ?? [])])
-    console.log('[OpsMetrics]   KP count:', a?.filter(m => m.nodeType === 'KnowledgePoint').length ?? 0)
-    console.log('[OpsMetrics] pagerank(St+KP):', b?.length, 'items, types:', [...new Set(b?.map(m => m.nodeType) ?? [])])
-    console.log('[OpsMetrics] degree(KP):', c?.length, 'items, types:', [...new Set(c?.map(m => m.nodeType) ?? [])])
-    console.log('[OpsMetrics] degree(St+KP):', d?.length, 'items, types:', [...new Set(d?.map(m => m.nodeType) ?? [])])
     kpPR.value = top(a, 'KnowledgePoint'); stPR.value = top(b, 'Student')
     kpDeg.value = top(c, 'KnowledgePoint'); stDeg.value = top(d, 'Student')
-    console.log('[OpsMetrics] top results: kpPR=%d stPR=%d kpDeg=%d stDeg=%d',
-      kpPR.value.length, stPR.value.length, kpDeg.value.length, stDeg.value.length)
   } catch (e: any) { error.value = e?.message ?? '加载失败' }
   finally { loading.value = false }
 }
 
 function top(list: MetricResultVO[], t: string): MetricRow[] {
-  return list.filter(m => m.nodeType === t).sort((a, b) => b.metricValue - a.metricValue).slice(0, 5)
+  return (Array.isArray(list) ? list : [])
+    .filter(m => m.nodeType === t)
+    .sort((a, b) => b.metricValue - a.metricValue)
+    .slice(0, 5)
     .map(m => ({ name: m.nodeName ?? m.nodeId, value: m.metricValue, nodeType: m.nodeType, subject: m.subject ?? '', className: m.className ?? '' }))
 }
 
 function fmt(v: number) { return v.toFixed(4) }
-function sub(r: MetricRow) { return r.nodeType === 'KnowledgePoint' ? r.subject : '' }
-function cls(r: MetricRow) { return r.nodeType === 'Student' ? r.className : '' }
 
 onMounted(load)
 </script>
@@ -55,23 +48,50 @@ onMounted(load)
     <div class="grid">
       <div class="col">
         <div class="col-title">PageRank · 知识点</div>
-        <table v-if="kpPR.length"><tr v-for="(r,i) in kpPR" :key="i"><td class="rk">{{ i+1 }}</td><td class="nm">{{ r.name }}<span class="sub">{{ sub(r) }}</span></td><td class="vl mono">{{ fmt(r.value) }}</td></tr></table>
-        <div v-else class="empty">—</div>
+        <table v-if="kpPR.length">
+          <tr v-for="(r,i) in kpPR" :key="i">
+            <td class="rank">{{ i+1 }}</td>
+            <td class="name">{{ r.name }}<span v-if="r.subject" class="sub">{{ r.subject }}</span></td>
+            <td class="val mono">{{ fmt(r.value) }}</td>
+          </tr>
+        </table>
+        <div v-else class="supporting" style="color:var(--color-text-tertiary)">—</div>
       </div>
+
       <div class="col">
         <div class="col-title">PageRank · 学生</div>
-        <table v-if="stPR.length"><tr v-for="(r,i) in stPR" :key="i"><td class="rk">{{ i+1 }}</td><td class="nm">{{ r.name }}<span class="sub">{{ cls(r) }}</span></td><td class="vl mono">{{ fmt(r.value) }}</td></tr></table>
-        <div v-else class="empty">—</div>
+        <table v-if="stPR.length">
+          <tr v-for="(r,i) in stPR" :key="i">
+            <td class="rank">{{ i+1 }}</td>
+            <td class="name">{{ r.name }}<span v-if="r.className" class="sub">{{ r.className }}</span></td>
+            <td class="val mono">{{ fmt(r.value) }}</td>
+          </tr>
+        </table>
+        <div v-else class="supporting" style="color:var(--color-text-tertiary)">—</div>
       </div>
+
       <div class="col">
         <div class="col-title">度中心性 · 知识点</div>
-        <table v-if="kpDeg.length"><tr v-for="(r,i) in kpDeg" :key="i"><td class="rk">{{ i+1 }}</td><td class="nm">{{ r.name }}<span class="sub">{{ sub(r) }}</span></td><td class="vl mono">{{ r.value }}</td></tr></table>
-        <div v-else class="empty">—</div>
+        <table v-if="kpDeg.length">
+          <tr v-for="(r,i) in kpDeg" :key="i">
+            <td class="rank">{{ i+1 }}</td>
+            <td class="name">{{ r.name }}<span v-if="r.subject" class="sub">{{ r.subject }}</span></td>
+            <td class="val mono">{{ r.value }}</td>
+          </tr>
+        </table>
+        <div v-else class="supporting" style="color:var(--color-text-tertiary)">—</div>
       </div>
+
       <div class="col">
         <div class="col-title">度中心性 · 学生</div>
-        <table v-if="stDeg.length"><tr v-for="(r,i) in stDeg" :key="i"><td class="rk">{{ i+1 }}</td><td class="nm">{{ r.name }}<span class="sub">{{ cls(r) }}</span></td><td class="vl mono">{{ r.value }}</td></tr></table>
-        <div v-else class="empty">—</div>
+        <table v-if="stDeg.length">
+          <tr v-for="(r,i) in stDeg" :key="i">
+            <td class="rank">{{ i+1 }}</td>
+            <td class="name">{{ r.name }}<span v-if="r.className" class="sub">{{ r.className }}</span></td>
+            <td class="val mono">{{ r.value }}</td>
+          </tr>
+        </table>
+        <div v-else class="supporting" style="color:var(--color-text-tertiary)">—</div>
       </div>
     </div>
   </section>
@@ -83,11 +103,10 @@ onMounted(load)
 .col { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--rounded-md);padding:var(--spacing-md); }
 .col-title { font-size:0.75rem;color:var(--color-text-tertiary);margin-bottom:6px; }
 table { width:100%;border-collapse:collapse; }
-td { padding:3px 0;font-size:0.8125rem;border-bottom:1px solid var(--color-border); }
+td { padding:4px 0;font-size:0.8125rem;border-bottom:1px solid var(--color-border); }
 tr:last-child td { border-bottom:none; }
-.rk { width:18px;color:var(--color-text-tertiary);font-weight:500; }
-.nm { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0; }
-.sub { color:var(--color-text-tertiary);font-size:0.6875rem;margin-left:4px; }
-.vl { text-align:right;white-space:nowrap; }
-.empty { color:var(--color-text-tertiary);font-size:0.75rem;padding:8px 0; }
+.rank { width:18px;color:var(--color-text-tertiary);font-weight:500; }
+.name { text-align:left;white-space:nowrap; }
+.name .sub { display:block;font-size:0.6875rem;color:var(--color-text-tertiary); }
+.val { text-align:right;white-space:nowrap;color:var(--color-text-primary); }
 </style>
