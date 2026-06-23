@@ -127,6 +127,8 @@ onMounted(loadGraph)
   height: 500px;
   display: flex;
   overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-md);
 }
 
 .graph-stats { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
