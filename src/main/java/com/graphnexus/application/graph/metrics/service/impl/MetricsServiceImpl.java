@@ -171,7 +171,7 @@ public class MetricsServiceImpl implements MetricsService {
             return Collections.emptyList();
         }
         return freqMap.entrySet().stream()
-                .map(e -> new MetricResultBO(e.getKey(), "KnowledgePoint", "examFrequency", e.getValue().doubleValue()))
+                .map(e -> new MetricResultBO(e.getKey(), "KnowledgePoint", e.getKey(), "", "", "examFrequency", e.getValue().doubleValue()))
                 .sorted(Comparator.comparingDouble(MetricResultBO::metricValue).reversed())
                 .collect(Collectors.toList());
     }
