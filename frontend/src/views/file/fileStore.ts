@@ -10,8 +10,9 @@ const INTERMEDIATE_STATES: FileStatus[] = ['PARSING', 'EXTRACTING', 'FUSING']
 /** 最大轮询时长（毫秒），超时强制停止，防止异常情况空转 */
 const MAX_POLLING_DURATION = 5 * 60 * 1000 // 5 分钟
 
-/** 最小轮询窗口（毫秒），桥接 UPLOADED→PARSING 和 PARSED→EXTRACTING 等过渡间隙 */
-const MIN_POLLING_DURATION = 30 * 1000 // 30 秒
+/** 最小轮询窗口（毫秒），确保至少 N 次轮询桥接过渡间隙。
+ *  当前轮询间隔 20s，120s = 6 次轮询，覆盖完整管线 (解析→抽取→融合) 的典型耗时。 */
+const MIN_POLLING_DURATION = 120 * 1000 // 2 分钟
 
 export const useFileStore = defineStore('file', () => {
   const files = ref<TextbookVO[]>([])
