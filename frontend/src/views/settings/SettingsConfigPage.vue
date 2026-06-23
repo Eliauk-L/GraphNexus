@@ -39,7 +39,6 @@ async function openEdit(config: ConfigVO) {
       editValue.value = content ?? ''
     }
   } catch {
-    // fallback to configValue / empty
     if (config.configType === 'NUMBER') {
       editValue.value = config.configValue ? Number(config.configValue) : 0
     } else if (config.configType === 'BOOLEAN') {
@@ -82,13 +81,19 @@ async function handleApply() {
 
 // ── helpers ──
 function displayValue(config: ConfigVO): string {
-  if (config.configValue == null) return config.defaultValue ?? '—'
-  if (config.configType === 'TEXT') {
-    return config.configValue.length > 50
-      ? config.configValue.substring(0, 50) + '…'
-      : config.configValue
+  if (config.configValue != null && config.configValue !== '') {
+    if (config.configType === 'TEXT') {
+      return config.configValue.length > 50
+        ? config.configValue.substring(0, 50) + '…'
+        : config.configValue
+    }
+    return config.configValue
   }
-  return config.configValue
+  return ''
+}
+
+function isUsingDefault(config: ConfigVO): boolean {
+  return config.configValue == null || config.configValue === ''
 }
 
 function parseValidationRule(config: ConfigVO): { min?: number; max?: number } {
@@ -121,13 +126,11 @@ const tabOptions = [
     </NTabs>
 
     <BaseCard>
-      <!-- 空状态 -->
       <NEmpty
         v-if="!configStore.loading && configStore.configsByCategory.length === 0"
         description="暂无配置数据"
       />
 
-      <!-- 配置列表 -->
       <div v-else>
         <div
           v-for="config in configStore.configsByCategory"
@@ -135,7 +138,6 @@ const tabOptions = [
           class="config-row"
           :class="{ 'config-row--pending': !config.applied }"
         >
-          <!-- 未应用竖条指示 -->
           <div v-if="!config.applied" class="config-row__pending-bar" />
 
           <div class="config-row__info">
@@ -146,7 +148,13 @@ const tabOptions = [
           </div>
 
           <div class="config-row__right">
-            <span class="config-row__value mono">{{ displayValue(config) }}</span>
+            <!-- 使用默认值 -->
+            <span v-if="isUsingDefault(config)" class="config-row__value" style="color: var(--color-text-tertiary)">
+              {{ config.defaultValue ?? '—' }}
+              <span class="config-row__default-tag">默认</span>
+            </span>
+            <!-- 自定义值 -->
+            <span v-else class="config-row__value mono">{{ displayValue(config) }}</span>
             <NTag
               v-if="!config.applied"
               type="warning"
@@ -164,10 +172,8 @@ const tabOptions = [
       </div>
     </BaseCard>
 
-    <!-- 底部占位（避免内容被固定栏遮挡） -->
     <div style="height: 80px" />
 
-    <!-- 底部固定栏 -->
     <div class="config-page__bottom-bar">
       <NTag
         v-if="configStore.hasPendingChanges"
@@ -198,16 +204,21 @@ const tabOptions = [
       preset="card"
     >
       <div v-if="editingConfig" class="edit-form">
-        <!-- 当前值/默认值/说明 -->
         <div class="edit-form__meta supporting">
-          <div>当前值：<span class="mono">{{ editingConfig.configValue ?? '（使用默认值）' }}</span></div>
-          <div v-if="editingConfig.defaultValue">默认值：<span style="color: var(--color-text-tertiary)">{{ editingConfig.defaultValue }}（yml 默认）</span></div>
+          <div v-if="isUsingDefault(editingConfig)">
+            当前使用：<span style="color: var(--color-text-tertiary)">系统默认值</span>
+          </div>
+          <div v-else>
+            当前自定义值：<span class="mono">{{ editingConfig.configValue }}</span>
+          </div>
+          <div v-if="editingConfig.defaultValue" style="color: var(--color-text-tertiary)">
+            系统默认值：{{ editingConfig.defaultValue }}
+          </div>
           <div v-if="editingConfig.description" style="color: var(--color-text-tertiary); margin-top: var(--spacing-sm)">
             {{ editingConfig.description }}
           </div>
         </div>
 
-        <!-- 编辑控件 -->
         <div class="edit-form__input">
           <span class="supporting" style="display: block; margin-bottom: var(--spacing-sm); font-weight: 500">新值</span>
 
@@ -256,7 +267,6 @@ const tabOptions = [
   min-height: calc(100vh - 120px);
 }
 
-/* ── 配置行 ── */
 .config-row {
   display: flex;
   align-items: center;
@@ -311,6 +321,19 @@ const tabOptions = [
   font-size: 0.875rem;
 }
 
+.config-row__default-tag {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-sm);
+  padding: 0 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 .config-row__edit {
   color: var(--color-text-tertiary);
   cursor: pointer;
@@ -322,7 +345,6 @@ const tabOptions = [
   color: var(--color-brand);
 }
 
-/* ── 底部固定栏 ── */
 .config-page__bottom-bar {
   position: sticky;
   bottom: 0;
@@ -335,7 +357,6 @@ const tabOptions = [
   border-top: 1px solid var(--color-border);
 }
 
-/* ── 编辑弹窗 ── */
 .edit-form {
   display: flex;
   flex-direction: column;
