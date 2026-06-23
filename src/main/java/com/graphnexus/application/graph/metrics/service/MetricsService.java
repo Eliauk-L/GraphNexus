@@ -74,6 +74,15 @@ public interface MetricsService {
     List<MetricResultBO> queryDegree(Set<String> nodeTypes, Set<String> edgeTypes, String subjectName, String documentId);
 
     /**
+     * 查询考试频次 — 每个知识点被考试考查的次数（非 GDS 指标，直接 Cypher 聚合）。
+     *
+     * @param subjectName 可选学科名称
+     * @param documentId  可选文档 ID
+     * @return 每个节点一条记录：metricName="examFrequency"
+     */
+    List<MetricResultBO> queryExamFrequency(String subjectName, String documentId);
+
+    /**
      * 清空所有指标缓存（图谱变更时由事件监听器调用）。
      */
     void clearCache();

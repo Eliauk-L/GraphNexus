@@ -7,7 +7,7 @@
  * 参照 useGraphInteraction 的同目录、同风格。
  */
 import { ref } from 'vue'
-import { queryDegree, queryPageRank } from '@/api/graph'
+import { queryDegree, queryPageRank, queryExamFrequency } from '@/api/graph'
 import type { MetricResultVO } from '@/api/types'
 
 const STORAGE_KEY = 'graphviz.pagerank'
@@ -31,6 +31,7 @@ function writeStoredPagerankEnabled(enabled: boolean): void {
 export function useMetrics() {
   const degreeData = ref<MetricResultVO[]>([])
   const pagerankData = ref<MetricResultVO[]>([])
+  const examFrequencyData = ref<MetricResultVO[]>([])
   const pagerankEnabled = ref(readStoredPagerankEnabled())
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -56,6 +57,14 @@ export function useMetrics() {
     }
   }
 
+  async function loadExamFrequency(subject?: string, documentId?: string): Promise<void> {
+    try {
+      examFrequencyData.value = await queryExamFrequency(subject, documentId)
+    } catch (e: any) {
+      examFrequencyData.value = []
+    }
+  }
+
   function togglePageRank(): void {
     pagerankEnabled.value = !pagerankEnabled.value
     writeStoredPagerankEnabled(pagerankEnabled.value)
@@ -78,16 +87,24 @@ export function useMetrics() {
     return entry ? entry.metricValue : null
   }
 
+  function getNodeExamFrequency(nodeId: string): number {
+    const entry = examFrequencyData.value.find((e) => e.nodeId === nodeId)
+    return entry ? entry.metricValue : 0
+  }
+
   return {
     degreeData,
     pagerankData,
+    examFrequencyData,
     pagerankEnabled,
     loading,
     error,
     loadDegreeMetrics,
     loadPageRankMetrics,
+    loadExamFrequency,
     togglePageRank,
     getNodeDegree,
     getNodePageRank,
+    getNodeExamFrequency,
   }
 }

@@ -118,6 +118,7 @@ async function handleDocSelect(docId: number | null) {
   await store.loadDocumentSubgraph(docId)
   // 文档模式下加载该文档关联 KP 的指标
   metrics.loadDegreeMetrics(undefined, String(docId))
+  metrics.loadExamFrequency(undefined, String(docId))
   if (metrics.pagerankEnabled.value) {
     metrics.loadPageRankMetrics(undefined, String(docId))
   }
@@ -136,6 +137,7 @@ async function handleSubjectSelect(subject: string | null) {
   selectedDocId.value = null
   await store.loadSubjectGraph(subject)
   metrics.loadDegreeMetrics(subject)
+  metrics.loadExamFrequency(subject)
   if (metrics.pagerankEnabled.value) {
     metrics.loadPageRankMetrics(subject)
   }
@@ -206,13 +208,15 @@ const nodeNameMap = computed<Record<string, string>>(() => {
 const selectedNodeMetrics = computed(() => {
   if (!selectedNode.value) return null
   const deg = metrics.getNodeDegree(selectedNode.value.id)
-  if (deg.totalDegree === 0 && deg.inDegree === 0 && deg.outDegree === 0) return null
+  const freq = metrics.getNodeExamFrequency(selectedNode.value.id)
+  if (deg.totalDegree === 0 && deg.inDegree === 0 && deg.outDegree === 0 && freq === 0) return null
   const pr = metrics.getNodePageRank(selectedNode.value.id)
   return {
     inDegree: deg.inDegree,
     outDegree: deg.outDegree,
     totalDegree: deg.totalDegree,
     pagerank: pr ?? undefined,
+    examFrequency: freq,
   }
 })
 
@@ -346,6 +350,7 @@ onBeforeUnmount(() => {
       :degree-data="metrics.degreeData.value"
       :pagerank-data="metrics.pagerankData.value"
       :pagerank-enabled="metrics.pagerankEnabled.value"
+      :exam-frequency-data="metrics.examFrequencyData.value"
       :node-names="nodeNameMap"
       @close="showMetricsPanel = false"
       @select-node="handleSelectNode"

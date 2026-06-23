@@ -95,4 +95,25 @@ public class MetricsController {
                 .toList();
         return ApiResult.success(vos);
     }
+
+    /**
+     * 查询考试频次 — 每个知识点被考试考查的次数。
+     */
+    @Operation(summary = "查询考试频次", description = "返回每个 KnowledgePoint 被 Exam 节点通过 TESTED 边考查的次数。非 GDS 指标，直接 Cypher 聚合")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "考试频次结果列表"),
+            @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
+    })
+    @GetMapping("/exam-frequency")
+    public ApiResult<List<MetricResultVO>> getExamFrequency(
+            @Parameter(description = "可选学科名称", example = "数学")
+            @RequestParam(required = false) String subject,
+            @Parameter(description = "可选文档 ID（MySQL 主键）", example = "1")
+            @RequestParam(required = false) String documentId) {
+        List<MetricResultBO> results = metricsService.queryExamFrequency(subject, documentId);
+        List<MetricResultVO> vos = results.stream()
+                .map(MetricResultVO::from)
+                .toList();
+        return ApiResult.success(vos);
+    }
 }

@@ -48,3 +48,11 @@ export function getSubjectGraph(subjectName: string): Promise<GraphSubgraphVO> {
     timeout: 30000,
   })
 }
+
+/** 查询考试频次 */
+export function queryExamFrequency(subject?: string, documentId?: string): Promise<MetricResultVO[]> {
+  return client.get('/graph/metrics/exam-frequency', {
+    params: { subject, documentId },
+    paramsSerializer: { indexes: null },
+  })
+}

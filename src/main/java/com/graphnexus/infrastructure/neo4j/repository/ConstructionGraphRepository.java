@@ -421,6 +421,52 @@ public class ConstructionGraphRepository {
         }
     }
 
+    // ======================== 考试频次查询 ========================
+
+    /**
+     * 按学科查询每个知识点的考试频次（被考过多少次）。
+     *
+     * @return nodeId → examFrequency 映射（仅含 frequency > 0 的 KP）
+     */
+    public Map<String, Integer> queryExamFrequencyBySubject(String subjectName) {
+        try {
+            return neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $name}) " +
+                    "OPTIONAL MATCH (e:Exam)-[:TESTED]->(kp) " +
+                    "RETURN kp.id AS nodeId, count(e) AS frequency"
+            ).bindAll(Map.of("name", subjectName)).fetch().all().stream()
+                    .filter(row -> ((Number) row.get("frequency")).intValue() > 0)
+                    .collect(Collectors.toMap(
+                            row -> (String) row.get("nodeId"),
+                            row -> ((Number) row.get("frequency")).intValue()
+                    ));
+        } catch (Exception e) {
+            log.warn("按 subjectName={} 查询考试频次失败: {}", subjectName, e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /**
+     * 按文档查询每个知识点的考试频次。
+     */
+    public Map<String, Integer> queryExamFrequencyByDocumentId(String documentId) {
+        try {
+            return neo4jClient.query(
+                    "MATCH (d {documentId: $docId})-[:EXTRACTS]->(:Entity)-[:ALIGNED_TO]->(kp:KnowledgePoint) " +
+                    "OPTIONAL MATCH (e:Exam)-[:TESTED]->(kp) " +
+                    "RETURN DISTINCT kp.id AS nodeId, count(e) AS frequency"
+            ).bindAll(Map.of("docId", documentId)).fetch().all().stream()
+                    .filter(row -> ((Number) row.get("frequency")).intValue() > 0)
+                    .collect(Collectors.toMap(
+                            row -> (String) row.get("nodeId"),
+                            row -> ((Number) row.get("frequency")).intValue()
+                    ));
+        } catch (Exception e) {
+            log.warn("按 documentId={} 查询考试频次失败: {}", documentId, e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
     // ======================== Subject 辅助 ========================
 
     /**

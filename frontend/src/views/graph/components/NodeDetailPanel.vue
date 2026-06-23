@@ -7,7 +7,7 @@
 defineProps<{
   node: { id: string; data: Record<string, unknown> } | null
   visible: boolean
-  metrics?: { inDegree: number; outDegree: number; totalDegree: number; pagerank?: number } | null
+  metrics?: { inDegree: number; outDegree: number; totalDegree: number; pagerank?: number; examFrequency?: number } | null
 }>()
 
 defineEmits<{
@@ -25,7 +25,7 @@ const HIDDEN_KEYS = new Set([
   // 内部标识/时间戳，无需展示
   'id', 'documentId', 'createdAt', 'updatedAt',
   // 代码/配置类
-  'entityType', 'nodeType',
+  'nodeType',
   // 文档页码（无业务意义）
   'pageNumber',
 ])
@@ -34,6 +34,7 @@ const HIDDEN_KEYS = new Set([
 const SHOW_KEYS = new Set([
   'description',
   'originalText',
+  'entityType',
   'subject',
   'gradeLevel',
   'weight',
@@ -120,6 +121,10 @@ function formatValue(value: unknown): string {
           <div v-if="metrics.pagerank != null" class="detail-field">
             <span class="detail-field-label supporting">PageRank</span>
             <span class="detail-field-value body mono">{{ metrics.pagerank.toFixed(4) }}</span>
+          </div>
+          <div v-if="metrics.examFrequency != null" class="detail-field">
+            <span class="detail-field-label supporting">考试频次</span>
+            <span class="detail-field-value body mono">{{ metrics.examFrequency }}</span>
           </div>
         </div>
       </template>

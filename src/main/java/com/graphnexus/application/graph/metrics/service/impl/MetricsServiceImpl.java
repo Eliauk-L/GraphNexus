@@ -160,6 +160,22 @@ public class MetricsServiceImpl implements MetricsService {
     }
 
     @Override
+    public List<MetricResultBO> queryExamFrequency(String subjectName, String documentId) {
+        Map<String, Integer> freqMap;
+        if (documentId != null && !documentId.isBlank()) {
+            freqMap = constructionGraphRepository.queryExamFrequencyByDocumentId(documentId);
+        } else if (subjectName != null && !subjectName.isBlank()) {
+            freqMap = constructionGraphRepository.queryExamFrequencyBySubject(subjectName);
+        } else {
+            return Collections.emptyList();
+        }
+        return freqMap.entrySet().stream()
+                .map(e -> new MetricResultBO(e.getKey(), "KnowledgePoint", "examFrequency", e.getValue().doubleValue()))
+                .sorted(Comparator.comparingDouble(MetricResultBO::metricValue).reversed())
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public void clearCache() {
         cache.invalidateAll();
         log.debug("指标缓存已清空（图谱变更触发）");

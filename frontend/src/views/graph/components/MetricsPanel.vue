@@ -12,6 +12,7 @@ const props = defineProps<{
   degreeData: MetricResultVO[]
   pagerankData: MetricResultVO[]
   pagerankEnabled: boolean
+  examFrequencyData?: MetricResultVO[]
   nodeNames?: Record<string, string>
 }>()
 
@@ -20,7 +21,7 @@ const emit = defineEmits<{
   'select-node': [nodeId: string]
 }>()
 
-type SortField = 'totalDegree' | 'inDegree' | 'outDegree' | 'pagerank'
+type SortField = 'totalDegree' | 'inDegree' | 'outDegree' | 'pagerank' | 'examFrequency'
 const sortField = ref<SortField>('totalDegree')
 
 const sortOptions = computed(() => {
@@ -28,6 +29,7 @@ const sortOptions = computed(() => {
     { label: '总度数 ↓', value: 'totalDegree' },
     { label: '入度 ↓', value: 'inDegree' },
     { label: '出度 ↓', value: 'outDegree' },
+    { label: '考试频次 ↓', value: 'examFrequency' },
   ]
   if (props.pagerankEnabled) {
     opts.push({ label: 'PageRank ↓', value: 'pagerank' })
@@ -42,6 +44,7 @@ interface RankRow {
   outDegree: number
   totalDegree: number
   pagerank: number | null
+  examFrequency: number
 }
 
 const rankedRows = computed<RankRow[]>(() => {
@@ -59,6 +62,11 @@ const rankedRows = computed<RankRow[]>(() => {
   for (const p of props.pagerankData) {
     if (p.nodeType === 'KnowledgePoint') prMap.set(p.nodeId, p.metricValue)
   }
+  // 考试频次查找表
+  const examFreqMap = new Map<string, number>()
+  for (const ef of (props.examFrequencyData ?? [])) {
+    examFreqMap.set(ef.nodeId, ef.metricValue)
+  }
 
   const rows: RankRow[] = []
   for (const [nodeId, deg] of map) {
@@ -69,6 +77,7 @@ const rankedRows = computed<RankRow[]>(() => {
       outDegree: deg.outDeg,
       totalDegree: deg.inDeg + deg.outDeg,
       pagerank: prMap.get(nodeId) ?? null,
+      examFrequency: examFreqMap.get(nodeId) ?? 0,
     })
   }
 
@@ -125,6 +134,7 @@ const isEmpty = computed(() => props.degreeData.length === 0)
                 <th class="col-num">出度</th>
                 <th class="col-num">总度</th>
                 <th v-if="pagerankEnabled" class="col-num">PR</th>
+                <th class="col-num">考次</th>
               </tr>
             </thead>
             <tbody>
@@ -141,6 +151,7 @@ const isEmpty = computed(() => props.degreeData.length === 0)
                 <td v-if="pagerankEnabled" class="col-num mono">
                   {{ row.pagerank != null ? row.pagerank.toFixed(4) : '-' }}
                 </td>
+                <td class="col-num mono">{{ row.examFrequency }}</td>
               </tr>
             </tbody>
           </table>
