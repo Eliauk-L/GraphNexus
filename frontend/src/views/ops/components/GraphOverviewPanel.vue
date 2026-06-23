@@ -124,8 +124,9 @@ onMounted(loadGraph)
 .graph-body { position: relative; }
 
 .graph-canvas-area {
-  min-height: 480px;
+  height: 500px;
   display: flex;
+  overflow: hidden;
 }
 
 .graph-stats { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
