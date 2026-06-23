@@ -1,13 +1,15 @@
 <script setup lang="ts">
 /**
- * DiagnosisSubgraph — 知识结构子图可视化组件。
+ * DiagnosisSubgraph — 知识结构子图可视化组件（G6 v5 动态力导向）。
  * 展示学生→知识点的掌握关系（MASTERS）和知识点间的前置依赖（PREREQUISITE_OF）。
- * 参考 GraphVisualizePage 的力导向布局 + 掌握度色阶。
+ * 参考 GraphCanvas 的 G6 生命周期管理。
  */
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
+import { Graph } from '@antv/g6'
 import { getPrunedSubgraph } from '@/api/analysis'
 import type { SubgraphResponse, SubgraphNodeVO, SubgraphEdgeVO } from '@/api/types'
 import BaseCard from '@/common/components/BaseCard.vue'
+import { NODE_COLORS, NODE_SIZES, EDGE_COLORS, EDGE_LINE_STYLES } from '@/views/graph/constants'
 
 const props = defineProps<{
   taskId: string | null
@@ -22,12 +24,13 @@ type LoadState = 'idle' | 'loading' | 'loaded' | 'error'
 const state = ref<LoadState>('idle')
 const subgraph = ref<SubgraphResponse | null>(null)
 
-// ── 画布参数 ──
-const W = 640
-const H = 440
+// ── G6 ──
+const container = ref<HTMLDivElement>()
+let graph: Graph | null = null
+let resizeObserver: ResizeObserver | null = null
 
 // ── 掌握度色阶 ──
-function masteryFill(weight: number | undefined): string {
+function masteryColor(weight: number | undefined): string {
   if (weight === undefined || weight === null) return '#9CA3AF'
   if (weight < 0.4) return '#EF4444'
   if (weight < 0.6) return '#F59E0B'
@@ -35,124 +38,152 @@ function masteryFill(weight: number | undefined): string {
   return '#10B981'
 }
 
-function nodeRadius(weight: number | undefined): number {
-  if (weight === undefined || weight === null) return 16
-  return 13 + weight * 26
+function kpNodeSize(weight: number | undefined): number {
+  return weight !== undefined ? 22 + weight * 36 : 28
 }
 
-// ── 力导向布局 ──
-interface LayoutNode {
-  id: string
-  nodeType: string
-  label: string
-  weight?: number
-  examHistory?: string
-  x: number; y: number
-  vx: number; vy: number
-  fixed: boolean
-}
+// ── 数据转换 ──
+function toG6Data(data: SubgraphResponse) {
+  const nodes = data.nodes.map((n) => {
+    const isKp = n.nodeType === 'KnowledgePoint'
+    const weight = isKp && typeof n.properties?.weight === 'number' ? n.properties.weight as number : undefined
+    const label = (n.properties?.name as string) ?? (n.properties?.label as string) ?? n.id.substring(0, 8)
+    return {
+      id: n.id,
+      data: {
+        label,
+        nodeType: n.nodeType,
+        color: n.nodeType === 'Student' ? NODE_COLORS.Student : masteryColor(weight),
+        size: n.nodeType === 'Student' ? NODE_SIZES.Student : kpNodeSize(weight),
+        weight,
+        examHistory: n.properties?.examHistory,
+      },
+    }
+  })
 
-interface LayoutEdge {
-  source: string
-  target: string
-  edgeType: string
-  weight: number
-}
-
-function computeLayout(data: SubgraphResponse): { nodes: LayoutNode[]; edges: LayoutEdge[] } {
-  const nodeMap = new Map(data.nodes.map(n => [n.id, n]))
-  const nodes: LayoutNode[] = data.nodes.map((n) => ({
-    id: n.id,
-    nodeType: n.nodeType,
-    label: (n.properties?.name as string) ?? (n.properties?.label as string) ?? n.id.substring(0, 8),
-    weight: typeof n.properties?.weight === 'number' ? (n.properties.weight as number) : undefined,
-    examHistory: typeof n.properties?.examHistory === 'string' ? (n.properties.examHistory as string) : undefined,
-    x: Math.random() * (W - 100) + 50,
-    y: Math.random() * (H - 100) + 50,
-    vx: 0, vy: 0,
-    fixed: n.nodeType === 'Student',
-  }))
-
-  // Student 固定居中偏上
-  const student = nodes.find((n) => n.nodeType === 'Student')
-  if (student) { student.x = W / 2; student.y = 70 }
-
-  const edges: LayoutEdge[] = data.edges.map((e) => ({
+  const edges = data.edges.map((e, i) => ({
+    id: `e-${i}`,
     source: e.sourceNodeId,
     target: e.targetNodeId,
-    edgeType: e.edgeType,
-    weight: e.weight ?? 1.0,
+    data: {
+      type: e.edgeType,
+      color: EDGE_COLORS[e.edgeType] ?? '#9CA3AF',
+      width: e.edgeType === 'MASTERS' ? 2 + (e.weight ?? 0) * 2 : 2,
+      lineStyle: EDGE_LINE_STYLES[e.edgeType] ?? 'solid',
+      weight: e.weight,
+      label: e.edgeType === 'PREREQUISITE_OF' && e.weight != null
+        ? `依赖${e.weight.toFixed(2)}` : e.edgeType,
+    },
   }))
-
-  // 力模拟（60 次迭代）
-  const REPULSION = 3200
-  const ATTRACTION = 0.006
-  const DAMPING = 0.85
-  const CENTER_GRAVITY = 0.008
-
-  for (let iter = 0; iter < 60; iter++) {
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const dx = nodes[j].x - nodes[i].x
-        const dy = nodes[j].y - nodes[i].y
-        const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1)
-        const force = REPULSION / (dist * dist)
-        const fx = (dx / dist) * force
-        const fy = (dy / dist) * force
-        if (!nodes[i].fixed) { nodes[i].vx -= fx; nodes[i].vy -= fy }
-        if (!nodes[j].fixed) { nodes[j].vx += fx; nodes[j].vy += fy }
-      }
-    }
-    for (const e of edges) {
-      const s = nodes.find((n) => n.id === e.source)
-      const t = nodes.find((n) => n.id === e.target)
-      if (!s || !t) continue
-      const dx = t.x - s.x
-      const dy = t.y - s.y
-      const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1)
-      const force = dist * ATTRACTION
-      const fx = (dx / dist) * force
-      const fy = (dy / dist) * force
-      if (!s.fixed) { s.vx += fx; s.vy += fy }
-      if (!t.fixed) { t.vx -= fx; t.vy -= fy }
-    }
-    for (const n of nodes) {
-      if (n.fixed) continue
-      n.vx += (W / 2 - n.x) * CENTER_GRAVITY
-      n.vy += (H / 2 - n.y) * CENTER_GRAVITY
-      n.vx *= DAMPING; n.vy *= DAMPING
-      n.x += n.vx; n.y += n.vy
-      n.x = Math.max(30, Math.min(W - 30, n.x))
-      n.y = Math.max(30, Math.min(H - 30, n.y))
-    }
-  }
 
   return { nodes, edges }
 }
 
-const layout = computed(() => {
-  if (!subgraph.value || subgraph.value.nodes.length === 0) return null
-  return computeLayout(subgraph.value)
-})
+// ── G6 图创建 ──
+async function createGraph() {
+  if (!container.value || !subgraph.value) return
 
-// ── 边标签位置（PREREQUISITE_OF 边中点偏移）──
-function edgeLabelPos(sx: number, sy: number, tx: number, ty: number) {
-  const mx = (sx + tx) / 2
-  const my = (sy + ty) / 2
-  return { x: mx - 8, y: my - 6 }
+  const rect = container.value.getBoundingClientRect()
+  if (rect.width === 0 || rect.height === 0) {
+    setTimeout(() => { if (subgraph.value) createGraph() }, 100)
+    return
+  }
+
+  if (graph) { graph.destroy(); graph = null }
+
+  const g6Data = toG6Data(subgraph.value)
+
+  try {
+    graph = new Graph({
+      container: container.value,
+      width: rect.width,
+      height: rect.height,
+      data: g6Data,
+      autoFit: 'view' as const,
+      node: {
+        type: 'circle',
+        style: {
+          size: (d: any) => d.data?.size ?? 28,
+          fill: (d: any) => d.data?.color ?? '#9CA3AF',
+          stroke: '#fff',
+          lineWidth: 2,
+          labelText: (d: any) => d.data?.label ?? '',
+          labelFontSize: 11,
+          labelFill: '#374151',
+          labelPlacement: 'bottom',
+          labelOffsetY: 6,
+        },
+        state: {
+          hover: { lineWidth: 3, stroke: 'rgba(59,130,246,0.4)' },
+        },
+      },
+      edge: {
+        type: 'line',
+        style: {
+          stroke: (d: any) => d.data?.color ?? '#9CA3AF',
+          lineWidth: (d: any) => d.data?.width ?? 2,
+          opacity: 0.7,
+          endArrow: true,
+          lineDash: (d: any) => {
+            const ls = d.data?.lineStyle
+            if (ls === 'dashed') return [8, 4]
+            if (ls === 'dotted') return [2, 4]
+            return undefined
+          },
+          labelText: (d: any) => d.data?.label ?? '',
+          labelFontSize: 10,
+          labelFill: '#555',
+          labelBackground: true,
+          labelBackgroundFill: '#fff',
+          labelBackgroundOpacity: 0.8,
+          labelBackgroundPadding: [2, 4],
+        },
+      },
+      layout: {
+        type: 'd3-force',
+        animate: true,
+        nodeStrength: (d: any) => d.data?.nodeType === 'Student' ? -20000 : -6000,
+        linkDistance: 140,
+        gravity: 0.3,
+        maxIterations: 300,
+      },
+      behaviors: [
+        'drag-canvas',
+        'zoom-canvas',
+        { type: 'hover-activate', degree: 1, state: 'hover' },
+      ],
+    })
+
+    graph.on('node:click', (evt: any) => {
+      const nodeId = evt.target?.id
+      if (!nodeId) return
+      const nodeData = subgraph.value?.nodes.find((n) => n.id === nodeId)
+      if (nodeData) {
+        emit('node-click', {
+          id: nodeId,
+          label: (nodeData.properties?.name as string) ?? (nodeData.properties?.label as string) ?? nodeId.substring(0, 8),
+          weight: typeof nodeData.properties?.weight === 'number' ? nodeData.properties.weight as number : undefined,
+          examHistory: typeof nodeData.properties?.examHistory === 'string' ? nodeData.properties.examHistory as string : undefined,
+        })
+      }
+    })
+
+    await graph.render()
+  } catch (err) {
+    console.error('[DiagnosisSubgraph] G6 create failed:', err)
+    graph = null
+  }
 }
-
-let idCounter = 0
-function uid(): string { return `ds-${idCounter++}` }
 
 // ── 数据加载 ──
 async function load() {
   if (!props.taskId) return
   state.value = 'loading'
-  idCounter = 0
   try {
     subgraph.value = await getPrunedSubgraph(props.taskId)
     state.value = 'loaded'
+    await nextTick()
+    await createGraph()
   } catch (e: any) {
     state.value = 'error'
     console.error('[DiagnosisSubgraph] load failed:', props.taskId, e?.message || e)
@@ -162,21 +193,32 @@ async function load() {
 watch(() => props.taskId, (newId) => { if (newId) load() })
 onMounted(() => { if (props.taskId) load() })
 
-function handleNodeClick(ln: LayoutNode) {
-  emit('node-click', {
-    id: ln.id,
-    label: ln.label,
-    weight: ln.weight,
-    examHistory: ln.examHistory,
-  })
-}
+// ── ResizeObserver ──
+onMounted(() => {
+  if (container.value) {
+    resizeObserver = new ResizeObserver(() => {
+      if (graph && container.value) {
+        const r = container.value.getBoundingClientRect()
+        if (r.width > 0 && r.height > 0) {
+          try { graph.setSize(r.width, r.height) } catch { /* ignore */ }
+        }
+      }
+    })
+    resizeObserver.observe(container.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null }
+  if (graph) { graph.destroy(); graph = null }
+})
 
 // ── 统计 ──
 const stats = computed(() => {
-  if (!layout.value) return null
-  const kpNodes = layout.value.nodes.filter(n => n.nodeType !== 'Student')
-  const mastersEdges = layout.value.edges.filter(e => e.edgeType === 'MASTERS')
-  const prereqEdges = layout.value.edges.filter(e => e.edgeType === 'PREREQUISITE_OF')
+  if (!subgraph.value) return null
+  const kpNodes = subgraph.value.nodes.filter(n => n.nodeType === 'KnowledgePoint')
+  const mastersEdges = subgraph.value.edges.filter(e => e.edgeType === 'MASTERS')
+  const prereqEdges = subgraph.value.edges.filter(e => e.edgeType === 'PREREQUISITE_OF')
   return { kpCount: kpNodes.length, mastersCount: mastersEdges.length, prereqCount: prereqEdges.length }
 })
 </script>
@@ -194,12 +236,12 @@ const stats = computed(() => {
     </div>
 
     <!-- empty -->
-    <div v-else-if="state === 'loaded' && (!layout || layout.nodes.length === 0)" class="state-placeholder supporting" style="color: var(--color-text-tertiary)">
+    <div v-else-if="state === 'loaded' && subgraph && subgraph.nodes.length === 0" class="state-placeholder supporting" style="color: var(--color-text-tertiary)">
       暂无子图数据
     </div>
 
-    <!-- 子图 SVG -->
-    <div v-else-if="state === 'loaded' && layout" class="subgraph-wrapper">
+    <!-- G6 画布 -->
+    <div v-else-if="state === 'loaded' && subgraph" class="subgraph-wrapper">
       <!-- 统计摘要 -->
       <div v-if="stats" class="stats-bar supporting">
         <span>{{ stats.kpCount }} 个知识点</span>
@@ -209,102 +251,12 @@ const stats = computed(() => {
         <span>{{ stats.prereqCount }} 条前置依赖</span>
       </div>
 
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        :viewBox="`0 0 ${W} ${H}`"
-        width="100%"
-        height="440"
-        class="subgraph-svg"
-      >
-        <!-- 边 -->
-        <g class="edges">
-          <line
-            v-for="e in layout.edges"
-            :key="uid()"
-            :x1="layout.nodes.find(n => n.id === e.source)?.x ?? 0"
-            :y1="layout.nodes.find(n => n.id === e.source)?.y ?? 0"
-            :x2="layout.nodes.find(n => n.id === e.target)?.x ?? 0"
-            :y2="layout.nodes.find(n => n.id === e.target)?.y ?? 0"
-            :stroke="e.edgeType === 'MASTERS' ? '#9CA3AF' : '#6B7280'"
-            :stroke-width="e.edgeType === 'MASTERS' ? 1.5 + e.weight * 2 : 1.8"
-            :stroke-dasharray="e.edgeType === 'PREREQUISITE_OF' ? '5,3' : 'none'"
-            :opacity="e.edgeType === 'MASTERS' ? 0.6 : 0.8"
-          />
-          <!-- PREREQUISITE_OF 边标签（依赖强度） -->
-          <text
-            v-for="e in layout.edges.filter(ed => ed.edgeType === 'PREREQUISITE_OF')"
-            :key="'el-' + uid()"
-            :x="edgeLabelPos(
-              layout.nodes.find(n => n.id === e.source)?.x ?? 0,
-              layout.nodes.find(n => n.id === e.source)?.y ?? 0,
-              layout.nodes.find(n => n.id === e.target)?.x ?? 0,
-              layout.nodes.find(n => n.id === e.target)?.y ?? 0
-            ).x"
-            :y="edgeLabelPos(
-              layout.nodes.find(n => n.id === e.source)?.x ?? 0,
-              layout.nodes.find(n => n.id === e.source)?.y ?? 0,
-              layout.nodes.find(n => n.id === e.target)?.x ?? 0,
-              layout.nodes.find(n => n.id === e.target)?.y ?? 0
-            ).y"
-            font-size="10"
-            fill="#6B7280"
-            text-anchor="start"
-          >{{ e.weight?.toFixed(2) }}</text>
-        </g>
-
-        <!-- 节点 -->
-        <g class="nodes">
-          <g
-            v-for="ln in layout.nodes"
-            :key="ln.id"
-            class="node-group"
-            @click="handleNodeClick(ln)"
-          >
-            <!-- 外环（hover 指示） -->
-            <circle
-              :cx="ln.x" :cy="ln.y"
-              :r="nodeRadius(ln.weight) + 4"
-              fill="none" stroke="transparent" stroke-width="2"
-              class="node-ring"
-            />
-            <!-- 主节点 -->
-            <circle
-              :cx="ln.x" :cy="ln.y"
-              :r="nodeRadius(ln.weight)"
-              :fill="ln.nodeType === 'Student' ? '#3B82F6' : masteryFill(ln.weight)"
-              stroke="#fff" stroke-width="2"
-              class="node-circle"
-            />
-            <!-- Student 图标标签 -->
-            <text
-              v-if="ln.nodeType === 'Student'"
-              :x="ln.x" :y="ln.y + 5"
-              text-anchor="middle" font-size="12" fill="#fff" font-weight="600"
-            >生</text>
-            <!-- 掌握度百分比（KP 节点内） -->
-            <text
-              v-if="ln.nodeType !== 'Student' && ln.weight !== undefined"
-              :x="ln.x" :y="ln.y + 4"
-              text-anchor="middle" font-size="10" fill="#fff" font-weight="500"
-            >{{ Math.round(ln.weight * 100) }}%</text>
-            <!-- 节点名称标签 -->
-            <text
-              :x="ln.x"
-              :y="ln.y + nodeRadius(ln.weight) + 16"
-              text-anchor="middle"
-              font-family="var(--font-body)"
-              font-size="11"
-              :fill="ln.nodeType === 'Student' ? '#1D4ED8' : '#374151'"
-              font-weight="500"
-            >{{ ln.label }}</text>
-          </g>
-        </g>
-      </svg>
+      <div ref="container" class="g6-container" />
 
       <!-- 图例 -->
       <div class="legend">
         <div class="legend-section">
-          <span class="supporting" style="font-weight: 600; color: var(--color-text-secondary)">掌握度</span>
+          <span class="legend-title">掌握度</span>
           <div class="legend-item"><span class="legend-dot" style="background: #EF4444" /><span class="supporting">&lt;40%</span></div>
           <div class="legend-item"><span class="legend-dot" style="background: #F59E0B" /><span class="supporting">40-60%</span></div>
           <div class="legend-item"><span class="legend-dot" style="background: #EAB308" /><span class="supporting">60-80%</span></div>
@@ -312,9 +264,14 @@ const stats = computed(() => {
           <div class="legend-item"><span class="legend-dot" style="background: #9CA3AF" /><span class="supporting">未考查</span></div>
         </div>
         <div class="legend-section">
-          <span class="supporting" style="font-weight: 600; color: var(--color-text-secondary)">关系类型</span>
+          <span class="legend-title">关系类型</span>
           <div class="legend-item"><span class="legend-line legend-line--masters" /><span class="supporting">掌握关系</span></div>
           <div class="legend-item"><span class="legend-line legend-line--prereq" /><span class="supporting">前置依赖</span></div>
+        </div>
+        <div class="legend-section">
+          <span class="legend-title">节点类型</span>
+          <div class="legend-item"><span class="legend-dot" :style="{ background: NODE_COLORS.Student }" /><span class="supporting">学生</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background: #3B82F6" /><span class="supporting">知识点</span></div>
         </div>
       </div>
     </div>
@@ -323,7 +280,6 @@ const stats = computed(() => {
 
 <style scoped>
 .subgraph-wrapper { position: relative; }
-.subgraph-svg { display: block; }
 
 .stats-bar {
   display: flex;
@@ -336,6 +292,15 @@ const stats = computed(() => {
   justify-content: center;
 }
 .stats-sep { color: var(--color-border); }
+
+.g6-container {
+  width: 100%;
+  height: 440px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-md);
+  overflow: hidden;
+  background: var(--color-surface);
+}
 
 .state-placeholder {
   height: 440px;
@@ -357,19 +322,6 @@ const stats = computed(() => {
   50% { opacity: 1; }
 }
 
-.node-group { cursor: pointer; }
-
-.node-circle {
-  transition: stroke-width var(--duration-fast) var(--ease-out);
-}
-
-.node-ring {
-  transition: stroke var(--duration-fast) var(--ease-out);
-}
-
-.node-group:hover .node-ring { stroke: rgba(59, 130, 246, 0.3); }
-.node-group:hover .node-circle { stroke-width: 3; }
-
 /* 图例 */
 .legend {
   display: flex;
@@ -383,6 +335,15 @@ const stats = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.legend-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
 }
 
 .legend-item {
@@ -405,11 +366,10 @@ const stats = computed(() => {
   border-radius: 1px;
 }
 
-.legend-line--masters { background: #9CA3AF; opacity: 0.6; }
+.legend-line--masters { background: #EC4899; }
 
 .legend-line--prereq {
-  background: repeating-linear-gradient(90deg, #6B7280 0px, #6B7280 5px, transparent 5px, transparent 8px);
-  opacity: 0.8;
+  background: repeating-linear-gradient(90deg, #3B82F6 0px, #3B82F6 5px, transparent 5px, transparent 8px);
 }
 
 @media (prefers-reduced-motion: reduce) {
