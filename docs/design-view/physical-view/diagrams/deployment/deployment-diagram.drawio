@@ -1,9 +1,12 @@
 <mxfile host="Electron">
   <diagram name="南北向部署拓扑" id="ns-deploy">
-    <mxGraphModel dx="873" dy="570" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="950" pageHeight="1050" math="0" shadow="0">
+    <mxGraphModel dx="1222" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="950" pageHeight="1050" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="iOH4N5YkLzcFQgbqkH7O-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;movable=0;resizable=0;rotatable=0;deletable=0;editable=0;locked=1;connectable=0;" value="" vertex="1">
+          <mxGeometry height="503" width="830" x="20" y="17" as="geometry" />
+        </mxCell>
         <mxCell id="-Ra1deNe5j15Ad9GW1-m-5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="" vertex="1">
           <mxGeometry height="390" width="630" x="200" y="110" as="geometry" />
         </mxCell>
@@ -28,14 +31,6 @@
         </mxCell>
         <mxCell id="DVXYI6ighwUfrCh0QZEB-8" connectable="0" parent="Q3yiNFzIERxuicVVqRr1-8" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="HTTP" vertex="1">
           <mxGeometry relative="1" x="0.794" y="-2" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="Q3yiNFzIERxuicVVqRr1-9" edge="1" parent="1" source="Q3yiNFzIERxuicVVqRr1-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontFamily=Helvetica;fontSize=10;fontColor=default;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="mq">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="DVXYI6ighwUfrCh0QZEB-5" connectable="0" parent="Q3yiNFzIERxuicVVqRr1-9" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="AMQP" vertex="1">
-          <mxGeometry relative="1" x="0.7003" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
@@ -97,25 +92,8 @@
         <mxCell id="redis" parent="1" style="shape=cylinder3;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=1.5;fontSize=10;size=12;align=center;fontColor=#333333;" value="&lt;&lt;cache&gt;&gt;&#xa;Redis :6379" vertex="1">
           <mxGeometry height="79" width="90" x="710" y="160" as="geometry" />
         </mxCell>
-        <mxCell id="N9mak_bQy1Q3l-uHB6tz-1" edge="1" parent="1" source="mq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.75;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="Q3yiNFzIERxuicVVqRr1-4">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="DVXYI6ighwUfrCh0QZEB-4" connectable="0" parent="N9mak_bQy1Q3l-uHB6tz-1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="AMQP" vertex="1">
-          <mxGeometry relative="1" x="-0.0343" y="1" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="mq" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#FEF9E7;strokeColor=#333333;strokeWidth=1.5;fontSize=10;arcSize=5;align=center;" value="&lt;&lt;queue&gt;&gt;&#xa;RabbitMQ :5672" vertex="1">
-          <mxGeometry height="74.5" width="90" x="710" y="322" as="geometry" />
-        </mxCell>
         <mxCell id="minio" parent="1" style="shape=cylinder3;whiteSpace=wrap;fillColor=#FEF9E7;strokeColor=#333333;strokeWidth=1.5;fontSize=10;size=12;align=center;" value="&lt;&lt;storage&gt;&gt;&#xa;MinIO :9000" vertex="1">
           <mxGeometry height="79" width="90" x="520" y="398" as="geometry" />
-        </mxCell>
-        <mxCell id="sep5" edge="1" parent="1" style="endArrow=none;strokeWidth=1;strokeColor=#cccccc;dashed=1;" value="">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="20" y="625" as="sourcePoint" />
-            <mxPoint x="700" y="625" as="targetPoint" />
-          </mxGeometry>
         </mxCell>
         <mxCell id="Q3yiNFzIERxuicVVqRr1-7" edge="1" parent="1" source="Q3yiNFzIERxuicVVqRr1-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;fontFamily=Helvetica;fontSize=10;fontColor=default;startArrow=classic;startFill=1;" target="neo4j">
           <mxGeometry relative="1" as="geometry" />

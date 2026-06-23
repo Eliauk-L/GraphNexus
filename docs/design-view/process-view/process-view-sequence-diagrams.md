@@ -103,11 +103,11 @@
 
 | # | 场景 | 用例 | Story | 优先级 | 交互模式 | 进程数 |
 |---|------|------|-------|--------|---------|--------|
-| **S1** | PDF上传与图谱构建 | UC-01 | 1.1 | P0 | 异步流水线 | 7 |
-| **S2** | 成绩CSV导入触发权重更新 | UC-02+07 | 1.2+1.5 | P0 | 同步批处理 | 8 |
-| **S3** | 实体对齐审核与合并 | UC-04 | 1.3 | P0 | 同步操作 | 5 |
-| **S4** | 单学生薄弱点归因查询 | UC-10 | 2.1 | P0 | 同步编排 | 7 |
-| **S5** | LLM降级与熔断 | 横切 | — | P0 | 级联降级链 | 9 |
+| **S1** | PDF上传与图谱构建 | UC-01 | 1.1 | P0 | 手动3步流程 | 5 |
+| **S2** | 成绩CSV导入 | UC-02 | 1.2 | P1 | 同步上传→MySQL | 3 |
+| **S3** | 宽图谱全量融合 | UC-04 | 1.3 | P1 | 同步融合+回滚 | 3 |
+| **S4** | 单学生薄弱点归因查询 | UC-10 | 2.1 | P0 | 同步/异步QA | 4 |
+| **S5** | LLM降级与熔断 | 横切 | — | P1 | LlmGateway内部 | 7 |
 
 ---
 
@@ -232,7 +232,7 @@ sequenceDiagram
 
 ---
 
-## 五、S2 · 成绩CSV导入触发权重更新 (UC-02 + UC-07, Story 1.2 + 1.5)
+## 五、S2 · 成绩CSV导入 (UC-02, Story 1.2)
 
 ### 步骤1：设置交互语境
 
@@ -328,7 +328,7 @@ sequenceDiagram
 
 ---
 
-## 六、S3 · 实体对齐审核与合并 (UC-04, Story 1.3)
+## 六、S3 · 宽图谱全量融合 (UC-04, Story 1.3)
 
 ### 步骤1：设置交互语境
 
@@ -474,11 +474,11 @@ sequenceDiagram
 ### 步骤3：设置生命线
 
 ```
-教师     P2       智能查询    基础数据    图分析      智能查询    基础数据    A6.LLM
- │        │        .智能对话    .角色管理    .图剪枝      .上下文组装   .LLM网关     │
- │        │         │        │        │        │         │         │
- ║        ║         ║        ║        ║        ║         ║         ║
- ▼        ▼         ▼        ▼        ▼        ▼         ▼         ▼
+教师     P2       Nginx     智能查询    基础数据    A6
+  │        │        │        .智能对话    .LLM网关     │
+  │        │        │         │         │         │
+  ║        ║        ║         ║         ║         ║
+  ▼        ▼        ▼         ▼         ▼         ▼
 ```
 
 ### 步骤4 + 步骤5：设置消息与激活期
@@ -487,121 +487,86 @@ sequenceDiagram
 sequenceDiagram
     actor T as 教师(A2)
     participant P2 as P2:教师工作台
-    participant Dialog as 智能查询<br/>.智能对话
-    participant RoleMgr as 基础数据<br/>.角色管理
-    participant Prune as 图分析<br/>.图剪枝
-    participant CtxBuild as 智能查询<br/>.上下文组装
+    participant Nginx as L1:Nginx<br/>+ JWT网关
+    participant QuerySvc as 智能查询<br/>.智能对话
     participant LLMGW as 基础数据<br/>.LLM网关
     participant A6 as A6:LLM Service<br/>(Claude/Doubao/Deepseek)
 
-    Note over T,A6: ═══════ 步骤1: 查询输入 ═══════
+    Note over T,A6: ═══════ 同步问答: POST /query/ask ═══════
 
-    T->>+P2: 输入查询 "学生A 为什么二次函数薄弱"
-    Note right of P2: 自然语言解析 →<br/>studentId="S2024001",<br/>kpId="KP-087",<br/>taskType="归因分析"
+    T->>+P2: 输入 "初三1班李华 为什么二次函数薄弱"<br/>+ 学科="数学"
+    P2->>+Nginx: POST /api/v1/query/ask<br/>Authorization: Bearer {JWT}
+    Nginx->>Nginx: JWT 校验 + @PreAuthorize("hasRole('TEACHER')")
+    Nginx->>+QuerySvc: QueryAskRequest{question, studentName:"李华", studentNo:null, subject:"数学"}
 
-    P2->>+Dialog: queryAttribution(query: AttributionQuery{studentId, kpId, taskType}): AttributionReport
-    activate Dialog
+    Note over QuerySvc: ─── QueryService 内部处理 (前端不可见) ───
+    QuerySvc->>QuerySvc: 1. 意图识别 → STUDENT_DIAGNOSIS
+    QuerySvc->>QuerySvc: 2. 图剪枝 (Student Diagnosis Strategy) → 子图提取
+    QuerySvc->>QuerySvc: 3. 上下文组装 (序列化+Token预算控制)
 
-    Note over T,A6: ═══════ 步骤2: 权限校验 ═══════
-
-    Dialog->>+RoleMgr: checkPermission(userId: teacherId, resourceType: STUDENT, resourceId: "S2024001", action: READ): Boolean
-    activate RoleMgr
-    RoleMgr->>RoleMgr: 查询 teacherId 任教班级 → 校验 studentId 是否在该班级
-    alt 权限通过
-        RoleMgr-->>-Dialog: true
-    else 权限拒绝
-        RoleMgr-->>Dialog: false
-        Dialog-->>P2: HTTP 403 Forbidden {message:"无权访问该学生数据"}
-        deactivate Dialog
-        P2-->>T: 权限不足提示
-    end
-    deactivate RoleMgr
-
-    Note over T,A6: ═══════ 步骤3: 任务驱动剪枝 ═══════
-
-    Dialog->>+Prune: prune(targetNodeId: "S2024001", taskType: ATTRIBUTION): Subgraph
-    activate Prune
-    Prune->>Prune: loadStrategy(taskType: ATTRIBUTION)
-    Note right of Prune: 策略参数:<br/>maxHops=3, maxNeighbors=5,<br/>weightThreshold=0.3,<br/>relationFilter=[MASTERY, PREREQUISITE, SAME_AS]
-
-    Prune->>Prune: BFS expand(hops=3, maxNeighbors=5)
-    Prune->>Prune: filter(weight≥0.3) AND filter(relationType ∈ whitelist)
-
-    Prune-->>-Dialog: Subgraph{nodes:23, edges:35, strategyVersion:v2.1, generationTime:850ms}
-    deactivate Prune
-
-    Note over T,A6: ═══════ 步骤4: 上下文构建 ═══════
-
-    Dialog->>+CtxBuild: buildContext(subgraph: Subgraph, taskType: ATTRIBUTION, extraInfo: {historyTrend, docRefs}): LLMContext
-    activate CtxBuild
-    CtxBuild->>CtxBuild: serializeToJSON(subgraph) → 图谱→结构化文本
-    CtxBuild->>CtxBuild: estimateTokenCount() → 预估 6800 tokens
-    CtxBuild->>CtxBuild: trimToBudget(maxTokens=8000) → 裁剪至 6200 tokens
-    CtxBuild->>CtxBuild: mergeHistoryTrend(studentId, kpId) → 附加权重变化时间线
-    CtxBuild->>CtxBuild: mergeDocReferences(kpIds) → 附加教辅引用
-    CtxBuild-->>-Dialog: LLMContext{serializedText, tokenCount:7200, metadata:{...}}
-    deactivate CtxBuild
-
-    Note over T,A6: ═══════ 步骤5: LLM调用 ═══════
-
-    Dialog->>+LLMGW: callLLM(request: LLMCallRequest{taskType, promptTemplateId, variables, context}): LLMCallResult
-    activate LLMGW
-
-    LLMGW->>LLMGW: 1. loadPromptTemplate(taskType: ATTRIBUTION)
-    LLMGW->>LLMGW: 2. fillVariables("{{student_name}}"="张三", "{{kp_name}}"="二次函数", "{{subgraph}}"=>context)
-    LLMGW->>LLMGW: 3. routeModel(taskType) → "Claude Opus"
-
-    LLMGW->>+A6: POST /v1/messages<br/>{model:"claude-opus-4-8", messages:[{role:"user", content: renderedPrompt}]}
+    QuerySvc->>+LLMGW: chat(systemPrompt, userMessage): String
+    LLMGW->>LLMGW: 模型路由 (Claude/Doubao/Deepseek)
+    LLMGW->>+A6: POST /v1/messages<br/>{model, messages:[{role:"system", content:systemPrompt}, {role:"user", content:userMessage}]}
     activate A6
 
-    alt LLM调用成功 (延迟 30s内)
-        A6-->>-LLMGW: {content: "归因分析文本...", usage: {input_tokens:7200, output_tokens:1800}}
-        LLMGW->>LLMGW: 4. logCall(success, model="Opus", tokens=9000, latency=12s)
-        LLMGW-->>-Dialog: LLMCallResult{text:"归因分析文本", model:"Opus", tokenUsed:9000, latency:12s}
-    else LLM超时 (超过30s)
-        A6-->>LLMGW: Timeout Error
-        LLMGW->>LLMGW: degradeTo("Sonnet")
-        LLMGW->>+A6: POST /v1/messages (模型=Sonnet)
-        A6-->>-LLMGW: {content: "归因分析文本...", usage: {...}}
-        LLMGW->>LLMGW: 4. logCall(degraded, model="Sonnet", degradedFrom="Opus")
-        LLMGW-->>Dialog: LLMCallResult{text, model:"Sonnet", degraded:true, tokenUsed:8500, latency:20s}
+    alt LLM调用成功
+        A6-->>-LLMGW: {content: "Markdown诊断结论..."}
+        LLMGW-->>-QuerySvc: String (Markdown)
+    else LLM调用失败 (C0001)
+        A6-->>LLMGW: Error
+        LLMGW-->>QuerySvc: 异常 (ApiException)
+        QuerySvc-->>P2: 500 C0001 LLM API 调用失败
+        P2-->>T: 错误提示: AI服务异常，请稍后重试
     end
-    deactivate LLMGW
 
-    Note over T,A6: ═══════ 步骤6: 结构化响应 ═══════
+    QuerySvc->>QuerySvc: 4. 记录 query_task (taskId, question, answer, tokens, status=COMPLETED)
 
-    Dialog->>Dialog: parseLLMResponse(text) → 结构化提取
-    Note right of Dialog: 解析: 根因列表×3, 证据链×5,<br/>追溯路径, 置信度标注
+    QuerySvc-->>-P2: QueryAskResponse{<br/>taskId, status:"COMPLETED", answer:"# 诊断报告\n\n...",<br/>tokenUsage:{input:7200, output:1800}, subgraph:{nodes, edges}}
+    P2-->>T: 展示 Markdown 诊断报告 (MarkdownViewer渲染)
 
-    Dialog-->>-P2: AttributionReport{<br/>rootCauses: [{cause:"配方法薄弱", impact:0.78, confidence:HIGH}, ...],<br/>evidenceChain: [{dimension:"前置知识", data:"配方法权重0.42", source:"权重引擎"}, ...],<br/>tracePath: [二次函数→配方法→完全平方公式→因式分解],<br/>docRefs: ["第3次月考第8题得分0", "第12次作业得分2/10"]}
-    deactivate Dialog
+    Note over T,A6: ═══════ 智能对话: POST /query/chat (仅需自然语言) ═══════
 
-    P2-->>T: 展示归因报告<br/>(根因降序 + 多维证据链 + 追溯路径可视化)
+    T->>+P2: 输入 "为什么李华的二次函数这么差"
+    P2->>+Nginx: POST /api/v1/query/chat<br/>Authorization: Bearer {JWT}
+    Nginx->>+QuerySvc: QueryChatRequest{question:"为什么李华的二次函数这么差"}
 
-    Note over T,A6: ─── ★ 交互式下钻 (可选) ───
+    QuerySvc->>QuerySvc: LLM-first 实体提取: 学生→"李华", 知识点→"二次函数"<br/>(+ 正则 fallback)
+    Note over QuerySvc: 后续流程同 /ask: 意图→剪枝→上下文→LLM→Markdown
 
-    T->>+P2: 点击根因节点"配方法"
-    P2->>+Dialog: drillDown(reportId, targetKpId="配方法"): AttributionReport
-    activate Dialog
-    Dialog->>Prune: prune(沿前置依赖链上溯1跳, kpId="配方法")
-    Dialog->>LLMGW: callLLM(更深层链式分析Prompt)
-    LLMGW->>A6: LLM下钻请求
-    A6-->>LLMGW: 下钻分析结果
-    Dialog-->>-P2: 深层链式归因报告
-    deactivate Dialog
-    P2-->>T: 展示"配方法为什么也薄弱 → 完全平方公式未掌握"
+    QuerySvc->>+LLMGW: chat(systemPrompt, userMessage): String
+    LLMGW->>+A6: POST /v1/messages
+    A6-->>-LLMGW: {content: "..."}
+    LLMGW-->>-QuerySvc: String
+
+    QuerySvc-->>-P2: QueryAskResponse{taskId, answer, tokenUsage}
+    P2-->>T: 展示诊断报告
+
+    Note over T,A6: ═══════ 异步问答: POST /query/ask-async (长耗时场景) ═══════
+
+    T->>+P2: 复杂问题异步提交
+    P2->>+Nginx: POST /api/v1/query/ask-async
+    Nginx->>+QuerySvc: QueryAskRequest{question, studentName, studentNo, subject}
+
+    QuerySvc->>QuerySvc: 创建 taskId(UUID), status=PENDING<br/>后台异步: 意图→剪枝→LLM
+
+    QuerySvc-->>-P2: QueryAsyncResponse{taskId, status:"PENDING", createdAt}
+    P2-->>T: 任务已提交 ✓ 稍后查看结果
+
+    Note over T: 前端轮询 GET /query/result/{taskId}<br/>PENDING → PROCESSING → COMPLETED(返回Markdown)<br/>或 FAILED(返回错误)
+
+    Note over T,P2: ─── 历史与导出 ───
+    Note over P2: GET /query/history: 分页查询历史诊断记录<br/>GET /query/history/{taskId}/export: 下载HTML报告<br/>DELETE /query/history/{taskId}: 删除记录
 ```
 
 ### 步骤6：设置约束与条件
 
 | 约束类型 | 内容 |
 |---------|------|
-| **时间约束** | 端到端 P95 < 15s；权限校验 < 50ms；剪枝 < 2s；LLM调用 < 30s (超时重试1次)；LLM降级总超时 < 60s |
-| **条件分支** | checkPermission=false→403；subgraph.isEmpty→提示数据不足；LLM超时→降级模型；全部模型不可用→断路器返回错误 |
-| **循环约束** | 下钻为可选操作，每次上溯1跳（非循环） |
-| **状态不变式** | AttributionReport 必须包含 ≥1 条根因；证据链中每条证据必须有来源引用 |
-| **并发约束** | 查询为只读操作，无并发冲突 |
-| **安全约束** | 教师只能查询任教班级的学生；学生ID不暴露于查询日志中 |
+| **时间约束** | 同步 ask/chat: P95 < 30s（含 LLM 等待）；异步 ask-async: taskId 返回 < 100ms，前端轮询间隔 1-2s |
+| **角色约束** | @PreAuthorize("hasRole('TEACHER')") — 仅教师可调用全部 query 端点 |
+| **条件分支** | chat: LLM-first 实体提取 → 正则 fallback；参数缺失→A0002；意图无法识别→A0019；同名 Student 冲突→A0020 |
+| **状态流转** | 异步: PENDING → PROCESSING → COMPLETED / FAILED |
+| **并发约束** | 查询为只读操作，无并发冲突；同一 taskId 幂等查询 |
 
 ---
 
@@ -614,7 +579,9 @@ sequenceDiagram
 | **所属系统** | GraphNexus |
 | **所属用例** | 横切关注点 — 所有依赖 LLM 的用例（UC-10/UC-16/UC-22） |
 | **用例脚本** | **降级脚本**：Opus配额不足→降级Sonnet；Opus超时→降级Sonnet→Sonnet失败→降级Haiku→全部失败→断路器熔断 |
-| **涉及类/服务** | 基础数据.LLM网关(原M5.LLMGatewayService)、智能查询.配置管理(原M5.QuotaManager + M5.CircuitBreaker)、L4.Redis(缓存)、横切.通知(原M7.NotificationService)、A6.LLM Service(Claude/Doubao/Deepseek等多Provider) |
+| **涉及类/服务** | 基础数据.LLM网关(原LlmGateway: chat(systemPrompt, userMessage) → String，内部含多Provider路由与降级)、A6.LLM Service(Claude/Doubao/Deepseek) |
+
+> **注意**：当前实现中 LlmGateway 接口暴露为单一 `chat(systemPrompt, userMessage)` 方法。S5 时序图中展示的多层降级链（缓存→配额→断路器→多模型级联）为 LlmGateway 内部设计行为，API 层面不可见。当前实现通过 LlmController 提供调试接口：`POST /llm/ping`（连通性测试）和 `POST /llm/debug`（自定义 Prompt 调试），仅 ADMIN/OPS_STAFF 可访问。
 | **前置条件** | 调用方(M6/M3)已调用 callLLM；模型配置和配额策略已设置 |
 | **后置条件(成功)** | 返回 LLM 响应（可能来自降级模型） |
 | **后置条件(失败)** | 断路器熔断，返回错误/降级响应 |
@@ -623,14 +590,12 @@ sequenceDiagram
 
 | 对象 | 角色定位 | 职责 |
 |------|---------|------|
-| **调用方(智能查询/文档处理)** | 请求发起者 | 发起 LLM 调用请求 |
-| **基础数据.LLM网关** | 控制对象（L2 应用层·基础数据） | 降级链编排、模型路由 |
-| **L4.Redis** | 缓存对象（L3 基础设施层） | 幂等请求去重缓存(TTL 5min) |
-| **智能查询.配置管理(Quota)** | 控制对象（L2 应用层·智能查询） | 配额检查、消耗计数 |
-| **智能查询.配置管理(Circuit)** | 控制对象（L2 应用层·智能查询） | 故障计数、断路器状态管理 |
-| **A6.LLM Service** | 外部系统 | 外部LLM API（Claude/Doubao/Deepseek等多Provider，按模型能力分层路由） |
-| **横切.通知** | 横切对象 | 告警通知发送 |
-| **L4.日志DB(MySQL)** | 持久化对象（L3 基础设施层） | 调用日志记录 |
+| **调用方(智能查询/文档处理)** | 请求发起者 | 调用 LlmGateway.chat(systemPrompt, userMessage) |
+| **基础数据.LLM网关** | 控制对象（L2 应用层·基础数据） | `chat()` 接口; 内部: 多Provider路由(Claude/Doubao/Deepseek) + 降级 + 配额 + 断路器 |
+| **A6.LLM Service** | 外部系统 | 外部LLM API（Claude/Doubao/Deepseek等多Provider） |
+| **L4.日志(MySQL)** | 持久化对象（L3 基础设施层） | LLM 调用日志记录 |
+
+> **注意**：以下 S5 时序图展示 LlmGateway 内部设计的完整降级熔断逻辑（缓存→配额→断路器→多模型级联）。当前 API 层面 `LlmGateway.chat()` 已封装这些步骤，外部调用方不可见内部降级细节。
 
 ### 步骤3：设置生命线
 
@@ -802,27 +767,27 @@ sequenceDiagram
 
 ### 9.1 进程特征对比
 
-| 维度 | S1 PDF上传 | S2 CSV导入 | S3 实体对齐 | S4 归因查询 | S5 LLM降级 |
+| 维度 | S1 PDF上传 | S2 CSV导入 | S3 宽图谱融合 | S4 归因查询 | S5 LLM降级 |
 |------|----------|----------|-----------|----------|----------|
-| **进程数** | 7 | 8 | 5 | 7 | 9 |
-| **交互模式** | 异步流水线 | 同步批处理 | 同步事务 | 同步编排 | 级联降级 |
-| **用户等待** | 秒级返回 | < 30s | < 1s | < 15s | 透明 |
-| **通信方式** | MQ(异步) | HTTP(同步) | HTTP(同步) | HTTP(同步) | HTTP(同步) |
-| **事务边界** | 消息消费→DB | 单行独立事务 | 单对事务 | 无(只读) | 无 |
-| **故障补偿** | MQ重试 | 成功行保留 | 快照回滚 | 降级模型 | 断路器 |
-| **幂等性** | docId去重 | eventId去重 | pairId锁 | 天然幂等 | 缓存去重 |
-| **瓶颈资源** | Pipeline Worker | Neo4j写入 | Neo4j事务 | LLM API | LLM API |
+| **进程数** | 5 | 3 | 3 | 4 | 7 |
+| **交互模式** | 手动3步流程 | 同步上传→MySQL | 同步融合+回滚 | 同步/异步QA | 内部降级链 |
+| **用户等待** | 秒级(上传) → 分钟级(解析) | < 10s | < 30s | < 30s (同步) | 透明 |
+| **通信方式** | HTTP(同步) | HTTP(同步) | HTTP(同步) | HTTP(同步) | HTTP(同步) |
+| **事务边界** | 单API调用 | 逐行INSERT | 全量融合事务 | 无(只读) | 无 |
+| **故障补偿** | 状态标记(PARSE_FAILED) | 异常行跳过 | 融合日志回滚 | 错误码+LLM降级 | 断路器 |
+| **幂等性** | 同MD5冲突(409) | examNo去重 | 融合并发锁(409) | 天然幂等 | 内部缓存(设计) |
+| **瓶颈资源** | MinerU解析 | MySQL写入 | Neo4j FuzzyMatch | LLM API | LLM API |
 
 ### 9.2 MVP 需求覆盖验证
 
 | MVP Story | 用例 | 时序图 | 覆盖度 |
 |-----------|------|--------|--------|
-| Story 1.1: PDF上传 | UC-01 | S1 | ✅ 全流程覆盖 |
-| Story 1.2: 学生+成绩导入 | UC-02 | S2 | ✅ 含前置链传播 |
-| Story 1.3: 实体对齐审核 | UC-04 | S3 | ✅ 含回滚路径 |
-| Story 1.4: 剪枝策略配置 | UC-06 | S4(剪枝加载) | ✅ 策略加载在S4中体现 |
-| Story 1.5: 权重规则配置 | UC-07 | S2(规则匹配) | ✅ 规则匹配+传播在S2中体现 |
-| Story 2.1: 归因查询 | UC-10 | S4 + S5 | ✅ 核心价值场景 + 降级 |
+| Story 1.1: PDF上传 | UC-01 | S1 | ✅ 手动3步流程覆盖 |
+| Story 1.2: 学生+成绩导入 | UC-02 | S2 | ⚠️ MVP版: CSV→MySQL（权重链预留） |
+| Story 1.3: 实体对齐 | UC-04 | S3 | ⚠️ MVP版: 自动融合+回滚（逐对审核预留） |
+| Story 1.4: 剪枝策略配置 | UC-06 | S4(内部) | ✅ QueryService内部剪枝 |
+| Story 1.5: 权重规则配置 | UC-07 | — | 🔲 MVP阶段未在API层体现 |
+| Story 2.1: 归因查询 | UC-10 | S4 | ✅ 核心场景 /query/ask+chat
 
 ---
 

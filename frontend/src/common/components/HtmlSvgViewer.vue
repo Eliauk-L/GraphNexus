@@ -123,11 +123,16 @@ const sanitizedHtml = computed(() => {
 }
 
 .html-svg-viewer :deep(svg) {
+  display: block;
   max-width: 100%;
   height: auto;
-  display: block;
   margin: var(--spacing-md) 0;
-  overflow-x: auto;
+  overflow: visible;
+}
+
+.html-svg-viewer :deep(svg text) {
+  /* 防止 SVG 文字被 viewBox 裁剪 */
+  overflow: visible;
 }
 
 .html-svg-viewer :deep(code) {
