@@ -2,6 +2,7 @@ package com.graphnexus.api.ops.controller;
 
 import com.graphnexus.api.ops.dto.OpsTrendRequest;
 import com.graphnexus.application.ops.stats.service.OpsStatsService;
+import com.graphnexus.application.ops.snapshot.service.SnapshotService;
 import com.graphnexus.common.ApiResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ import java.util.List;
 public class OpsStatsController {
 
     private final OpsStatsService opsStatsService;
+    private final SnapshotService snapshotService;
 
     /** 运营仪表盘摘要数据（实时） */
     @GetMapping("/summary")
@@ -44,5 +46,12 @@ public class OpsStatsController {
     @GetMapping("/subjects")
     public ApiResult<List<String>> getSubjects() {
         return ApiResult.success(opsStatsService.getSubjects());
+    }
+
+    /** 手动触发统计快照 */
+    @PostMapping("/snapshot/trigger")
+    public ApiResult<String> triggerSnapshot() {
+        snapshotService.takeDailySnapshot();
+        return ApiResult.success("快照采集已触发");
     }
 }

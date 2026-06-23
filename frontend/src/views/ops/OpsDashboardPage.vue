@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useOpsStore } from '@/stores/opsStore'
+import { opsApi } from '@/api/ops'
 import UsageStatsPanel from './components/UsageStatsPanel.vue'
 import DocumentStatsPanel from './components/DocumentStatsPanel.vue'
 import GraphStatsPanel from './components/GraphStatsPanel.vue'
@@ -11,6 +12,13 @@ import { CHART_COLORS } from '@/common/components/chartTheme'
 import { NButtonGroup, NButton, NTag, NAlert } from 'naive-ui'
 
 const store = useOpsStore()
+const snapshotTriggering = ref(false)
+
+async function triggerSnapshot() {
+  snapshotTriggering.value = true
+  try { await opsApi.triggerSnapshot() }
+  finally { snapshotTriggering.value = false }
+}
 
 onMounted(() => {
   store.fetchSummary()
@@ -94,9 +102,12 @@ const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-di
     <section class="stats-section">
       <div class="section-header">
         <h2 class="headline" style="margin: 0">历史趋势</h2>
-        <NTag size="tiny" :bordered="true" style="border-color: var(--color-border); color: var(--color-text-tertiary)">
-          基于快照数据
-        </NTag>
+        <div style="display:flex;align-items:center;gap:8px">
+          <NTag size="tiny" :bordered="true" style="border-color: var(--color-border); color: var(--color-text-tertiary)">
+            基于快照数据
+          </NTag>
+          <NButton size="tiny" :loading="snapshotTriggering" @click="triggerSnapshot">采集快照</NButton>
+        </div>
       </div>
       <div class="chart-row">
         <OpsChart title="活跃用户数趋势" :option="trendOption('active_users')" :loading="store.trendLoading" height="300px" />

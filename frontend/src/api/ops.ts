@@ -58,4 +58,8 @@ export const opsApi = {
   getSubjects(): Promise<string[]> {
     return client.get('/ops/stats/subjects')
   },
+
+  triggerSnapshot(): Promise<string> {
+    return client.post('/ops/stats/snapshot/trigger')
+  },
 }
