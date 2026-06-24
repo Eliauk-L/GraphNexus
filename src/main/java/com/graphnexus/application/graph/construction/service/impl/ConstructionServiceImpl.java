@@ -20,7 +20,6 @@ import com.graphnexus.infrastructure.neo4j.node.GraphNode;
 import com.graphnexus.infrastructure.neo4j.node.KnowledgePointNode;
 import com.graphnexus.infrastructure.neo4j.node.SubjectNode;
 import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
-import com.graphnexus.infrastructure.neo4j.repository.QueryGraphRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -62,7 +61,6 @@ public class ConstructionServiceImpl implements ConstructionService {
     private final TextbookRepository textbookRepository;
     private final ExtractionService extractionService;
     private final ConstructionGraphRepository constructionGraphRepository;
-    private final QueryGraphRepository queryGraphRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PlatformTransactionManager txManager;
     private final Neo4jTransactionManager neo4jTransactionManager;
@@ -267,7 +265,7 @@ public class ConstructionServiceImpl implements ConstructionService {
 
     @Override
     public List<String> listSubjects() {
-        return queryGraphRepository.findDistinctSubjects();
+        return textbookRepository.findDistinctSubjects();
     }
 
     @Override

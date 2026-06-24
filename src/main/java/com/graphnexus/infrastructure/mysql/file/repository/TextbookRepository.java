@@ -56,4 +56,8 @@ public interface TextbookRepository extends JpaRepository<TextbookDO, Long> {
     /** 按学科分组统计文档数（排除 DELETING 状态）。 */
     @Query("SELECT d.subject, COUNT(d) FROM TextbookDO d WHERE d.status <> 'DELETING' GROUP BY d.subject ORDER BY COUNT(d) DESC")
     List<Object[]> countGroupBySubject();
+
+    /** 查询所有不重复的学科（从 document 表，排除 DELETING）。 */
+    @Query("SELECT DISTINCT d.subject FROM TextbookDO d WHERE d.status <> 'DELETING' AND d.subject IS NOT NULL ORDER BY d.subject")
+    List<String> findDistinctSubjects();
 }
