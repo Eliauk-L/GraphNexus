@@ -121,7 +121,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="grade-page">
     <div class="page-header">
       <h1 class="headline">学生成绩管理</h1>
       <NSpace>
@@ -228,6 +228,13 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.grade-page {
+  background: var(--color-surface);
+  border-radius: var(--rounded-md);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-border);
+}
+
 .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--spacing-lg); }
 .search-bar { display:flex; align-items:center; gap:var(--spacing-sm); margin-bottom:var(--spacing-md); flex-wrap:wrap; }
 .upload-modal { padding:var(--spacing-md); }
