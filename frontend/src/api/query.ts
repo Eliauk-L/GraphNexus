@@ -39,8 +39,15 @@ export function deleteHistory(taskId: string): Promise<string> {
 
 /** 导出单条诊断报告（HTML 格式，返回 Blob） */
 export async function exportSingle(taskId: string): Promise<Blob> {
-  const resp = await client.get(`/query/history/${taskId}/export`, {
-    responseType: 'blob',
-  })
-  return resp as unknown as Blob
+  const token = localStorage.getItem('accessToken')
+  const headers: Record<string, string> = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  const resp = await fetch(`/api/v1/query/history/${taskId}/export`, { headers })
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '')
+    throw new Error(text || `导出失败 (HTTP ${resp.status})`)
+  }
+  return await resp.blob()
 }
