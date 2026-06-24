@@ -30,13 +30,13 @@ public class SystemHealthServiceImpl implements SystemHealthService {
     private final List<HealthIndicator> healthIndicators;
     private final MeterRegistry meterRegistry;
 
-    /** 仅展示这4个组件，类名→显示名映射 */
+    /** 仅展示这4个组件，类名关键词→显示名映射 */
     private static final Map<String, String> COMPONENT_NAMES = new LinkedHashMap<>();
     static {
-        COMPONENT_NAMES.put("DataSourceHealthIndicator", "MySQL");
-        COMPONENT_NAMES.put("Neo4jHealthIndicator", "Neo4j");
-        COMPONENT_NAMES.put("RedisHealthIndicator", "Redis");
-        COMPONENT_NAMES.put("MinIOHealthIndicator", "MinIO");
+        COMPONENT_NAMES.put("DataSource", "MySQL");
+        COMPONENT_NAMES.put("Neo4j", "Neo4j");
+        COMPONENT_NAMES.put("Redis", "Redis");
+        COMPONENT_NAMES.put("MinIO", "MinIO");
     }
 
     @Override
@@ -45,7 +45,7 @@ public class SystemHealthServiceImpl implements SystemHealthService {
 
         for (HealthIndicator indicator : healthIndicators) {
             String className = indicator.getClass().getSimpleName();
-            String displayName = COMPONENT_NAMES.get(className);
+            String displayName = findDisplayName(className);
             if (displayName == null) {
                 continue; // 过滤 DiskSpace / Ping 等无关组件
             }
@@ -90,6 +90,19 @@ public class SystemHealthServiceImpl implements SystemHealthService {
                 .threadCount((int) safeGaugeValue("jvm.threads.live"))
                 .gcCount(safeTimerCount("jvm.gc.pause"))
                 .build();
+    }
+
+    /**
+     * 从类名中匹配已知组件关键词，返回显示名。
+     * 使用 contains 匹配，兼容 Spring CGLIB 代理后缀（如 DataSourceHealthIndicator$$SpringCGLIB$$0）。
+     */
+    private String findDisplayName(String className) {
+        for (Map.Entry<String, String> entry : COMPONENT_NAMES.entrySet()) {
+            if (className.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     private long safeGaugeValue(String name) {
