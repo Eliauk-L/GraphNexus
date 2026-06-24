@@ -9,7 +9,9 @@ import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 系统健康业务实现。
@@ -28,16 +30,29 @@ public class SystemHealthServiceImpl implements SystemHealthService {
     private final List<HealthIndicator> healthIndicators;
     private final MeterRegistry meterRegistry;
 
+    /** 仅展示这4个组件，类名→显示名映射 */
+    private static final Map<String, String> COMPONENT_NAMES = new LinkedHashMap<>();
+    static {
+        COMPONENT_NAMES.put("DataSourceHealthIndicator", "MySQL");
+        COMPONENT_NAMES.put("Neo4jHealthIndicator", "Neo4j");
+        COMPONENT_NAMES.put("RedisHealthIndicator", "Redis");
+        COMPONENT_NAMES.put("MinIOHealthIndicator", "MinIO");
+    }
+
     @Override
     public SystemHealthVO getSystemHealth() {
         List<SystemHealthVO.ComponentHealth> components = new ArrayList<>();
 
         for (HealthIndicator indicator : healthIndicators) {
-            String name = indicator.getClass().getSimpleName().replace("HealthIndicator", "");
+            String className = indicator.getClass().getSimpleName();
+            String displayName = COMPONENT_NAMES.get(className);
+            if (displayName == null) {
+                continue; // 过滤 DiskSpace / Ping 等无关组件
+            }
             try {
                 var health = indicator.health();
                 var builder = SystemHealthVO.ComponentHealth.builder()
-                        .name(name)
+                        .name(displayName)
                         .status(health.getStatus().getCode());
 
                 if (health.getDetails() != null) {
@@ -52,9 +67,9 @@ public class SystemHealthServiceImpl implements SystemHealthService {
                 }
                 components.add(builder.build());
             } catch (Exception e) {
-                log.warn("{} 健康检查异常: {}", name, e.getMessage());
+                log.warn("{} 健康检查异常: {}", displayName, e.getMessage());
                 components.add(SystemHealthVO.ComponentHealth.builder()
-                        .name(name)
+                        .name(displayName)
                         .status("DOWN")
                         .error(e.getMessage())
                         .build());
