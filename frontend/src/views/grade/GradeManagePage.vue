@@ -229,10 +229,11 @@ onMounted(() => {
 
 <style scoped>
 .grade-page {
-  background: var(--color-surface);
+  background: #fff;
   border-radius: var(--rounded-md);
   padding: var(--spacing-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid oklch(0.88 0.005 95);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--spacing-lg); }
