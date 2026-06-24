@@ -77,6 +77,8 @@ const docOptions = computed(() =>
 
 async function handleDocSelect(docId: number | null) {
   if (docId == null) {
+    selectedDocId.value = null
+    selectedNode.value = null
     store.clearGraph()
     metrics.examFrequencyData.value = []
     return
