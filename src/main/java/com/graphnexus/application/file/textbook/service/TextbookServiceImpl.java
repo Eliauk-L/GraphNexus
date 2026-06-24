@@ -16,6 +16,7 @@ import com.graphnexus.infrastructure.mysql.file.repository.TextbookRepository;
 import com.graphnexus.infrastructure.mysql.file.entity.FileStatus;
 import com.graphnexus.infrastructure.mysql.ops.entity.OperationType;
 import com.graphnexus.infrastructure.storage.FileStorageService;
+import com.graphnexus.infrastructure.neo4j.repository.ConstructionGraphRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,6 +33,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 教材业务服务实现 — 事件驱动，解析完成后发布 {@link TextbookParsedEvent}。
@@ -63,6 +66,7 @@ public class TextbookServiceImpl implements TextbookService {
     private final FileParserRegistry fileParserRegistry;
     private final ApplicationEventPublisher eventPublisher;
     private final PlatformTransactionManager txManager;
+    private final ConstructionGraphRepository constructionGraphRepository;
 
     // ======================== 上传（委托，自管理事务） ========================
 
@@ -224,6 +228,20 @@ public class TextbookServiceImpl implements TextbookService {
 
     @Override
     public void deleteTextBook(Long id) {
+        // ===== 阶段 0：校验 — 文档知识点是否关联考试（ADR-028 规则 1 前检查）=====
+
+        String neo4jDocId = String.valueOf(id);
+        List<Map<String, Object>> linkedExams = constructionGraphRepository
+                .findExamsLinkedToDocument(neo4jDocId);
+        if (!linkedExams.isEmpty()) {
+            String examList = linkedExams.stream()
+                    .map(row -> row.get("examNo") + "(" + row.get("examName") + ")")
+                    .collect(Collectors.joining("、"));
+            throw new BusinessException(ErrorCode.A0035,
+                    "该文档的知识点已关联以下考试：" + examList
+                    + "。请先删除对应考试记录后再删除文档。");
+        }
+
         // ===== 阶段 1：短事务 — 状态→DELETING（ADR-028 规则 1）=====
 
         TransactionTemplate tx = new TransactionTemplate(txManager);

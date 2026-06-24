@@ -237,6 +237,27 @@ public class ConstructionGraphRepository {
         return deletedCount;
     }
 
+    /**
+     * 删除孤点 StudentNode — 仅当该学生没有任何 ATTENDED 关系时才删除。
+     *
+     * <p>用于考试级联删除后清理：某学生所有考试都被删 → MySQL 无记录 → 删除 Neo4j 孤点。</p>
+     *
+     * @param studentNo 学号
+     * @return 删除的节点数（0 表示仍有关系未删除）
+     */
+    public int deleteOrphanStudent(String studentNo) {
+        var summary = neo4jClient.query(
+                "MATCH (s:Student {studentNo: $studentNo}) "
+              + "WHERE NOT (s)-[:ATTENDED]->(:Exam) "
+              + "DETACH DELETE s"
+        ).bindAll(Map.of("studentNo", studentNo)).run();
+        int deletedCount = summary.counters().nodesDeleted();
+        if (deletedCount > 0) {
+            log.debug("已删除孤点 StudentNode: studentNo={}", studentNo);
+        }
+        return deletedCount;
+    }
+
     // ======================== 全量图谱查询 ========================
 
     /**
@@ -497,6 +518,28 @@ public class ConstructionGraphRepository {
         } catch (Exception e) {
             log.warn("按 documentId={} 查询考试频次失败: {}", documentId, e.getMessage());
             return Collections.emptyMap();
+        }
+    }
+
+    /**
+     * 查询文档关联的知识点是否已被考试引用。
+     *
+     * <p>通过 {@code EXTRACTS → ALIGNED_TO → TESTED} 路径，
+     * 查找所有与文档知识点关联的考试。用于删除前的考试关联校验。</p>
+     *
+     * @param documentId 文档 ID
+     * @return 关联的考试编号和名称列表（空列表表示无关联）
+     */
+    public List<Map<String, Object>> findExamsLinkedToDocument(String documentId) {
+        try {
+            return new ArrayList<>(neo4jClient.query(
+                    "MATCH (d {documentId: $docId})-[:EXTRACTS]->(:Entity)-[:ALIGNED_TO]->(kp:KnowledgePoint) " +
+                    "MATCH (e:Exam)-[:TESTED]->(kp) " +
+                    "RETURN DISTINCT e.examNo AS examNo, e.name AS examName"
+            ).bindAll(Map.of("docId", documentId)).fetch().all());
+        } catch (Exception e) {
+            log.warn("查询文档关联考试失败: documentId={}, {}", documentId, e.getMessage());
+            return Collections.emptyList();
         }
     }
 
