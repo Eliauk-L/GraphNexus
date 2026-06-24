@@ -583,18 +583,25 @@ public class ConstructionGraphRepository {
      * 查找已有 SubjectNode，若无则创建（幂等）。
      */
     public SubjectNode findOrCreateSubject(String name) {
+        String id = UUID.nameUUIDFromBytes(("SUBJECT:" + name).getBytes()).toString();
+
+        String cypher = "MERGE (s:Subject {name: $name}) "
+                + "ON CREATE SET s.id = $id, s.nodeType = 'Subject' "
+                + "RETURN s.id AS id";
+
         try {
-            var rows = neo4jClient.query(
-                    "MATCH (s:Subject {name: $name}) RETURN s.id AS id"
-            ).bindAll(Map.of("name", name)).fetch().all();
+            var rows = neo4jClient.query(cypher).bindAll(Map.of(
+                    "name", name, "id", id
+            )).fetch().all();
             if (!rows.isEmpty()) {
-                SubjectNode existing = new SubjectNode(name);
-                existing.setId((String) rows.iterator().next().get("id"));
-                return existing;
+                SubjectNode node = new SubjectNode(name);
+                node.setId((String) rows.iterator().next().get("id"));
+                return node;
             }
         } catch (Exception e) {
-            log.debug("查找 Subject 失败，将创建新节点: name={}", name);
+            log.warn("MERGE Subject 失败: name={}", name, e);
         }
+        // 兜底：直接 save（极低概率）
         return save(new SubjectNode(name));
     }
 
