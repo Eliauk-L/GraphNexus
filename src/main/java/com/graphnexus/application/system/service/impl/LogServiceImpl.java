@@ -55,6 +55,7 @@ public class LogServiceImpl implements LogService {
         try (Stream<Path> stream = Files.list(logDir)) {
             return stream
                     .filter(Files::isRegularFile)
+                    .filter(p -> p.getFileName().toString().endsWith(".log"))
                     .map(this::toLogFileVO)
                     .sorted(Comparator.comparing(LogFileVO::getLastModified).reversed())
                     .collect(Collectors.toList());
