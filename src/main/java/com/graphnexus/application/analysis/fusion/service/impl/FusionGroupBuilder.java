@@ -63,6 +63,18 @@ public class FusionGroupBuilder {
             }
         }
 
+        // 子序列 pass：短名全部字符按序出现在长名中 + 长度比 ≥ 65% → 必然合并
+        // 处理 "矩阵概念" ↔ "矩阵基本概念" 这类插入修饰词的同义 KP
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                String na = candidates.get(i).name();
+                String nb = candidates.get(j).name();
+                if (na != null && nb != null && isSubsequenceMerge(na.trim(), nb.trim())) {
+                    union(parent, i, j);
+                }
+            }
+        }
+
         // FuzzyMatch pass：对未在前置 pass 中合并的 KP 做模糊匹配
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
@@ -164,5 +176,25 @@ public class FusionGroupBuilder {
     private void union(int[] parent, int a, int b) {
         int ra = find(parent, a), rb = find(parent, b);
         if (ra != rb) parent[ra] = rb;
+    }
+
+    /**
+     * 子序列合并判定：短名的全部字符是否按序出现在长名中，且长度比 ≥ 65%。
+     *
+     * <p>处理 "矩阵概念" ↔ "矩阵基本概念" 这类在中间插入修饰词的同义 KP。
+     * 约束长度比避免 "函数" ⊂ "二次函数"(50%) 误合并。</p>
+     */
+    private boolean isSubsequenceMerge(String a, String b) {
+        if (a.isEmpty() || b.isEmpty() || a.equals(b)) return false;
+        String shorter = a.length() <= b.length() ? a : b;
+        String longer  = a.length() >  b.length() ? a : b;
+        // 长度比约束：短名至少占长名的 65%
+        if ((double) shorter.length() / longer.length() < 0.65) return false;
+        // 子序列判定
+        int si = 0;
+        for (int li = 0; li < longer.length() && si < shorter.length(); li++) {
+            if (shorter.charAt(si) == longer.charAt(li)) si++;
+        }
+        return si == shorter.length();
     }
 }

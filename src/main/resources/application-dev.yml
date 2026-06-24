@@ -68,8 +68,8 @@ spring:
       api-key: ${LLM_API_KEY:}
       chat:
         options:
-          model: deepseek-v4-flash
-          temperature: 0.3
+          model: qwen3.6-plus
+          temperature: 0
           max-tokens: -1
 
     # ---------------------------------------------------------------------------
@@ -104,7 +104,7 @@ minio:
 fusion:
   kp-matching:
     strategy: fuzzy             # fuzzy（模糊匹配）/ exact（精确匹配）/ vector-similarity（未来）
-    threshold: 0.85             # 融合相似度阈值
+    threshold: 0.75             # 融合相似度阈值（含子序列匹配pass兜底）
   weight:
     strategy: time-decay        # time-decay（时间衰减）/ simple-average（简单平均）/ ewma（未来）
 
