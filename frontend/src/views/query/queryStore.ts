@@ -182,9 +182,22 @@ export const useQueryStore = defineStore('query', () => {
   }
 
   async function downloadSingleExport(taskId: string) {
-    const blob = await exportSingle(taskId)
-    const shortId = taskId.length > 8 ? taskId.substring(0, 8) : taskId
-    createDownloadLink(blob, `diagnosis-${shortId}.html`)
+    try {
+      const blob = await exportSingle(taskId)
+      // 检测是否为错误响应（后端返回 JSON 错误而非文件）
+      if (blob.type.includes('json') || blob.type.includes('html')) {
+        const text = await blob.text()
+        if (text.startsWith('{') || text.startsWith('<!DOCTYPE')) {
+          console.error('[export] 导出失败，服务器返回错误:', text)
+          throw new Error('导出失败，请稍后重试')
+        }
+      }
+      const shortId = taskId.length > 8 ? taskId.substring(0, 8) : taskId
+      createDownloadLink(blob, `diagnosis-${shortId}.html`)
+    } catch (e: any) {
+      console.error('[export] 导出异常:', e)
+      throw e
+    }
   }
 
   async function deleteHistoryRecord(taskId: string) {
