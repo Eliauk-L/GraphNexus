@@ -145,6 +145,7 @@ function removeFile() {
 <style scoped>
 .upload-modal {
   padding: var(--spacing-md);
+  background: #fff;
 }
 
 .field {

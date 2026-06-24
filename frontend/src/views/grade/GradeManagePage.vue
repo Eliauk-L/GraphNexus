@@ -121,7 +121,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="grade-page">
+  <div>
     <div class="page-header">
       <h1 class="headline">学生成绩管理</h1>
       <NSpace>
@@ -228,17 +228,9 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.grade-page {
-  background: #fff;
-  border-radius: var(--rounded-md);
-  padding: var(--spacing-lg);
-  border: 1px solid oklch(0.88 0.005 95);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
 .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--spacing-lg); }
 .search-bar { display:flex; align-items:center; gap:var(--spacing-sm); margin-bottom:var(--spacing-md); flex-wrap:wrap; }
-.upload-modal { padding:var(--spacing-md); }
+.upload-modal { padding:var(--spacing-md); background: #fff; }
 .field { margin-bottom:var(--spacing-md); }
 .field .label { display:block; margin-bottom:4px; font-size:0.75rem; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; }
 .upload-zone {
@@ -246,12 +238,13 @@ onMounted(() => {
   padding:var(--spacing-2xl) var(--spacing-xl);
   border:2px dashed var(--color-border); border-radius:var(--rounded-md);
   cursor:pointer; transition:border-color var(--duration-fast) var(--ease-out);
+  background: #fff;
 }
 .upload-zone:hover { border-color:var(--color-border-focus); }
 .file-selected { padding:var(--spacing-md); border:1px solid var(--color-border); border-radius:var(--rounded-md); }
 .modal-footer { margin-top:var(--spacing-lg); padding-top:var(--spacing-md); border-top:1px solid var(--color-border); }
 
-.manage-modal { padding: var(--spacing-md); }
+.manage-modal { padding: var(--spacing-md); background: #fff; }
 .manage-search { display: flex; margin-bottom: var(--spacing-md); }
 .manage-list {
   display: flex; flex-direction: column; gap: var(--spacing-sm);

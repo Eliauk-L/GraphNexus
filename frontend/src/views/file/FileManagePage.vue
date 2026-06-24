@@ -134,7 +134,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="file-page">
+  <div>
     <div class="page-header">
       <h1 class="headline">教材管理</h1>
       <NSpace align="center">
@@ -179,14 +179,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.file-page {
-  background: #fff;
-  border-radius: var(--rounded-md);
-  padding: var(--spacing-lg);
-  border: 1px solid oklch(0.88 0.005 95);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
 .page-header {
   display: flex;
   justify-content: space-between;
