@@ -49,6 +49,9 @@ public class TextbookVO {
     @Schema(description = "文件类型（PDF/TXT）", example = "PDF")
     private String fileType;
 
+    @Schema(description = "失败原因（处理失败时填充）", example = "LLM抽取失败: read timeout")
+    private String failReason;
+
     @Schema(description = "创建时间", example = "2026-06-17T10:30:00")
     private LocalDateTime createTime;
 
@@ -66,6 +69,7 @@ public class TextbookVO {
                 .pageCount(bo.getPageCount())
                 .status(bo.getStatus())
                 .fileType(bo.getFileType())
+                .failReason(bo.getFailReason())
                 .createTime(bo.getCreateTime()).build();
     }
 }
