@@ -109,19 +109,29 @@ public class GradeServiceImpl implements GradeService {
             List<ExamRecordDO> records = examRecordRepository.findByExamNo(examNo);
             if (records.isEmpty()) {
                 log.info("考试 {} 无未删除记录，幂等返回", examNo);
-                return new Object[]{examNo, 0};
+                return new Object[]{examNo, 0, List.of()};
             }
 
             int recordCount = records.size();
+            // 提取涉及的学生学号（去重），用于级联检查孤点 StudentNode
+            List<String> studentNos = records.stream()
+                    .map(ExamRecordDO::getStudentNo)
+                    .distinct()
+                    .toList();
+
             examRecordRepository.deleteAll(records);
-            log.info("考试 {} MySQL 物理删除完成，共 {} 条", examNo, recordCount);
-            return new Object[]{examNo, recordCount};
+            log.info("考试 {} MySQL 物理删除完成，共 {} 条，涉及 {} 名学生",
+                    examNo, recordCount, studentNos.size());
+            return new Object[]{examNo, recordCount, studentNos};
         });
 
         // 事务外发布事件（ADR-028 规则 4）
         int recordCount = (int) result[1];
         if (recordCount > 0) {
-            eventPublisher.publishEvent(new GradeDeletedEvent(this, (String) result[0], recordCount));
+            @SuppressWarnings("unchecked")
+            List<String> studentNos = (List<String>) result[2];
+            eventPublisher.publishEvent(new GradeDeletedEvent(
+                    this, (String) result[0], recordCount, studentNos));
         }
         return result;
     }

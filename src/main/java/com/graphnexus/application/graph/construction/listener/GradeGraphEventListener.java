@@ -94,6 +94,10 @@ public class GradeGraphEventListener {
 
     /**
      * 成绩删除 → 清理 Neo4j 图。
+     *
+     * <p>级联清理顺序：ATTENDED 边 → TESTED 边 → ExamNode → 孤点 StudentNode。
+     * 孤点 StudentNode 清理前先查 MySQL 确认该学生无其他考试记录，
+     * 双重保障（MySQL 无记录 + Neo4j 无 ATTENDED 关系）后才删除。</p>
      */
     @EventListener
     public void onGradeDeleted(GradeDeletedEvent event) {
@@ -103,10 +107,19 @@ public class GradeGraphEventListener {
         int testedEdges = constructionGraphRepository.deleteEdgesByExamNo(examNo, "TESTED");
         int deletedNodes = constructionGraphRepository.deleteExamNode(examNo);
 
+        // 级联清理孤点 StudentNode：受影响的学生若在 MySQL 中无任何考试记录，则删除 Neo4j 节点
+        int orphanStudentsDeleted = 0;
+        for (String studentNo : event.getStudentNos()) {
+            if (examRecordRepository.findByStudentNo(studentNo).isEmpty()) {
+                constructionGraphRepository.deleteOrphanStudent(studentNo);
+                orphanStudentsDeleted++;
+            }
+        }
+
         // 图结构已变更（节点/边已删除），触发指标缓存失效
         eventPublisher.publishEvent(new GraphChangedEvent(this));
 
-        log.info("图谱清理完成: examNo={}, attendEdges={}, testedEdges={}, examNodes={}",
-                examNo, attendEdges, testedEdges, deletedNodes);
+        log.info("图谱清理完成: examNo={}, attendEdges={}, testedEdges={}, examNodes={}, orphanStudents={}",
+                examNo, attendEdges, testedEdges, deletedNodes, orphanStudentsDeleted);
     }
 }
