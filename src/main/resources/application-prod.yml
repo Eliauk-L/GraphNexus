@@ -45,6 +45,22 @@ spring:
         format_sql: true
 
   # ---------------------------------------------------------------------------
+  # Redis 缓存（user-auth-rbac）
+  # ---------------------------------------------------------------------------
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:graphnexus123}
+      database: ${REDIS_DATABASE:0}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+
+  # ---------------------------------------------------------------------------
   # 文件上传限制
   # ---------------------------------------------------------------------------
   servlet:
@@ -61,9 +77,19 @@ spring:
       api-key: ${LLM_API_KEY:}
       chat:
         options:
-          model: deepseek-v4-flash
-          temperature: 0.3
-          max-tokens: -1
+          model: ${LLM_MODEL:deepseek-v4-flash}
+          temperature: ${LLM_TEMPERATURE:0.3}
+          max-tokens: ${LLM_MAX_TOKENS:-1}
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ 消息队列（ops-analytics 异步事件）
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:graphnexus}
+    password: ${RABBITMQ_PASSWORD:graphnexus123}
+    virtual-host: ${RABBITMQ_VHOST:graphnexus}
 
 # ---------------------------------------------------------------------------
 # MinIO 对象存储（自定义配置，无 Spring Boot 自动配置）
@@ -83,6 +109,8 @@ fusion:
     threshold: 0.85
   weight:
     strategy: time-decay
+  rollback:
+    weight-tolerance: 0.01      # MASTERS weight 回滚校验容差
 
 fusion.strategy.fuzzy:
   alpha: 0.3
@@ -143,6 +171,15 @@ query:
     queue-capacity: 10
   timeout:
     sync-timeout-seconds: 30
+  output-format: html  # html | markdown
+
+# ---------------------------------------------------------------------------
+# JWT 认证配置
+# ---------------------------------------------------------------------------
+jwt:
+  secret: ${JWT_SECRET:graphnexus-jwt-secret-key-prod-must-change}
+  access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:1d}
+  refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:7d}
 
 # ---------------------------------------------------------------------------
 # 日志（生产环境降低日志级别）

@@ -51,13 +51,22 @@ services:
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-graphnexus123}
       - MYSQL_USERNAME=${MYSQL_USERNAME:-graphnexus}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-graphnexus123}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-graphnexus123}
+      - REDIS_DATABASE=${REDIS_DATABASE:-0}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
       - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-graphnexus}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-graphnexus123}
       - RABBITMQ_VHOST=${RABBITMQ_VHOST:-graphnexus}
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
       - MINIO_BUCKET=${MINIO_BUCKET:-graphnexus-prod}
+      # JWT 认证
+      - JWT_SECRET=${JWT_SECRET:-graphnexus-jwt-secret-key-prod-must-change}
+      - JWT_ACCESS_TOKEN_TTL=${JWT_ACCESS_TOKEN_TTL:-1d}
+      - JWT_REFRESH_TOKEN_TTL=${JWT_REFRESH_TOKEN_TTL:-7d}
       # 外部 API 密钥
       - LLM_API_KEY=${LLM_API_KEY:-}
       - MINERU_API_TOKEN=${MINERU_API_TOKEN:-}
@@ -90,13 +99,22 @@ services:
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-graphnexus123}
       - MYSQL_USERNAME=${MYSQL_USERNAME:-graphnexus}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-graphnexus123}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-graphnexus123}
+      - REDIS_DATABASE=${REDIS_DATABASE:-0}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
       - RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-graphnexus}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-graphnexus123}
       - RABBITMQ_VHOST=${RABBITMQ_VHOST:-graphnexus}
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
       - MINIO_BUCKET=${MINIO_BUCKET:-graphnexus-prod}
+      # JWT 认证
+      - JWT_SECRET=${JWT_SECRET:-graphnexus-jwt-secret-key-prod-must-change}
+      - JWT_ACCESS_TOKEN_TTL=${JWT_ACCESS_TOKEN_TTL:-1d}
+      - JWT_REFRESH_TOKEN_TTL=${JWT_REFRESH_TOKEN_TTL:-7d}
       # 外部 API 密钥
       - LLM_API_KEY=${LLM_API_KEY:-}
       - MINERU_API_TOKEN=${MINERU_API_TOKEN:-}
