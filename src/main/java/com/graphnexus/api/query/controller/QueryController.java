@@ -20,7 +20,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -132,26 +131,22 @@ public class QueryController {
             @ApiResponse(responseCode = "500", description = "B0001 系统内部异常")
     })
     @GetMapping("/history/{taskId}/export")
-    public ResponseEntity<StreamingResponseBody> exportSingle(
+    public ResponseEntity<byte[]> exportSingle(
             @Parameter(description = "任务 ID（UUID 格式）", required = true)
             @PathVariable String taskId) {
 
         QueryTaskDO task = queryService.exportSingle(taskId);
-        String answer = task.getAnswer() != null ? task.getAnswer() : "";
+        byte[] answerBytes = (task.getAnswer() != null ? task.getAnswer() : "").getBytes(StandardCharsets.UTF_8);
 
         String shortId = taskId.length() > 8 ? taskId.substring(0, 8) : taskId;
         String filename = "diagnosis-" + shortId + ".html";
 
-        StreamingResponseBody body = outputStream -> {
-            outputStream.write(answer.getBytes(StandardCharsets.UTF_8));
-            outputStream.flush();
-        };
-
         return ResponseEntity.ok()
                 .contentType(MediaType.valueOf("text/html; charset=UTF-8"))
+                .contentLength(answerBytes.length)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
-                .body(body);
+                .body(answerBytes);
     }
 
     /**
