@@ -288,5 +288,6 @@ export interface HistoryRecordVO {
   tokenUsage: TokenUsageVO | null
   elapsedMs: number
   errorMessage: string | null
+  createdBy: string | null
   createTime: string
 }

@@ -32,6 +32,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -1028,6 +1030,7 @@ public class QueryServiceImpl implements QueryService {
                 .errorMessage(errorMessage)
                 .retryCount(0)
                 .elapsedMs(elapsedMs)
+                .createdBy(getCurrentUsername())
                 .build();
         queryTaskRepository.save(task);
     }
@@ -1171,8 +1174,14 @@ public class QueryServiceImpl implements QueryService {
         if (taskId == null || !taskId.matches("^[0-9a-fA-F-]{36}$")) {
             throw new BusinessException(ErrorCode.A0021, "任务不存在: " + taskId);
         }
-        return queryTaskRepository.findByTaskId(taskId)
+        QueryTaskDO task = queryTaskRepository.findByTaskId(taskId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0021, "问答任务不存在: " + taskId));
+        // 行级安全：只能导出自己创建的记录
+        String currentUser = getCurrentUsername();
+        if (currentUser != null && !currentUser.equals(task.getCreatedBy())) {
+            throw new BusinessException(ErrorCode.A0021, "问答任务不存在: " + taskId);
+        }
+        return task;
     }
 
     @Override
@@ -1183,6 +1192,12 @@ public class QueryServiceImpl implements QueryService {
         }
         QueryTaskDO task = queryTaskRepository.findByTaskId(taskId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.A0021, "问答任务不存在: " + taskId));
+
+        // 行级安全：只能删除自己创建的记录
+        String currentUser = getCurrentUsername();
+        if (currentUser != null && !currentUser.equals(task.getCreatedBy())) {
+            throw new BusinessException(ErrorCode.A0021, "问答任务不存在: " + taskId);
+        }
 
         queryTaskRepository.delete(task);
         log.info("历史记录已删除: taskId={}, question={}", taskId,
@@ -1197,6 +1212,12 @@ public class QueryServiceImpl implements QueryService {
     private Specification<QueryTaskDO> buildHistorySpec(HistoryQueryRequest req) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            // 行级安全：用户只能查询自己创建的记录
+            String currentUser = getCurrentUsername();
+            if (currentUser != null) {
+                predicates.add(cb.equal(root.get("createdBy"), currentUser));
+            }
 
             if (req.studentName() != null && !req.studentName().isBlank()) {
                 predicates.add(cb.like(root.get("studentName"),
@@ -1229,5 +1250,14 @@ public class QueryServiceImpl implements QueryService {
             query.orderBy(cb.desc(root.get("createTime")));
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    /** 从 SecurityContext 获取当前登录用户名，未认证时返回 null */
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof com.graphnexus.common.security.UserPrincipal principal) {
+            return principal.getUsername();
+        }
+        return null;
     }
 }

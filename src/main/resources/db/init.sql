@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS query_task (
     error_message TEXT COMMENT '失败时错误信息',
     retry_count INT DEFAULT 0 COMMENT 'LLM调用重试次数',
     elapsed_ms BIGINT COMMENT '任务总耗时(毫秒)',
+    created_by VARCHAR(64) COMMENT '创建者用户名（执行诊断的用户）',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='智能问答任务记录表(日志类表，不设逻辑删除)';

@@ -35,6 +35,7 @@ public record HistoryRecordVO(
         QueryAskResponse.TokenUsageVO tokenUsage,
         Long elapsedMs,
         String errorMessage,
+        String createdBy,
         LocalDateTime createTime
 ) {
 
@@ -51,6 +52,7 @@ public record HistoryRecordVO(
                 parseTokenUsage(task.getTokenUsageJson()),
                 task.getElapsedMs(),
                 task.getErrorMessage(),
+                task.getCreatedBy(),
                 task.getCreateTime()
         );
     }

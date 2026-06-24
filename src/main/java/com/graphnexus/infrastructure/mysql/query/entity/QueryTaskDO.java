@@ -89,6 +89,10 @@ public class QueryTaskDO {
     @Column(name = "elapsed_ms")
     private Long elapsedMs;
 
+    /** 创建者用户名（执行诊断的用户） */
+    @Column(name = "created_by", length = 64)
+    private String createdBy;
+
     /** 创建时间（自动填充） */
     @CreatedDate
     @Column(name = "create_time", nullable = false, updatable = false)

@@ -78,8 +78,9 @@ const columns: DataTableColumns<HistoryRecordVO> = [
   {
     title: '问题', key: 'question', width: 240, ellipsis: { tooltip: true },
   },
-  { title: '学生', key: 'studentName', width: 80 },
-  { title: '学科', key: 'subject', width: 70 },
+  { title: '学生', key: 'studentName', width: 70 },
+  { title: '创建者', key: 'createdBy', width: 80, ellipsis: { tooltip: true } },
+  { title: '学科', key: 'subject', width: 60 },
   {
     title: '状态', key: 'status', width: 80,
     render(row) {
