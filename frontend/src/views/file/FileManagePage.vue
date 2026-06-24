@@ -19,13 +19,21 @@ const page = ref(1)
 const pageSize = ref(10)
 const searchName = ref('')
 const filterFileType = ref<string | null>(null)
-const searchSubject = ref('')
+const searchSubject = ref<string | null>(null)
 
 const fileTypeOptions = computed(() => {
   const types = [...new Set(store.files.map((f) => f.fileType).filter(Boolean))]
   return [
     { label: '全部类型', value: null },
     ...types.map((t) => ({ label: t, value: t })),
+  ]
+})
+
+const subjectOptions = computed(() => {
+  const subjects = [...new Set(store.files.map((f) => f.subject).filter(Boolean))]
+  return [
+    { label: '全部学科', value: null },
+    ...subjects.map((s) => ({ label: s, value: s })),
   ]
 })
 
@@ -150,11 +158,12 @@ onBeforeUnmount(() => {
         style="width: 120px"
         @update:model-value="load"
       />
-      <BaseInput
+      <BaseSelect
         v-model="searchSubject"
-        placeholder="学科..."
-        style="width: 100px"
-        @keyup.enter="load"
+        :options="subjectOptions"
+        placeholder="学科"
+        style="width: 120px"
+        @update:model-value="load"
       />
       <BaseInput
         v-model="searchName"
