@@ -95,19 +95,22 @@ public class GradeGraphEventListener {
     /**
      * 成绩删除 → 清理 Neo4j 图。
      *
-     * <p>级联清理顺序：ATTENDED 边 → TESTED 边 → ExamNode → 孤点 StudentNode。
-     * 孤点 StudentNode 清理前先查 MySQL 确认该学生无其他考试记录，
-     * 双重保障（MySQL 无记录 + Neo4j 无 ATTENDED 关系）后才删除。</p>
+     * <p>级联清理顺序：查 KP 名称 → ATTENDED 边 → TESTED 边 → ExamNode
+     * → 孤点 StudentNode → 孤点 KnowledgePoint。
+     * KP 名称在删边前取出，用于后续孤点检查。</p>
      */
     @EventListener
     public void onGradeDeleted(GradeDeletedEvent event) {
         String examNo = event.getExamNo();
 
+        // 在删边前查出关联的知识点名称
+        List<String> kpNames = constructionGraphRepository.findKpNamesByExamNo(examNo);
+
         int attendEdges = constructionGraphRepository.deleteEdgesByExamNo(examNo, "ATTENDED");
         int testedEdges = constructionGraphRepository.deleteEdgesByExamNo(examNo, "TESTED");
         int deletedNodes = constructionGraphRepository.deleteExamNode(examNo);
 
-        // 级联清理孤点 StudentNode：受影响的学生若在 MySQL 中无任何考试记录，则删除 Neo4j 节点
+        // 级联清理孤点 StudentNode
         int orphanStudentsDeleted = 0;
         for (String studentNo : event.getStudentNos()) {
             if (examRecordRepository.findByStudentNo(studentNo).isEmpty()) {
@@ -116,10 +119,17 @@ public class GradeGraphEventListener {
             }
         }
 
+        // 级联清理孤点 KnowledgePoint（无 TESTED + 无 ALIGNED_TO 才删，防止误删文档图谱节点）
+        int orphanKpsDeleted = 0;
+        for (String kpName : kpNames) {
+            int deleted = constructionGraphRepository.deleteOrphanKnowledgePoint(kpName);
+            if (deleted > 0) orphanKpsDeleted++;
+        }
+
         // 图结构已变更（节点/边已删除），触发指标缓存失效
         eventPublisher.publishEvent(new GraphChangedEvent(this));
 
-        log.info("图谱清理完成: examNo={}, attendEdges={}, testedEdges={}, examNodes={}, orphanStudents={}",
-                examNo, attendEdges, testedEdges, deletedNodes, orphanStudentsDeleted);
+        log.info("图谱清理完成: examNo={}, attendEdges={}, testedEdges={}, examNodes={}, orphanStudents={}, orphanKps={}",
+                examNo, attendEdges, testedEdges, deletedNodes, orphanStudentsDeleted, orphanKpsDeleted);
     }
 }

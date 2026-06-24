@@ -258,6 +258,40 @@ public class ConstructionGraphRepository {
         return deletedCount;
     }
 
+    /**
+     * 查询考试直接关联的知识点名称列表（考前取出，用于清理后孤点检查）。
+     */
+    public List<String> findKpNamesByExamNo(String examNo) {
+        return neo4jClient.query(
+                "MATCH (e:Exam {examNo: $examNo})-[:TESTED]->(kp:KnowledgePoint) RETURN kp.name"
+        ).bindAll(Map.of("examNo", examNo)).fetch().all().stream()
+                .map(row -> (String) row.get("kp.name"))
+                .toList();
+    }
+
+    /**
+     * 删除孤点 KnowledgePoint — 仅当没有任何考试或文档实体引用时才删除。
+     *
+     * <p>检查条件：无 TESTED 关系（来自 Exam）+ 无 ALIGNED_TO 关系（来自 Entity/文档抽取）。
+     * 同时满足两个条件才执行 DETACH DELETE，防止误删文档图谱引用的知识点。</p>
+     *
+     * @param kpName 知识点名称
+     * @return 删除的节点数（0 表示仍有引用未删除）
+     */
+    public int deleteOrphanKnowledgePoint(String kpName) {
+        var summary = neo4jClient.query(
+                "MATCH (kp:KnowledgePoint {name: $kpName}) "
+              + "WHERE NOT (kp)<-[:TESTED]-(:Exam) "
+              + "  AND NOT (kp)<-[:ALIGNED_TO]-(:Entity) "
+              + "DETACH DELETE kp"
+        ).bindAll(Map.of("kpName", kpName)).run();
+        int deletedCount = summary.counters().nodesDeleted();
+        if (deletedCount > 0) {
+            log.debug("已删除孤点 KnowledgePoint: name={}", kpName);
+        }
+        return deletedCount;
+    }
+
     // ======================== 全量图谱查询 ========================
 
     /**
