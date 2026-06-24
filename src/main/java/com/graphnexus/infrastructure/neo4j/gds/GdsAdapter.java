@@ -58,21 +58,26 @@ public class GdsAdapter {
      * 执行 PageRank 流式计算。
      */
     public List<GdsResult> runPageRank(String graphName) {
-        int maxIterations = metricsProperties.getPageRank().maxIterations();
-        double dampingFactor = metricsProperties.getPageRank().dampingFactor();
+        try {
+            int maxIterations = metricsProperties.getPageRank().maxIterations();
+            double dampingFactor = metricsProperties.getPageRank().dampingFactor();
 
-        String cypher = String.format(
-                "CALL gds.pageRank.stream('%s', {maxIterations: %d, dampingFactor: %.4f}) " +
-                "YIELD nodeId, score " +
-                "RETURN gds.util.asNode(nodeId).id AS nodeId, " +
-                "labels(gds.util.asNode(nodeId))[0] AS nodeType, " +
-                "coalesce(gds.util.asNode(nodeId).name, gds.util.asNode(nodeId).id) AS nodeName, " +
-                "'' AS subject, " +
-                "coalesce(gds.util.asNode(nodeId).className, '') AS className, " +
-                "score",
-                graphName, maxIterations, dampingFactor);
+            String cypher = String.format(
+                    "CALL gds.pageRank.stream('%s', {maxIterations: %d, dampingFactor: %.4f}) " +
+                    "YIELD nodeId, score " +
+                    "RETURN gds.util.asNode(nodeId).id AS nodeId, " +
+                    "labels(gds.util.asNode(nodeId))[0] AS nodeType, " +
+                    "coalesce(gds.util.asNode(nodeId).name, gds.util.asNode(nodeId).id) AS nodeName, " +
+                    "'' AS subject, " +
+                    "coalesce(gds.util.asNode(nodeId).className, '') AS className, " +
+                    "score",
+                    graphName, maxIterations, dampingFactor);
 
-        return fetchResults(cypher);
+            return fetchResults(cypher);
+        } catch (Exception e) {
+            log.warn("PageRank 计算失败(可能无边或无节点): {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     /**
@@ -81,18 +86,23 @@ public class GdsAdapter {
      * @param orientation NATURAL（outDegree）或 REVERSE（inDegree）
      */
     public List<GdsResult> runDegreeStream(String graphName, String orientation) {
-        String cypher = String.format(
-                "CALL gds.degree.stream('%s', {orientation: '%s'}) " +
-                "YIELD nodeId, score " +
-                "RETURN gds.util.asNode(nodeId).id AS nodeId, " +
-                "labels(gds.util.asNode(nodeId))[0] AS nodeType, " +
-                "coalesce(gds.util.asNode(nodeId).name, gds.util.asNode(nodeId).id) AS nodeName, " +
-                "'' AS subject, " +
-                "coalesce(gds.util.asNode(nodeId).className, '') AS className, " +
-                "score",
-                graphName, orientation);
+        try {
+            String cypher = String.format(
+                    "CALL gds.degree.stream('%s', {orientation: '%s'}) " +
+                    "YIELD nodeId, score " +
+                    "RETURN gds.util.asNode(nodeId).id AS nodeId, " +
+                    "labels(gds.util.asNode(nodeId))[0] AS nodeType, " +
+                    "coalesce(gds.util.asNode(nodeId).name, gds.util.asNode(nodeId).id) AS nodeName, " +
+                    "'' AS subject, " +
+                    "coalesce(gds.util.asNode(nodeId).className, '') AS className, " +
+                    "score",
+                    graphName, orientation);
 
-        return fetchResults(cypher);
+            return fetchResults(cypher);
+        } catch (Exception e) {
+            log.warn("度中心性计算失败(orientation={}, 可能无边): {}", orientation, e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     /**
