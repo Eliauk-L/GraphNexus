@@ -83,7 +83,7 @@ public class QueryServiceImpl implements QueryService {
         QueryIntent intent = recognizeIntent(question);
         if (intent == QueryIntent.CLASS_WEAKNESS_OVERVIEW) {
             // 尝试从 question 中正则提取班级名
-            String className = extractClassName(question);
+            String className = extractClassName(question, getKnownClassNames());
             if (className != null && !className.isBlank()) {
                 List<String> subjects = getKnownSubjects();
                 String extractedSubject = extractSubject(question,
