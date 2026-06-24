@@ -23,6 +23,7 @@ const selectedFile = ref<File | null>(null)
 const selectedSubject = ref('')
 const uploading = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const MAX_FILE_SIZE = 50 * 1024 * 1024
 
 // ── 管理考试弹窗 ──
 const showManageModal = ref(false)
@@ -63,7 +64,15 @@ function handleUploadClick() {
 
 function handleFileChange(e: Event) {
   const input = e.target as HTMLInputElement
-  if (input.files?.length) selectedFile.value = input.files[0]
+  if (input.files?.length) {
+    const file = input.files[0]
+    if (file.size > MAX_FILE_SIZE) {
+      message.warning(`文件「${file.name}」大小为 ${formatSize(file.size)}，超过 50MB 限制，请压缩后重试`)
+      input.value = ''
+      return
+    }
+    selectedFile.value = file
+  }
 }
 
 function triggerFileInput() { fileInputRef.value?.click() }

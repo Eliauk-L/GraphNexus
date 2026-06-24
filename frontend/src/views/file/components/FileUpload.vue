@@ -30,10 +30,18 @@ const subjectOptions = [
   { label: '地理', value: '地理' },
 ]
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+
 function handleFileChange(e: Event) {
   const input = e.target as HTMLInputElement
   if (input.files && input.files.length > 0) {
-    selectedFile.value = input.files[0]
+    const file = input.files[0]
+    if (file.size > MAX_FILE_SIZE) {
+      message.warning(`文件「${file.name}」大小为 ${formatSize(file.size)}，超过 50MB 限制，请压缩后重试`)
+      input.value = '' // 清空选择
+      return
+    }
+    selectedFile.value = file
   }
 }
 
