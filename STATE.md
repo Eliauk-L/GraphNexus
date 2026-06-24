@@ -6,13 +6,12 @@
 
 ## 当前活动
 
-- **Change ID**: `user-auth-rbac`
-- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → UI-DESIGN ✅ → TASK ✅ → DEV ✅ → 下一步 TEST/REVIEW
+- **Change ID**: `transaction-management-refactor`
+- **当前阶段**: CHANGE ✅ → REQUIREMENT ✅ → DESIGN ✅ → TASK ✅ → DEV ✅ → 下一步 TEST/REVIEW
 - **当前角色**: Dev
-- **当前角色**: Architect
-- **最后更新**: 2026-06-22
-- **工件**: `@.specs/user-auth-rbac/CHANGE.md` + `REQUIREMENT.md` + `DESIGN.md` + `@.specs/adr/ADR-037-040-*.md` + `@.specs/CONTEXT.md`（已更新）
-- **关键设计决策 (D1–D12)**:
+- **最后更新**: 2026-06-24
+- **工件**: `@.specs/transaction-management-refactor/CHANGE.md` + `REQUIREMENT.md` + `DESIGN.md` + `TASK.md` + `T10-SUMMARY.md` + `T11-SUMMARY.md` + `@.specs/adr/ADR-028-029-*.md`
+- **关键设计决策 (D1–D10)**:
   - D1: JWT → jjwt 0.12.x / HS256 / Access Token 30min + Refresh Token UUID 7d
   - D2: Access Token payload: `{sub, userId, roles, iat, exp}`
   - D3: SecurityFilterChain → 单一链 + JwtAuthenticationFilter 插在 UsernamePasswordAuthenticationFilter 前
@@ -53,9 +52,12 @@
 
 - **Change ID**: `transaction-management-refactor`
 - **当前阶段**: DEV ✅ → 下一步 TEST/REVIEW
-- **DEV 执行记录**: 11 任务 · 4 波次 · 212 单测全通过
-- **工件**: `@.specs/transaction-management-refactor/{CHANGE,REQUIREMENT,DESIGN,TASK}.md` + `@.specs/adr/{028,029}-*.md`
-- **最后更新**: 2026-06-22
+- **DEV 执行记录**: 11 任务 · 4 波次 · 全量 51 测试类编译通过 · 本次 change 相关 32 tests 0 failures
+- **工件**: `@.specs/transaction-management-refactor/{CHANGE,REQUIREMENT,DESIGN,TASK,T10-SUMMARY,T11-SUMMARY}.md` + `@.specs/adr/{028,029}-*.md`
+- **最后更新**: 2026-06-24
+- **提交**: 
+  - `d482de0` refactor(transaction-management-refactor): 事务管理策略重构 — T01-T09 核心重构（16 files, +741/-321）
+  - T10-T11 补齐（待提交）：TransactionVisibilityTest + CrossStorageCompensationTest + MetricsTest/MetricsControllerTest 编译修复
 - **路径建议**: 完整（`REQUIREMENT → DESIGN → TASK → DEV → TEST → REVIEW → INTEGRATION`）— 纯后端重构，无前端变更，跳过 `UI-DESIGN.md`
 - **关键决策（DESIGN 级 · D1–D10）**：
   - D1 parse() 拆 3 段：短事务(→PARSING)→无事务(MinIO+解析)→短事务(→PARSED)

@@ -81,7 +81,7 @@ class MetricsServiceTest {
     void testKnowledgePointCenter_Allowed() {
         when(gdsAdapter.projectGraph(any(), any())).thenReturn("g1");
         when(gdsAdapter.runPageRank("g1")).thenReturn(List.of(
-                new GdsResult("kp-1", "KnowledgePoint", 0.5)));
+                new GdsResult("kp-1", "KnowledgePoint", null, null, null, 0.5)));
 
         List<MetricResultBO> results = service.queryPageRank(Set.of("KnowledgePoint"), Set.of());
         assertEquals(1, results.size());
@@ -130,7 +130,7 @@ class MetricsServiceTest {
     void testCache_Hit() {
         when(gdsAdapter.projectGraph(any(), any())).thenReturn("g1");
         when(gdsAdapter.runPageRank("g1")).thenReturn(List.of(
-                new GdsResult("kp-1", "KnowledgePoint", 0.5)));
+                new GdsResult("kp-1", "KnowledgePoint", null, null, null, 0.5)));
 
         Set<String> nodes = Set.of("KnowledgePoint");
         Set<String> edges = Set.of("PREREQUISITE_OF");
@@ -146,7 +146,7 @@ class MetricsServiceTest {
     void testClearCache_TriggersRecompute() {
         when(gdsAdapter.projectGraph(any(), any())).thenReturn("g1");
         when(gdsAdapter.runPageRank("g1")).thenReturn(List.of(
-                new GdsResult("kp-1", "KnowledgePoint", 0.5)));
+                new GdsResult("kp-1", "KnowledgePoint", null, null, null, 0.5)));
 
         Set<String> nodes = Set.of("KnowledgePoint");
         Set<String> edges = Set.of("PREREQUISITE_OF");
@@ -165,9 +165,9 @@ class MetricsServiceTest {
     void testQueryDegree_ReturnsBothDirections() {
         when(gdsAdapter.projectGraph(any(), any())).thenReturn("g1");
         when(gdsAdapter.runDegreeStream("g1", "NATURAL")).thenReturn(List.of(
-                new GdsResult("kp-1", "KnowledgePoint", 3.0)));
+                new GdsResult("kp-1", "KnowledgePoint", null, null, null, 3.0)));
         when(gdsAdapter.runDegreeStream("g1", "REVERSE")).thenReturn(List.of(
-                new GdsResult("kp-1", "KnowledgePoint", 2.0)));
+                new GdsResult("kp-1", "KnowledgePoint", null, null, null, 2.0)));
 
         List<MetricResultBO> results = service.queryDegree(Set.of("KnowledgePoint"), Set.of());
         assertEquals(2, results.size());

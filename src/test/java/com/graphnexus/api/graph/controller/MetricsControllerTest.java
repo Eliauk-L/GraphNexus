@@ -38,7 +38,7 @@ class MetricsControllerTest {
     @DisplayName("GET /api/v1/graph/metrics/pagerank → 200 + 含 nodeId/nodeType/metricName/metricValue（AC-1）")
     void testGetPageRank_Returns200() throws Exception {
         when(metricsService.queryPageRank(anySet(), anySet())).thenReturn(List.of(
-                new MetricResultBO("kp-001", "KnowledgePoint", "pagerank", 0.85)));
+                new MetricResultBO("kp-001", "KnowledgePoint", null, null, null, "pagerank", 0.85)));
 
         mockMvc.perform(get("/api/v1/graph/metrics/pagerank")
                         .param("nodeTypes", "KnowledgePoint")
@@ -55,8 +55,8 @@ class MetricsControllerTest {
     @DisplayName("GET /api/v1/graph/metrics/degree → 200（AC-2）")
     void testGetDegree_Returns200() throws Exception {
         when(metricsService.queryDegree(anySet(), anySet())).thenReturn(List.of(
-                new MetricResultBO("kp-001", "KnowledgePoint", "inDegree", 2.0),
-                new MetricResultBO("kp-001", "KnowledgePoint", "outDegree", 3.0)));
+                new MetricResultBO("kp-001", "KnowledgePoint", null, null, null, "inDegree", 2.0),
+                new MetricResultBO("kp-001", "KnowledgePoint", null, null, null, "outDegree", 3.0)));
 
         mockMvc.perform(get("/api/v1/graph/metrics/degree")
                         .param("nodeTypes", "KnowledgePoint")
