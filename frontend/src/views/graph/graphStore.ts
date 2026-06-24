@@ -19,7 +19,7 @@ export const useGraphStore = defineStore('graph', () => {
   async function loadDocuments() {
     try {
       const result = await listFiles(1, 100)
-      const graphStatuses = ['EXTRACTED', 'EXTRACTING', 'FUSING', 'COMPLETED']
+      const graphStatuses = ['EXTRACTED', 'COMPLETED']
       documents.value = result.list.filter((d) => graphStatuses.includes(d.status))
     } catch {
       // 静默失败
