@@ -16,8 +16,13 @@ const snapshotTriggering = ref(false)
 
 async function triggerSnapshot() {
   snapshotTriggering.value = true
-  try { await opsApi.triggerSnapshot() }
-  finally { snapshotTriggering.value = false }
+  try {
+    await opsApi.triggerSnapshot()
+    // 快照完成后局部刷新趋势和摘要
+    store.fetchSummary(true)
+    store.fetchTrend('active_users', 30)
+    store.fetchTrend('document_total', 30)
+  } finally { snapshotTriggering.value = false }
 }
 
 onMounted(() => {
