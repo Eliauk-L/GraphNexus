@@ -283,15 +283,20 @@ function handlePageChange(page: number) {
   margin-bottom: var(--spacing-md);
 }
 
-.preview-body {
-  width: 100%;
-  background: #fff;
+/* 统一 card header/content 宽度，消除视觉不对齐 */
+:deep(.n-card__content) {
+  padding: var(--spacing-md) var(--spacing-lg);
   box-sizing: border-box;
 }
 
-/* 确保 card content 内部子元素一致撑满 */
-:deep(.n-card__content) {
-  padding: 0;
+:deep(.n-card-header) {
+  padding: var(--spacing-md) var(--spacing-lg);
+  box-sizing: border-box;
+}
+
+.preview-body {
+  width: 100%;
+  background: #fff;
 }
 
 .preview-content {
