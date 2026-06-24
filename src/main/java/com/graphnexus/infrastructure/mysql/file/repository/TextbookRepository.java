@@ -39,14 +39,16 @@ public interface TextbookRepository extends JpaRepository<TextbookDO, Long> {
     long countByFilePathAndStatusNot(String filePath, FileStatus status);
 
     /**
-     * 条件分页查询：支持按文件类型和文件名筛选。
+     * 条件分页查询：支持按文件类型、文件名和学科筛选。
      */
     @Query("SELECT d FROM TextbookDO d WHERE d.status <> 'DELETING' "
          + "AND (:fileType IS NULL OR d.fileType = :fileType) "
          + "AND (:name IS NULL OR d.name LIKE %:name%) "
+         + "AND (:subject IS NULL OR d.subject = :subject) "
          + "ORDER BY d.createTime DESC")
     Page<TextbookDO> findByConditions(@Param("fileType") String fileType,
                                   @Param("name") String name,
+                                  @Param("subject") String subject,
                                   Pageable pageable);
 
     /** 按处理状态分组统计文档数（排除 DELETING 状态）。 */

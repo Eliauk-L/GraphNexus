@@ -20,7 +20,7 @@ public interface TextbookService {
     ParseResult parse(Long documentId);
 
     /** 分页查询教材列表（条件筛选）。 */
-    Page<TextbookBO> listTextBooks(int pageNum, int pageSize, String fileType, String name);
+    Page<TextbookBO> listTextBooks(int pageNum, int pageSize, String fileType, String name, String subject);
 
     /** 按 ID 查询单个教材。 */
     TextbookBO getTextBook(Long id);

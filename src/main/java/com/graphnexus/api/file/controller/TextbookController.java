@@ -104,9 +104,11 @@ public class TextbookController {
             @Parameter(description = "文件类型筛选（可选）", example = "PDF")
             @RequestParam(required = false) String fileType,
             @Parameter(description = "文件名模糊搜索（可选）", example = "二次函数")
-            @RequestParam(required = false) String name
+            @RequestParam(required = false) String name,
+            @Parameter(description = "学科筛选（可选）", example = "数学")
+            @RequestParam(required = false) String subject
     ) {
-        Page<TextbookBO> page = textBookService.listTextBooks(pageNum, pageSize, fileType, name);
+        Page<TextbookBO> page = textBookService.listTextBooks(pageNum, pageSize, fileType, name, subject);
         return ApiResult.success(PageResult.of(page.map(TextbookVO::from)));
     }
 

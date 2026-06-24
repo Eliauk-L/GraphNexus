@@ -209,9 +209,9 @@ public class TextbookServiceImpl implements TextbookService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TextbookBO> listTextBooks(int pageNum, int pageSize, String fileType, String name) {
+    public Page<TextbookBO> listTextBooks(int pageNum, int pageSize, String fileType, String name, String subject) {
         return textbookRepository
-                .findByConditions(fileType, name, PageRequest.of(pageNum - 1, pageSize))
+                .findByConditions(fileType, name, subject, PageRequest.of(pageNum - 1, pageSize))
                 .map(this::toBO);
     }
 
