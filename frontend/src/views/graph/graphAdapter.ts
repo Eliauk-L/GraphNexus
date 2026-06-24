@@ -111,10 +111,16 @@ function transformDocumentSubgraph(vo: GraphSubgraphVO): G6GraphData {
 // ── 全量图谱转换（不过滤节点类型，包含 Student/Exam）──
 
 function transformFullGraph(vo: GraphSubgraphVO): G6GraphData {
-  const nodeIds = new Set(vo.nodes.map((n) => n.id))
+  // 去重：Neo4j 查询可能返回重复节点
+  const seen = new Map<string, any>()
+  for (const n of vo.nodes) {
+    if (!seen.has(n.id)) seen.set(n.id, n)
+  }
+  const uniqueNodes = [...seen.values()]
+  const nodeIds = new Set(uniqueNodes.map((n: any) => n.id))
 
   return {
-    nodes: vo.nodes.map((n) => ({
+    nodes: uniqueNodes.map((n: any) => ({
       id: n.id,
       data: {
         ...n.properties,
