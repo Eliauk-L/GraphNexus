@@ -279,8 +279,11 @@ public class QueryServiceImpl implements QueryService {
 
     // ======================== 智能对话（chat） ========================
 
-    /** 学科列表缓存（从 Neo4j KnowledgePoint 查询，volatile 保证可见性） */
+    /** 学科列表缓存（从 MySQL exam_record 查询，volatile 保证可见性） */
     private volatile List<String> cachedSubjects;
+
+    /** 班级列表缓存（从 MySQL exam_record 查询，volatile 保证可见性） */
+    private volatile List<String> cachedClassNames;
 
     /** LLM 实体提取结果 */
     private record ExtractedEntities(String studentName, String studentNo, String className, String subject) {}
@@ -297,31 +300,42 @@ public class QueryServiceImpl implements QueryService {
                     "系统中暂无学科数据，请先导入考试记录或文档图谱");
         }
 
+        List<String> classNames = getKnownClassNames();
+
         // 1. 先意图识别（避免非目标意图浪费后续 LLM 实体提取调用）
         QueryIntent intent = recognizeIntent(question);
 
         // 2. LLM 实体提取（仅在意图可识别时进行）
-        ExtractedEntities entities = extractViaLlm(question, subjects);
+        ExtractedEntities entities = extractViaLlm(question, subjects, classNames);
 
         // 3. LLM 失败 → 正则兜底
         if (entities == null) {
             log.info("LLM 实体提取失败，降级为规则提取");
-            entities = extractViaRegex(question, subjects);
+            entities = extractViaRegex(question, subjects, classNames);
         }
 
         // 4. 按意图类型校验实体 + 路由
         if (intent == QueryIntent.CLASS_WEAKNESS_OVERVIEW) {
             // 班级概览路径：需 className + subject
             if (entities == null || entities.subject() == null || entities.className() == null) {
+                String hint = classNames.isEmpty() ? ""
+                        : "，当前系统已有班级：" + String.join("、", classNames);
                 throw new BusinessException(ErrorCode.A0019,
                         "无法从问题中识别班级名称和学科，当前系统已有学科：" + String.join("、", subjects)
-                        + "。示例：分析初三(1)班数学薄弱知识点");
+                        + hint + "。示例：分析初三(1)班数学薄弱知识点");
             }
             if (!subjects.contains(entities.subject())) {
                 throw new BusinessException(ErrorCode.A0019,
                         "学科\"" + entities.subject() + "\"在系统中暂无数据，当前已有学科："
                         + String.join("、", subjects)
                         + "。请先导入对应学科的考试记录或文档图谱");
+            }
+            // 校验班级名是否存在于系统中（精确匹配）
+            if (!classNames.isEmpty() && !classNames.contains(entities.className())) {
+                throw new BusinessException(ErrorCode.A0019,
+                        "班级\"" + entities.className() + "\"在系统中暂无数据，当前已有班级："
+                        + String.join("、", classNames)
+                        + "。请使用精确的班级名称重新提问");
             }
             log.info("chat 完成(班级): intent={}, className={}, subject={}",
                     intent, entities.className(), entities.subject());
@@ -500,8 +514,11 @@ public class QueryServiceImpl implements QueryService {
         }
     }
 
-    /** LLM 提取：调用大模型从问题中抽取学生姓名/学号和学科，返回 JSON */
-    private ExtractedEntities extractViaLlm(String question, List<String> subjects) {
+    /** LLM 提取：调用大模型从问题中抽取学生姓名/学号或班级名称，以及学科名称 */
+    private ExtractedEntities extractViaLlm(String question, List<String> subjects, List<String> classNames) {
+        String classHint = classNames.isEmpty() ? ""
+                : "\n班级名称必须是以下之一：" + String.join("、", classNames)
+                + "\n请从用户问题中匹配最接近的班级名，不要自行编造或改变格式。";
         String systemPrompt = """
                 你是一个信息提取助手。从用户问题中提取学生标识（姓名或学号）或班级名称，以及学科名称。
                 仅返回一个 JSON 对象，格式为 {"studentName":"...","studentNo":"...","className":"...","subject":"..."}，
@@ -509,7 +526,8 @@ public class QueryServiceImpl implements QueryService {
                 学号通常是字母+数字组合（如 S2024001），姓名通常是2-4个中文字符。
                 班级名称通常包含"班"字，如"初三(1)班"、"高一3班"、"九年级1班"。
                 学科必须是以下之一：%s
-                """.formatted(String.join("、", subjects));
+                %s
+                """.formatted(String.join("、", subjects), classHint);
 
         try {
             String response = llmGateway.chat(systemPrompt, question);
@@ -564,7 +582,7 @@ public class QueryServiceImpl implements QueryService {
     }
 
     /** 正则提取：手动规则兜底 */
-    private ExtractedEntities extractViaRegex(String question, List<String> subjects) {
+    private ExtractedEntities extractViaRegex(String question, List<String> subjects, List<String> classNames) {
         List<String> sorted = subjects.stream()
                 .sorted((a, b) -> b.length() - a.length()).toList();
         String subjectOr = String.join("|", sorted);
@@ -574,15 +592,27 @@ public class QueryServiceImpl implements QueryService {
         String subject = extractSubject(question, subjectRegex);
         String studentName = extractStudentName(question, boundaryTokens, subjects);
         String studentNo = extractStudentNo(question);
-        String className = extractClassName(question);
+        String className = extractClassName(question, classNames);
 
         // 学生信息或班级信息至少有一组
         if (subject == null || (studentName == null && studentNo == null && className == null)) return null;
         return new ExtractedEntities(studentName, studentNo, className, subject);
     }
 
-    /** 正则提取班级名（如 初三(1)班、高一3班、九年级1班、初一(12)班） */
-    String extractClassName(String question) {
+    /** 正则提取班级名 — 先尝试正则匹配，再与已知班级列表精确匹配 */
+    String extractClassName(String question, List<String> classNames) {
+        // 1. 先尝试从已知班级列表中直接匹配（用户可能用了精确名称）
+        if (!classNames.isEmpty()) {
+            // 按长度降序排列，优先匹配更长的班级名（避免 "初三(1)班" 被 "初三" 误匹配）
+            List<String> sorted = classNames.stream()
+                    .sorted((a, b) -> b.length() - a.length()).toList();
+            for (String cn : sorted) {
+                if (question.contains(cn)) {
+                    return cn;
+                }
+            }
+        }
+        // 2. 正则兜底（基本格式匹配）
         var matcher = java.util.regex.Pattern.compile(
                 "([\\u4e00-\\u9fa5]{0,6}年级?[\\u4e00-\\u9fa5]?\\d+班)").matcher(question);
         return matcher.find() ? matcher.group(1) : null;
@@ -605,6 +635,19 @@ public class QueryServiceImpl implements QueryService {
             }
         }
         return cachedSubjects;
+    }
+
+    /** 从 MySQL exam_record 获取班级列表（带缓存，用于 LLM 实体提取约束） */
+    List<String> getKnownClassNames() {
+        if (cachedClassNames == null || cachedClassNames.isEmpty()) {
+            synchronized (this) {
+                if (cachedClassNames == null || cachedClassNames.isEmpty()) {
+                    cachedClassNames = examRecordRepository.findDistinctClassNames();
+                    log.info("从 MySQL exam_record 加载班级列表: {}", cachedClassNames);
+                }
+            }
+        }
+        return cachedClassNames;
     }
 
     String extractSubject(String question, java.util.regex.Pattern pattern) {

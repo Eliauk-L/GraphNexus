@@ -39,6 +39,10 @@ public interface ExamRecordRepository extends JpaRepository<ExamRecordDO, Long>,
     @Query("SELECT DISTINCT e.subject FROM ExamRecordDO e WHERE e.subject IS NOT NULL ORDER BY e.subject")
     List<String> findDistinctSubjectBySubjectIsNotNullOrderBySubject();
 
+    /** 查询所有不重复的班级名称（排除空班级，按班级名排序）。 */
+    @Query("SELECT DISTINCT e.className FROM ExamRecordDO e WHERE e.className IS NOT NULL ORDER BY e.className")
+    List<String> findDistinctClassNames();
+
     /**
      * 按姓名模糊匹配学生（返回不重复的 studentNo/name/className）。
      */
