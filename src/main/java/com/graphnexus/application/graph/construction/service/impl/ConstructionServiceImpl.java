@@ -176,7 +176,7 @@ public class ConstructionServiceImpl implements ConstructionService {
         for (var kp : extracted.knowledgePoints()) {
             // 查找同 Subject 下同名 KP（可能来自考试上传），复用其节点避免重复
             KnowledgePointNode existing = constructionGraphRepository.findExistingKnowledgePoint(
-                    kp.getName(), subjectNode.getId());
+                    kp.getName(), subjectName);
             if (existing != null) {
                 // 复用已有节点 id，同时更新文档属性（文档数据质量更高）
                 kp.setId(existing.getId());

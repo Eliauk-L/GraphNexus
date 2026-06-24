@@ -642,10 +642,10 @@ public class ConstructionGraphRepository {
      * 不同 Subject 下同名 KP 各自独立。解决多次考试成绩上传产生重复 KP 节点的问题。</p>
      * <p>已存在时追加 CSV_IMPORT 来源标记。</p>
      */
-    public KnowledgePointNode findOrCreateKnowledgePoint(String kpName, String subjectNodeId) {
-        String id = UUID.nameUUIDFromBytes(("KP:" + kpName + ":" + subjectNodeId).getBytes()).toString();
+    public KnowledgePointNode findOrCreateKnowledgePoint(String kpName, String subjectName) {
+        String id = UUID.nameUUIDFromBytes(("KP:" + kpName + ":" + subjectName).getBytes()).toString();
 
-        String cypher = "MATCH (s:Subject {id: $subjectNodeId}) "
+        String cypher = "MATCH (s:Subject {name: $subjectName}) "
                 + "MERGE (kp:KnowledgePoint {name: $name})-[:BELONGS_TO_SUBJECT]->(s) "
                 + "ON CREATE SET kp.id = $id, kp.fusionSource = $fusionSource, "
                 + "kp.nodeType = 'KnowledgePoint', kp.description = '', kp.gradeLevel = '', kp.documentId = '' "
@@ -656,7 +656,7 @@ public class ConstructionGraphRepository {
                 + "RETURN kp.id AS id";
 
         var rows = neo4jClient.query(cypher).bindAll(Map.of(
-                "subjectNodeId", subjectNodeId,
+                "subjectName", subjectName,
                 "name", kpName,
                 "id", id,
                 "fusionSource", "CSV_IMPORT"
@@ -678,10 +678,10 @@ public class ConstructionGraphRepository {
      */
     public KnowledgePointNode findOrCreateDocumentKnowledgePoint(String kpName, String description,
                                                                   String gradeLevel, String documentId,
-                                                                  String subjectNodeId) {
-        String id = UUID.nameUUIDFromBytes(("KP:" + kpName + ":" + subjectNodeId).getBytes()).toString();
+                                                                  String subjectName) {
+        String id = UUID.nameUUIDFromBytes(("KP:" + kpName + ":" + subjectName).getBytes()).toString();
 
-        String cypher = "MATCH (s:Subject {id: $subjectNodeId}) "
+        String cypher = "MATCH (s:Subject {name: $subjectName}) "
                 + "MERGE (kp:KnowledgePoint {name: $name})-[:BELONGS_TO_SUBJECT]->(s) "
                 + "ON CREATE SET kp.id = $id, kp.description = $description, "
                 + "kp.gradeLevel = $gradeLevel, kp.documentId = $documentId, "
@@ -694,7 +694,7 @@ public class ConstructionGraphRepository {
                 + "RETURN kp.id AS id";
 
         var rows = neo4jClient.query(cypher).bindAll(Map.of(
-                "subjectNodeId", subjectNodeId,
+                "subjectName", subjectName,
                 "name", kpName,
                 "id", id,
                 "description", description != null ? description : "",
@@ -717,12 +717,12 @@ public class ConstructionGraphRepository {
      *
      * @return 已有 KP 节点，若无则返回 null
      */
-    public KnowledgePointNode findExistingKnowledgePoint(String kpName, String subjectNodeId) {
+    public KnowledgePointNode findExistingKnowledgePoint(String kpName, String subjectName) {
         try {
             var rows = neo4jClient.query(
-                    "MATCH (kp:KnowledgePoint {name: $name})-[:BELONGS_TO_SUBJECT]->(s:Subject {id: $subjectNodeId}) "
+                    "MATCH (kp:KnowledgePoint {name: $name})-[:BELONGS_TO_SUBJECT]->(s:Subject {name: $subjectName}) "
                     + "RETURN kp.id AS id"
-            ).bindAll(Map.of("name", kpName, "subjectNodeId", subjectNodeId)).fetch().all();
+            ).bindAll(Map.of("name", kpName, "subjectName", subjectName)).fetch().all();
             if (!rows.isEmpty()) {
                 KnowledgePointNode node = new KnowledgePointNode(kpName);
                 node.setId((String) rows.iterator().next().get("id"));
