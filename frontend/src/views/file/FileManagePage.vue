@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, h } from 'vue'
+import { onMounted, onBeforeUnmount, ref, h, computed } from 'vue'
 import { NSpace, useMessage, useDialog } from 'naive-ui'
 import { useFileStore } from './fileStore'
 import FileUpload from './components/FileUpload.vue'
@@ -21,12 +21,13 @@ const searchName = ref('')
 const filterFileType = ref<string | null>(null)
 const searchSubject = ref('')
 
-const fileTypeOptions = [
-  { label: '全部类型', value: null },
-  { label: 'PDF', value: 'PDF' },
-  { label: 'TXT', value: 'TXT' },
-  { label: 'CSV', value: 'CSV' },
-]
+const fileTypeOptions = computed(() => {
+  const types = [...new Set(store.files.map((f) => f.fileType).filter(Boolean))]
+  return [
+    { label: '全部类型', value: null },
+    ...types.map((t) => ({ label: t, value: t })),
+  ]
+})
 
 const columns: DataTableColumns<TextbookVO> = [
   { title: '文件名', key: 'name', width: 260, ellipsis: { tooltip: true } },
