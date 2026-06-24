@@ -73,7 +73,7 @@ public class SystemHealthServiceImpl implements SystemHealthService {
                 .heapMax(safeGaugeValue("jvm.memory.max"))
                 .cpuUsage(safeGaugeDouble("system.cpu.usage"))
                 .threadCount((int) safeGaugeValue("jvm.threads.live"))
-                .gcCount(safeGaugeValue("jvm.gc.pause"))
+                .gcCount(safeTimerCount("jvm.gc.pause"))
                 .build();
     }
 
@@ -94,6 +94,16 @@ public class SystemHealthServiceImpl implements SystemHealthService {
         } catch (Exception e) {
             log.debug("获取指标 {} 失败: {}", name, e.getMessage());
             return 0.0;
+        }
+    }
+
+    private long safeTimerCount(String name) {
+        try {
+            var timer = meterRegistry.get(name).timer();
+            return timer != null ? timer.count() : 0;
+        } catch (Exception e) {
+            log.debug("获取Timer指标 {} 失败: {}", name, e.getMessage());
+            return 0;
         }
     }
 }
