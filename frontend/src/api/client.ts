@@ -58,6 +58,10 @@ const FRIENDLY_TIPS: Record<string, string> = {
 // response 拦截器：unwrap ApiResult.data + 用户友好错误提示
 client.interceptors.response.use(
   (response) => {
+    // blob 响应（文件下载等）跳过 unwrap，直接返回
+    if (response.config.responseType === 'blob') {
+      return response.data as never
+    }
     const body = response.data as ApiResult<unknown>
     return body.data as never
   },

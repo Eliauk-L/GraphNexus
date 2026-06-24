@@ -1,6 +1,5 @@
 import client from './client'
 import type { QueryAskRequest, QueryChatRequest, QueryAskResponse, QueryAsyncResponse, QueryResultResponse, HistoryQueryParams, HistoryRecordVO, PageResult } from './types'
-import axios from 'axios'
 
 /** 同步问答 */
 export function askSync(req: QueryAskRequest): Promise<QueryAskResponse> {
@@ -40,8 +39,8 @@ export function deleteHistory(taskId: string): Promise<string> {
 
 /** 导出单条诊断报告（HTML 格式，返回 Blob） */
 export async function exportSingle(taskId: string): Promise<Blob> {
-  const resp = await axios.get(`/api/v1/query/history/${taskId}/export`, {
+  const resp = await client.get(`/query/history/${taskId}/export`, {
     responseType: 'blob',
   })
-  return resp.data as Blob
+  return resp as unknown as Blob
 }
