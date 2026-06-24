@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS query_task (
     error_message TEXT COMMENT '失败时错误信息',
     retry_count INT DEFAULT 0 COMMENT 'LLM调用重试次数',
     elapsed_ms BIGINT COMMENT '任务总耗时(毫秒)',
+    created_by VARCHAR(64) COMMENT '创建者用户名（执行诊断的用户）',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='智能问答任务记录表(日志类表，不设逻辑删除)';
@@ -237,8 +238,8 @@ INSERT IGNORE INTO system_config (config_key, config_type, category, config_name
 INSERT IGNORE INTO system_config (config_key, config_type, category, config_name, description, default_value, required, validation_rule, sort_order) VALUES
 ('llm.base-url', 'STRING', 'LLM_MODEL', 'LLM API地址', 'LLM服务的基础URL', 'https://dashscope.aliyuncs.com/compatible-mode', 1, NULL, 5),
 ('llm.api-key', 'STRING', 'LLM_MODEL', 'LLM API Key', 'LLM服务的认证密钥', '${LLM_API_KEY:}', 1, NULL, 6),
-('llm.model', 'STRING', 'LLM_MODEL', 'LLM模型名称', '调用LLM API时使用的模型标识', 'deepseek-v4-flash', 1, NULL, 10),
-('llm.temperature', 'NUMBER', 'LLM_MODEL', 'LLM温度参数', '生成温度(0~2)，越高越随机', '0.3', 0, '{"min":0,"max":2}', 11),
+('llm.model', 'STRING', 'LLM_MODEL', 'LLM模型名称', '调用LLM API时使用的模型标识', 'qwen3.6-plus', 1, NULL, 10),
+('llm.temperature', 'NUMBER', 'LLM_MODEL', 'LLM温度参数', '生成温度(0~2)，越高越随机', '0', 0, '{"min":0,"max":2}', 11),
 ('llm.max-tokens', 'NUMBER', 'LLM_MODEL', 'LLM最大Token数', '单次生成最大token数，-1表示不限制', '-1', 0, '{"min":-1}', 12);
 
 -- =============================================================================
