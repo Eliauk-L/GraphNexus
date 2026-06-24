@@ -84,7 +84,7 @@ const failReasonShort = computed(() => {
     删除中
   </span>
 
-  <!-- 管线进度指示器 -->
+  <!-- 管线进度指示器 + 失败原因直显 -->
   <NTooltip v-else placement="top" :delay="300">
     <template #trigger>
       <div class="pipeline">
@@ -111,6 +111,10 @@ const failReasonShort = computed(() => {
             class="pipeline__label micro-label"
           >{{ stage.label }}</span>
         </div>
+        <!-- 失败原因直显（非 FAILED/DELETING 状态但有 failReason 时） -->
+        <span v-if="failReasonShort" class="pipeline__fail-reason supporting">
+          {{ failReasonShort }}
+        </span>
       </div>
     </template>
     <span class="supporting">{{ tooltipText }}</span>
@@ -182,6 +186,16 @@ const failReasonShort = computed(() => {
 
 .pipeline__label {
   color: var(--color-text-tertiary);
+}
+
+/* ── 失败原因直显 ── */
+.pipeline__fail-reason {
+  color: var(--color-error);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
 }
 
 /* ── 回退徽章（FAILED / DELETING）── */
