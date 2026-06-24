@@ -149,6 +149,13 @@ public class TextbookServiceImpl implements TextbookService {
             throw new BusinessException(ErrorCode.A0004, "文档解析失败（所有解析器均失败）");
         }
 
+        // 页数校验：超过 200 页拒绝
+        if (parseResult.pageCount() > 200) {
+            failParsing(documentId, "页数超过限制: " + parseResult.pageCount() + " 页（最大 200 页）");
+            throw new BusinessException(ErrorCode.A0004,
+                    "文档页数超过限制（" + parseResult.pageCount() + " 页，最大允许 200 页）");
+        }
+
         // ===== 阶段 3：短事务 — 状态→PARSED（ADR-028 规则 1）=====
 
         completeParsing(documentId, parseResult);
