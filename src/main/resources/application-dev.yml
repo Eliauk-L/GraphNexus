@@ -104,7 +104,7 @@ minio:
 fusion:
   kp-matching:
     strategy: fuzzy             # fuzzy（模糊匹配）/ exact（精确匹配）/ vector-similarity（未来）
-    threshold: 0.75             # 融合相似度阈值（含子序列匹配pass兜底）
+    threshold: 0.60             # 融合相似度阈值（字符Jaccard）
   weight:
     strategy: time-decay        # time-decay（时间衰减）/ simple-average（简单平均）/ ewma（未来）
 

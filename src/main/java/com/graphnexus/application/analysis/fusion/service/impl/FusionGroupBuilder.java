@@ -63,19 +63,7 @@ public class FusionGroupBuilder {
             }
         }
 
-        // 子序列 pass：短名全部字符按序出现在长名中 + 长度比 ≥ 65% → 必然合并
-        // 处理 "矩阵概念" ↔ "矩阵基本概念" 这类插入修饰词的同义 KP
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                String na = candidates.get(i).name();
-                String nb = candidates.get(j).name();
-                if (na != null && nb != null && isSubsequenceMerge(na.trim(), nb.trim())) {
-                    union(parent, i, j);
-                }
-            }
-        }
-
-        // FuzzyMatch pass：对未在前置 pass 中合并的 KP 做模糊匹配
+        // FuzzyMatch pass：字符 Jaccard ≥ 阈值则合并（见 FuzzyMatchStrategy）
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
                 if (matcher.match(candidates.get(i), candidates.get(j)) >= threshold) {
@@ -149,28 +137,7 @@ public class FusionGroupBuilder {
             }
         }
         // 子序列优先选更长名：短名是长名的子序列 → 长名更完整作为规范节点
-        // 处理 "凸函数" ⊂ "凸函数与凹函数" 等场景
-        String masterName = (String) kps.get(masterIdx).get("name");
-        for (int idx : indices) {
-            if (idx == masterIdx) continue;
-            String otherName = (String) kps.get(idx).get("name");
-            if (masterName != null && otherName != null
-                    && masterName.length() < otherName.length()
-                    && isSubsequence(masterName, otherName)) {
-                masterIdx = idx;
-                masterName = otherName;
-            }
-        }
         return masterIdx;
-    }
-
-    /** 仅判断短名是否为长名的子序列（不做长度比约束，供 selectMaster 用） */
-    private boolean isSubsequence(String shorter, String longer) {
-        int si = 0;
-        for (int li = 0; li < longer.length() && si < shorter.length(); li++) {
-            if (shorter.charAt(si) == longer.charAt(li)) si++;
-        }
-        return si == shorter.length();
     }
 
     /** 构建规范 KP 属性（拼接 fusionSource） */
@@ -200,24 +167,4 @@ public class FusionGroupBuilder {
         if (ra != rb) parent[ra] = rb;
     }
 
-    /**
-     * 子序列合并判定：短名的全部字符是否按序出现在长名中。
-     *
-     * <p>处理 "矩阵概念"↔"矩阵基本概念"、"凸函数"↔"凸函数与凹函数" 等同义 KP。
-     * 长度比阈值分级：短名 ≥ 3 字放至 50%（有意义术语），短名 < 3 字保持 65%（防"函数"误匹配）。</p>
-     */
-    private boolean isSubsequenceMerge(String a, String b) {
-        if (a.isEmpty() || b.isEmpty() || a.equals(b)) return false;
-        String shorter = a.length() <= b.length() ? a : b;
-        String longer  = a.length() >  b.length() ? a : b;
-        // 长度比约束：短名 ≥ 3 字放宽，< 3 字从严
-        double minRatio = shorter.length() >= 3 ? 0.50 : 0.65;
-        if ((double) shorter.length() / longer.length() < minRatio) return false;
-        // 子序列判定
-        int si = 0;
-        for (int li = 0; li < longer.length() && si < shorter.length(); li++) {
-            if (shorter.charAt(si) == longer.charAt(li)) si++;
-        }
-        return si == shorter.length();
     }
-}
