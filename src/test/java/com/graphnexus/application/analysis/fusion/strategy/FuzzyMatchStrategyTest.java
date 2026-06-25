@@ -1,6 +1,5 @@
 package com.graphnexus.application.analysis.fusion.strategy;
 
-import com.graphnexus.application.analysis.fusion.config.FuzzyMatchProperties;
 import com.graphnexus.application.analysis.fusion.model.KpCandidate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -9,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * FuzzyMatchStrategy 单元测试 — AC-2/3/11。
+ * FuzzyMatchStrategy 单元测试 — 字符 Jaccard 相似度。
  *
  * @author Jay
  * @date 2026/06/15
@@ -21,11 +20,7 @@ class FuzzyMatchStrategyTest {
 
     @BeforeEach
     void setUp() {
-        FuzzyMatchProperties props = new FuzzyMatchProperties();
-        props.setAlpha(0.3);
-        props.setBeta(0.5);
-        props.setGamma(0.2);
-        strategy = new FuzzyMatchStrategy(props);
+        strategy = new FuzzyMatchStrategy();
     }
 
     @Test
@@ -45,13 +40,13 @@ class FuzzyMatchStrategyTest {
     }
 
     @Test
-    @DisplayName("AC-3: 名称部分重叠但不同知识点应低于阈值")
+    @DisplayName("名称部分重叠但不同知识点应低于阈值")
     void similarButDifferentKpsBelowThreshold() {
         KpCandidate a = new KpCandidate("二次函数图像", "数学", "1", "DOCUMENT");
         KpCandidate b = new KpCandidate("一次函数图像", "数学", null, "CSV_IMPORT");
         double score = strategy.match(a, b);
-        // 共享"函数图像"，但 Jaccard ≈ 0.714，应 < 0.85
-        assertTrue(score < 0.85, "Expected score < 0.85 but got " + score);
+        // "二" vs "一" 不同 → charJaccard ≈ 5/7 ≈ 0.714
+        assertTrue(score < 0.75, "Expected score < 0.75 but got " + score);
     }
 
     @Test

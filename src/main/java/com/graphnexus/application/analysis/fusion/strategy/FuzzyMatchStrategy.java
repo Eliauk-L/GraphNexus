@@ -1,23 +1,19 @@
 package com.graphnexus.application.analysis.fusion.strategy;
 
-import com.graphnexus.application.analysis.fusion.config.FuzzyMatchProperties;
 import com.graphnexus.application.analysis.fusion.model.KpCandidate;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * 模糊匹配策略 v1 — 多度量组合：字符 Jaccard + Bigram Jaccard + 归一化编辑距离。
+ * 模糊匹配策略 v1 — 字符 Jaccard 相似度。
  *
- * <p>见 ADR-006 + DESIGN D1。</p>
+ * <p>仅使用字符集交集/并集比作为相似度度量，对中文 KP 名称最为有效。
+ * 精确名称匹配和子序列匹配由 {@code FusionGroupBuilder} 前置 pass 兜底。</p>
  *
  * @author Jay
  * @date 2026/06/15
  */
 @Component("fuzzy")
-@RequiredArgsConstructor
 public class FuzzyMatchStrategy implements KpMatchingStrategy {
-
-    private final FuzzyMatchProperties fuzzyProperties;
 
     @Override
     public double match(KpCandidate a, KpCandidate b) {
@@ -37,15 +33,8 @@ public class FuzzyMatchStrategy implements KpMatchingStrategy {
             return 0.0;
         }
 
-        double alpha = fuzzyProperties.getAlpha();
-        double beta = fuzzyProperties.getBeta();
-        double gamma = fuzzyProperties.getGamma();
-
-        double charJaccard = charJaccard(na, nb);
-        double bigramJaccard = bigramJaccard(na, nb);
-        double normLevenshtein = 1.0 - normalizedLevenshtein(na, nb);
-
-        return alpha * charJaccard + beta * bigramJaccard + gamma * normLevenshtein;
+        // 仅使用字符 Jaccard 相似度（中文 KP 名称最有效的单一度量）
+        return charJaccard(na, nb);
     }
 
     @Override
@@ -91,54 +80,5 @@ public class FuzzyMatchStrategy implements KpMatchingStrategy {
         union.addAll(setB);
 
         return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
-    }
-
-    // ======================== Bigram Jaccard ========================
-
-    private double bigramJaccard(String a, String b) {
-        if (a.length() < 2 || b.length() < 2) {
-            // 短于 2 字符降级为字符 Jaccard
-            return charJaccard(a, b);
-        }
-        java.util.Set<String> bigramsA = new java.util.HashSet<>();
-        for (int i = 0; i < a.length() - 1; i++) {
-            bigramsA.add(a.substring(i, i + 2));
-        }
-        java.util.Set<String> bigramsB = new java.util.HashSet<>();
-        for (int i = 0; i < b.length() - 1; i++) {
-            bigramsB.add(b.substring(i, i + 2));
-        }
-
-        java.util.Set<String> intersection = new java.util.HashSet<>(bigramsA);
-        intersection.retainAll(bigramsB);
-
-        java.util.Set<String> union = new java.util.HashSet<>(bigramsA);
-        union.addAll(bigramsB);
-
-        return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
-    }
-
-    // ======================== 归一化编辑距离 ========================
-
-    private double normalizedLevenshtein(String a, String b) {
-        int maxLen = Math.max(a.length(), b.length());
-        if (maxLen == 0) return 0.0;
-        int distance = levenshteinDistance(a, b);
-        return (double) distance / maxLen;
-    }
-
-    private int levenshteinDistance(String a, String b) {
-        int[][] dp = new int[a.length() + 1][b.length() + 1];
-        for (int i = 0; i <= a.length(); i++) dp[i][0] = i;
-        for (int j = 0; j <= b.length(); j++) dp[0][j] = j;
-
-        for (int i = 1; i <= a.length(); i++) {
-            for (int j = 1; j <= b.length(); j++) {
-                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-                dp[i][j] = Math.min(dp[i - 1][j] + 1,
-                        Math.min(dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost));
-            }
-        }
-        return dp[a.length()][b.length()];
     }
 }
