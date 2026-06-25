@@ -80,6 +80,7 @@ public class TextbookServiceImpl implements TextbookService {
     // ======================== 解析（短事务→无事务→短事务→事务外事件） ========================
 
     @Override
+    @Auditable(OperationType.DOCUMENT_PROCESS)
     public ParseResult parse(Long documentId) {
         // ===== 阶段 1：短事务 — 校验 + 状态→PARSING（ADR-028 规则 1）=====
 

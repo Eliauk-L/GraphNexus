@@ -26,6 +26,8 @@ import com.graphnexus.infrastructure.mysql.query.entity.QueryTaskStatus;
 import com.graphnexus.infrastructure.mysql.file.repository.ExamRecordRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.graphnexus.application.ops.audit.annotation.Auditable;
+import com.graphnexus.infrastructure.mysql.ops.entity.OperationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -76,6 +78,7 @@ public class QueryServiceImpl implements QueryService {
     // ======================== 公共 API ========================
 
     @Override
+    @Auditable(OperationType.QA_ASK)
     public QueryResultBO ask(String question, String studentName, String studentNo, String subject) {
         // 如果提供了 className 信息（通过 question 中的意图识别判断），走班级流程
         // ask() 端点显式调用时，className 通过 QueryAskRequest 传递但此处无法直接获取。
@@ -186,6 +189,7 @@ public class QueryServiceImpl implements QueryService {
     }
 
     @Override
+    @Auditable(OperationType.QA_ASK)
     public String askAsync(String question, String studentName, String studentNo, String subject) {
         String taskId = UUID.randomUUID().toString();
         persistTask(taskId, question, studentName, studentNo, subject, null,
