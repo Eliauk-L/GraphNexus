@@ -69,6 +69,7 @@ public class MetricsServiceImpl implements MetricsService {
         List<MetricResultBO> results = cache.get(query.toCacheKey(), key -> {
             log.debug("缓存未命中，执行 PageRank 计算（nodeTypes={}, edgeTypes={}）", projNodes, normalizedEdges);
             String graphName = gdsAdapter.projectGraph(projNodes, normalizedEdges);
+            if (graphName == null) return Collections.emptyList();
             try {
                 return gdsAdapter.runPageRank(graphName).stream()
                         .map(r -> new MetricResultBO(r.nodeId(), r.nodeType(), r.nodeName(), "", r.className(), "pagerank", r.score()))
@@ -91,6 +92,7 @@ public class MetricsServiceImpl implements MetricsService {
         List<MetricResultBO> results = cache.get(query.toCacheKey(), key -> {
             log.debug("缓存未命中，执行度中心性计算（nodeTypes={}, edgeTypes={}）", projNodes, normalizedEdges);
             String graphName = gdsAdapter.projectGraph(projNodes, normalizedEdges);
+            if (graphName == null) return Collections.emptyList();
             try {
                 List<MetricResultBO> list = new ArrayList<>();
                 list.addAll(gdsAdapter.runDegreeStream(graphName, "NATURAL").stream()

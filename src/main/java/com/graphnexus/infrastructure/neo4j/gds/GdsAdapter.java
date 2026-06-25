@@ -50,8 +50,27 @@ public class GdsAdapter {
                 graphName, nodeProj, relProj);
 
         log.debug("GDS 图投影: graphName={}, nodeTypes={}, edgeTypes={}", graphName, nodeTypes, edgeTypes);
-        neo4jClient.query(cypher).run();
-        return graphName;
+        try {
+            neo4jClient.query(cypher).run();
+            return graphName;
+        } catch (Exception e) {
+            log.warn("GDS 图投影失败(可能部分边类型不存在): {}", e.getMessage());
+            // 回退：尝试仅用 '*' 投影全部关系类型
+            if (!"'*'".equals(relProj)) {
+                try {
+                    String fallbackCypher = String.format(
+                            "CALL gds.graph.project('%s', %s, '*')",
+                            graphName, nodeProj);
+                    log.info("GDS 回退投影: graphName={}, relProj=*", graphName);
+                    neo4jClient.query(fallbackCypher).run();
+                    return graphName;
+                } catch (Exception e2) {
+                    log.warn("GDS 回退投影也失败: {}", e2.getMessage());
+                    return null;
+                }
+            }
+            return null;
+        }
     }
 
     /**
