@@ -2,11 +2,11 @@
 # GraphNexus 容器化生产环境配置（profile: prod）
 # =============================================================================
 # 用途: Podman Compose 容器部署，所有主机名使用容器服务名
-# 激活: SPRING_PROFILES_ACTIVE=prod（通过环境变量注入）
+# 激活: SPRING_PROFILES_ACTIVE=prod（Containerfile ENV 默认值）
 # 网络: graphnexus-net（容器间内部通信，见 podman-compose.yml）
 #
 # 安全: 所有凭证通过环境变量注入，默认值与 podman-compose.yml 一致
-#       生产环境务必通过 podman-compose 或 .env 文件覆盖所有密码
+#       生产环境务必通过 .env 文件覆盖所有密码
 # =============================================================================
 
 spring:
@@ -45,6 +45,14 @@ spring:
         format_sql: true
 
   # ---------------------------------------------------------------------------
+  # 文件上传限制
+  # ---------------------------------------------------------------------------
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+
+  # ---------------------------------------------------------------------------
   # Redis 缓存（user-auth-rbac）
   # ---------------------------------------------------------------------------
   data:
@@ -61,14 +69,6 @@ spring:
           min-idle: 4
 
   # ---------------------------------------------------------------------------
-  # 文件上传限制
-  # ---------------------------------------------------------------------------
-  servlet:
-    multipart:
-      max-file-size: 50MB
-      max-request-size: 55MB
-
-  # ---------------------------------------------------------------------------
   # DeepSeek API（Spring AI OpenAI starter，兼容 OpenAI 协议）
   # ---------------------------------------------------------------------------
   ai:
@@ -77,22 +77,12 @@ spring:
       api-key: ${LLM_API_KEY:}
       chat:
         options:
-          model: ${LLM_MODEL:deepseek-v4-flash}
+          model: ${LLM_MODEL:qwen3.6-plus}
           temperature: ${LLM_TEMPERATURE:0.3}
           max-tokens: ${LLM_MAX_TOKENS:-1}
 
-  # ---------------------------------------------------------------------------
-  # RabbitMQ 消息队列（ops-analytics 异步事件）
-  # ---------------------------------------------------------------------------
-  rabbitmq:
-    host: ${RABBITMQ_HOST:rabbitmq}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:graphnexus}
-    password: ${RABBITMQ_PASSWORD:graphnexus123}
-    virtual-host: ${RABBITMQ_VHOST:graphnexus}
-
 # ---------------------------------------------------------------------------
-# MinIO 对象存储（自定义配置，无 Spring Boot 自动配置）
+# MinIO 对象存储（自定义配置，无 Spring Boot 自动配置，MinioClient 手动管理）
 # ---------------------------------------------------------------------------
 minio:
   endpoint: http://minio:9000
@@ -106,22 +96,16 @@ minio:
 fusion:
   kp-matching:
     strategy: fuzzy
-    threshold: 0.85
+    threshold: 0.5
   weight:
     strategy: time-decay
-  rollback:
-    weight-tolerance: 0.01      # MASTERS weight 回滚校验容差
 
-fusion.strategy.fuzzy:
-  alpha: 0.3
-  beta: 0.5
-  gamma: 0.2
 
 fusion.strategy.time-decay:
   factor: 0.9
 
 # ---------------------------------------------------------------------------
-# 图指标度量配置
+# 图指标度量配置（graph-metrics）
 # ---------------------------------------------------------------------------
 graph:
   metrics:
@@ -171,7 +155,7 @@ query:
     queue-capacity: 10
   timeout:
     sync-timeout-seconds: 30
-  output-format: html  # html | markdown
+  output-format: html
 
 # ---------------------------------------------------------------------------
 # JWT 认证配置
@@ -190,6 +174,7 @@ logging:
     com.graphnexus.infra: INFO
     org.springframework.web: WARN
     org.springframework.data.neo4j: WARN
+    org.springframework.data.redis: WARN
 
 # ---------------------------------------------------------------------------
 # SpringDoc OpenAPI

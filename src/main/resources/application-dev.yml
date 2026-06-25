@@ -104,17 +104,13 @@ minio:
 fusion:
   kp-matching:
     strategy: fuzzy             # fuzzy（模糊匹配）/ exact（精确匹配）/ vector-similarity（未来）
-    threshold: 0.60             # 融合相似度阈值（字符Jaccard）
+    threshold: 0.5            # 融合相似度阈值（字符Jaccard）
   weight:
     strategy: time-decay        # time-decay（时间衰减）/ simple-average（简单平均）/ ewma（未来）
 
 # ---------------------------------------------------------------------------
 # 策略专属配置 — 各策略独立绑定前缀，新增策略只需加新配置块
 # ---------------------------------------------------------------------------
-fusion.strategy.fuzzy:
-  alpha: 0.3                    # 字符 Jaccard 权重
-  beta: 0.5                     # Bigram Jaccard 权重
-  gamma: 0.2                    # 归一化编辑距离权重
 
 fusion.strategy.time-decay:
   factor: 0.9                   # 月衰减因子（0~1）
@@ -159,7 +155,7 @@ mineru:
 # ---------------------------------------------------------------------------
 query:
   token-budget:
-    max-input-tokens: 8000
+    max-input-tokens: 8000  # -1 表示不限制
     chars-per-token: 3
   pruning:
     weak-threshold: 0.6

@@ -84,6 +84,7 @@ public class ConstructionController {
     }
 
     /**
+     * TODO: 将该接口应该移至文档处理模块中
      * 查询所有学科名称列表。
      */
     @Operation(summary = "查询学科列表", description = "返回 Neo4j 中所有 Subject 节点的名称，按名称排序。用于前端学科选择器下拉框数据源")

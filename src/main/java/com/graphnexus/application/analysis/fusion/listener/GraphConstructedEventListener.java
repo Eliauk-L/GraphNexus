@@ -1,4 +1,4 @@
-package com.graphnexus.application.analysis.fusion.event;
+package com.graphnexus.application.analysis.fusion.listener;
 
 import com.graphnexus.application.analysis.fusion.service.FusionService;
 import com.graphnexus.application.graph.construction.event.GraphConstructedEvent;

@@ -127,12 +127,12 @@ public class QueryServiceImpl implements QueryService {
             // 4. 子图序列化
             String subgraphText = serializeSubgraph(subgraph, student);
 
-            // 5. Token 预算控制
+            // 5. Token 预算控制（maxInputTokens <= 0 时不限制）
             int maxInputTokens = queryProperties.getTokenBudget().getMaxInputTokens();
             int charsPerToken = queryProperties.getTokenBudget().getCharsPerToken();
             boolean truncated = false;
             List<String> truncatedNames = Collections.emptyList();
-            if (subgraphText.length() > maxInputTokens * charsPerToken) {
+            if (maxInputTokens > 0 && subgraphText.length() > maxInputTokens * charsPerToken) {
                 var result = truncateSubgraph(subgraphText, maxInputTokens * charsPerToken);
                 subgraphText = result.text();
                 truncated = result.truncated();

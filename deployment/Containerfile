@@ -37,6 +37,9 @@ USER app:app
 
 WORKDIR /app
 
+# logback-spring.xml 中 LOG_DIR=logs，prod profile 写文件日志到此目录
+RUN mkdir -p logs
+
 # 从构建阶段复制 fat JAR
 COPY --from=builder /build/target/*.jar ./app.jar
 
@@ -44,5 +47,8 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=60s \
     CMD wget -qO- http://localhost:8080/actuator/health || exit 1
 
 EXPOSE 8080
+
+# 默认激活 prod profile，连接容器服务名（neo4j/redis/rabbitmq/...）而非 localhost
+ENV SPRING_PROFILES_ACTIVE=prod
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

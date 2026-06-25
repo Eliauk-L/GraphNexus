@@ -26,16 +26,13 @@
           <mxGeometry height="70" width="180" x="150" y="774" as="geometry" />
         </mxCell>
         <mxCell id="l4-m2" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="✅MySQL" vertex="1">
-          <mxGeometry height="70" width="180" x="350" y="774" as="geometry" />
+          <mxGeometry height="70" width="180" x="390" y="776.75" as="geometry" />
         </mxCell>
         <mxCell id="l4-m3" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="✅Redis" vertex="1">
-          <mxGeometry height="70" width="160" x="550" y="774" as="geometry" />
+          <mxGeometry height="70" width="160" x="650" y="776.75" as="geometry" />
         </mxCell>
         <mxCell id="l4-m4" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="✅MinIO" vertex="1">
-          <mxGeometry height="70" width="160" x="730" y="774" as="geometry" />
-        </mxCell>
-        <mxCell id="l4-m5" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=1.5;fontSize=13;arcSize=5;align=center;" value="RabbitMQ" vertex="1">
-          <mxGeometry height="70" width="150" x="910" y="774" as="geometry" />
+          <mxGeometry height="70" width="160" x="880" y="774" as="geometry" />
         </mxCell>
         <mxCell id="hvbLFj-UJNi-nB-QriEM-5" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;arcSize=8;rotation=90;fontColor=light-dark(#f5f5f5, #fb7b35);fontSize=13;" value="" vertex="1">
           <mxGeometry height="215" width="831.25" x="791.87" y="358.12" as="geometry" />

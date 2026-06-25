@@ -118,7 +118,7 @@ class FileProcessingIntegrationTest {
     @Order(3)
     @DisplayName("AC-4: 分页查询文档列表")
     void listTextBooksShouldReturnPage() {
-        var page = textBookService.listTextBooks(1, 10, null, null);
+        var page = textBookService.listTextBooks(1, 10, null, null,null);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(1);
     }
 

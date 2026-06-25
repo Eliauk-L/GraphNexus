@@ -227,10 +227,10 @@ class TextbookServiceTest {
     @DisplayName("分页查询返回正确结构（AC-4）")
     void listTextBooksShouldReturnPage() {
         Page<TextbookDO> page = new PageImpl<>(List.of(sampleDoc), PageRequest.of(0, 10), 1);
-        when(textbookRepository.findByConditions(null, null, PageRequest.of(0, 10)))
+        when(textbookRepository.findByConditions(null, null, null,PageRequest.of(0, 10)))
                 .thenReturn(page);
 
-        Page<TextbookBO> result = fileService.listTextBooks(1, 10, null, null);
+        Page<TextbookBO> result = fileService.listTextBooks(1, 10, null, null,null);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
