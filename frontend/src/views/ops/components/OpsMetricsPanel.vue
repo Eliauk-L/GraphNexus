@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { queryPageRank, queryDegree } from '@/api/graph'
 import type { MetricResultVO } from '@/api/types'
 import { NTag } from 'naive-ui'
@@ -9,6 +9,7 @@ const kpPR = ref<MetricRow[]>([])
 const stPR = ref<MetricRow[]>([])
 const kpDeg = ref<MetricRow[]>([])
 const stDeg = ref<MetricRow[]>([])
+const isEmpty = computed(() => !kpPR.value.length && !stPR.value.length && !kpDeg.value.length && !stDeg.value.length)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -45,7 +46,12 @@ onMounted(load)
     <h2 class="headline">图度量指标 <NTag size="tiny" :bordered="true" style="vertical-align:middle;margin-left:8px">Top 5</NTag></h2>
     <div v-if="error" class="supporting" style="color:var(--color-error)">{{ error }}</div>
 
-    <div class="grid">
+    <div v-if="!loading && isEmpty" class="col" style="text-align:center;padding:var(--spacing-xl)">
+      <div class="supporting" style="color:var(--color-text-tertiary)">图谱中暂无节点和边数据</div>
+      <div class="supporting" style="color:var(--color-text-tertiary);font-size:0.75rem;margin-top:4px">导入成绩或上传文档后，系统自动计算 PageRank 和度中心性指标</div>
+    </div>
+
+    <div v-else class="grid">
       <div class="col">
         <div class="col-title">PageRank · 知识点</div>
         <table v-if="kpPR.length">
