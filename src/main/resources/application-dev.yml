@@ -155,7 +155,7 @@ mineru:
 # ---------------------------------------------------------------------------
 query:
   token-budget:
-    max-input-tokens: 8000  # -1 表示不限制
+    max-input-tokens: -1  # -1 表示不限制
     chars-per-token: 3
   pruning:
     weak-threshold: 0.6

@@ -395,10 +395,10 @@ public class QueryServiceImpl implements QueryService {
             // 子图序列化
             String subgraphText = serializeSubgraph(subgraph, student);
 
-            // Token 预算控制
+            // Token 预算控制（maxInputTokens <= 0 时不限制）
             int maxInputTokens = queryProperties.getTokenBudget().getMaxInputTokens();
             int charsPerToken = queryProperties.getTokenBudget().getCharsPerToken();
-            if (subgraphText.length() > maxInputTokens * charsPerToken) {
+            if (maxInputTokens > 0 && subgraphText.length() > maxInputTokens * charsPerToken) {
                 var result = truncateSubgraph(subgraphText, maxInputTokens * charsPerToken);
                 subgraphText = result.text();
             }
@@ -469,10 +469,10 @@ public class QueryServiceImpl implements QueryService {
             // 班级子图序列化
             String subgraphText = serializeClassSubgraph(subgraph, className, classInfo.classSize());
 
-            // Token 预算控制
+            // Token 预算控制（maxInputTokens <= 0 时不限制）
             int maxInputTokens = queryProperties.getTokenBudget().getMaxInputTokens();
             int charsPerToken = queryProperties.getTokenBudget().getCharsPerToken();
-            if (subgraphText.length() > maxInputTokens * charsPerToken) {
+            if (maxInputTokens > 0 && subgraphText.length() > maxInputTokens * charsPerToken) {
                 var result = truncateSubgraph(subgraphText, maxInputTokens * charsPerToken);
                 subgraphText = result.text();
             }

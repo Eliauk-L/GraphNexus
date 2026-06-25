@@ -165,7 +165,7 @@
         <mxCell id="KTZk7nBxucwavztfb8zA-11" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅智能对话" vertex="1">
           <mxGeometry height="32.5" width="160" x="890" y="426" as="geometry" />
         </mxCell>
-        <mxCell id="KTZk7nBxucwavztfb8zA-12" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="配置管理" vertex="1">
+        <mxCell id="KTZk7nBxucwavztfb8zA-12" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅配置管理" vertex="1">
           <mxGeometry height="32.5" width="160" x="890" y="476" as="geometry" />
         </mxCell>
         <mxCell id="KTZk7nBxucwavztfb8zA-13" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#2196F3;strokeWidth=1;fontSize=13;arcSize=5;align=center;verticalAlign=top;" value="✅成绩管理" vertex="1">
