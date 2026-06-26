@@ -1,0 +1,192 @@
+[
+  {
+    "n": {
+      "identity": 14,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-25T09:29:21.237370",
+        "gradeLevel": "本科",
+        "name": "向量与标量概念",
+        "description": "具有大小和方向的量及其n元组表示，是线性代数的基础对象",
+        "documentId": "1",
+        "id": "81254d16-4107-4a24-9a69-10b6ef05b7dd",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:14"
+    }
+  },
+  {
+    "n": {
+      "identity": 15,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "gradeLevel": "本科",
+        "subjectNodeId": "1b82d431-e59e-3a1d-b8bb-5e44eac41675",
+        "subject": "机器学习",
+        "name": "向量内积与运算",
+        "description": "向量点积运算及其交换律，用于衡量向量相似性与投影",
+        "documentId": "1",
+        "id": "7697c23b-8b91-4701-b110-a9622ee33d37",
+        "fusionSource": "DOCUMENT,CSV_IMPORT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:15"
+    }
+  },
+  {
+    "n": {
+      "identity": 16,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-25T09:29:21.237390",
+        "gradeLevel": "本科",
+        "name": "向量范数",
+        "description": "衡量向量长度的函数，包括L1、L2、Lp及L0范数",
+        "documentId": "1",
+        "id": "a24c54eb-7fde-4613-97ed-be31cc88f51d",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT,CSV_IMPORT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:16"
+    }
+  },
+  {
+    "n": {
+      "identity": 17,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-25T09:29:21.237396",
+        "gradeLevel": "本科",
+        "name": "矩阵基本概念",
+        "description": "二维矩形数表及其转置、特殊矩阵（对角、单位、零矩阵）",
+        "documentId": "1",
+        "id": "8203202a-8f15-4180-a79f-e4896439b888",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:17"
+    }
+  },
+  {
+    "n": {
+      "identity": 18,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-25T09:29:21.237402",
+        "gradeLevel": "本科",
+        "name": "矩阵乘法与逆矩阵",
+        "description": "矩阵相乘的行列匹配规则、结合律及逆矩阵定义",
+        "documentId": "1",
+        "id": "1f7dbbd8-9d0f-4e19-bbb0-a67dda1bb87e",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:18"
+    }
+  },
+  {
+    "n": {
+      "identity": 19,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-25T09:29:21.237407",
+        "gradeLevel": "本科",
+        "name": "矩阵的秩与线性相关性",
+        "description": "衡量矩阵信息量与列向量线性无关程度的核心指标",
+        "documentId": "1",
+        "id": "500ec9fb-cc6d-403d-a82b-fc29f078f8f4",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT,CSV_IMPORT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:19"
+    }
+  },
+  {
+    "n": {
+      "identity": 20,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-25T09:29:21.237413",
+        "gradeLevel": "本科",
+        "name": "梯度与偏导数",
+        "description": "多元函数在各坐标轴方向变化率组成的向量，指示函数上升最快方向",
+        "documentId": "1",
+        "id": "39af6071-9c6d-4b33-92b3-77d871bd8d29",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:20"
+    }
+  },
+  {
+    "n": {
+      "identity": 21,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-25T09:29:21.237416",
+        "gradeLevel": "本科",
+        "name": "雅可比矩阵与黑塞矩阵",
+        "description": "向量值函数的一阶导数矩阵与标量函数的二阶导数矩阵",
+        "documentId": "1",
+        "id": "55d9a300-734b-4857-a2bf-4bc246b63d0e",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:21"
+    }
+  },
+  {
+    "n": {
+      "identity": 22,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-25T09:29:21.237421",
+        "gradeLevel": "本科",
+        "name": "凸函数性质与定义",
+        "description": "满足Jensen不等式的函数，其图像任意两点连线在函数上方，保证局部最优即全局最优",
+        "documentId": "1",
+        "id": "f68755e2-34a9-40cb-8fee-5a6d61e87810",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:22"
+    }
+  },
+  {
+    "n": {
+      "identity": 23,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-25T09:29:21.237427",
+        "gradeLevel": "本科",
+        "name": "优化问题与极值条件",
+        "description": "寻找函数最小值的数学建模，梯度为零是寻找极值点的必要条件",
+        "documentId": "1",
+        "id": "6b99f1cd-25c7-4cf9-b1e4-1eb94424c120",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:743acaa2-9277-4fcf-a768-fcc57d01ec14:23"
+    }
+  }
+]

@@ -1,0 +1,188 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="S6-图谱构建与融合" id="s06-graph-build-fusion">
+    <mxGraphModel dx="1400" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="S6 · 图谱构建与图谱融合 — 端到端流水线" style="rounded=1;whiteSpace=wrap;fillColor=#2C3E50;strokeColor=#1a252f;fontSize=14;fontColor=#ffffff;fontStyle=1;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="100" y="10" width="1000" height="32" as="geometry"/>
+        </mxCell>
+
+        <!-- Participants -->
+        <!-- Admin -->
+        <mxCell id="h-A" value="管理员(A1)" style="rounded=1;whiteSpace=wrap;fillColor=#D5F5E3;strokeColor=#27AE60;fontSize=10;fontStyle=1;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="30" y="60" width="70" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-A" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="65" y="88" as="sourcePoint"/><mxPoint x="65" y="820" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- P1 -->
+        <mxCell id="h-P1" value="P1:管理后台" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=10;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="140" y="60" width="80" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-P1" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="88" as="sourcePoint"/><mxPoint x="180" y="820" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Graph Construction -->
+        <mxCell id="h-Constr" value="文档处理.图构建" style="rounded=1;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;fontSize=10;fontStyle=1;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="280" y="60" width="110" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-Constr" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="335" y="88" as="sourcePoint"/><mxPoint x="335" y="820" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Neo4j -->
+        <mxCell id="h-DB" value="L4:Neo4j" style="rounded=1;whiteSpace=wrap;fillColor=#D5D8DC;strokeColor=#566573;fontSize=10;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="450" y="60" width="70" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-DB" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="485" y="88" as="sourcePoint"/><mxPoint x="485" y="820" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Graph Fusion -->
+        <mxCell id="h-Fusion" value="图分析.图融合" style="rounded=1;whiteSpace=wrap;fillColor=#E8DAEF;strokeColor=#8E44AD;fontSize=10;fontStyle=1;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="580" y="60" width="100" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-Fusion" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="630" y="88" as="sourcePoint"/><mxPoint x="630" y="820" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- PHASE 1: 图谱构建 -->
+        <!-- ============================================ -->
+        <mxCell id="p1-note" value="阶段1: 图谱构建 — POST /graph/construction/extract/{id} (NER实体抽取 + RE关系抽取 → Neo4j写入)" style="text;fontSize=9;fontStyle=2;fontColor=#E67E22;fillColor=#FEF9E7;strokeColor=#E67E22;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="105" width="650" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Step 1.1: Trigger -->
+        <mxCell id="m1" value="点击重新抽取图谱" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="65" y="140" as="sourcePoint"/><mxPoint x="180" y="140" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m2" value="POST /graph/construction/extract/{documentId}" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="165" as="sourcePoint"/><mxPoint x="335" y="165" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- NER step -->
+        <mxCell id="m3-note" value="NER实体抽取 (KnowledgePoint节点)" style="text;fontSize=8;fontColor=#E67E22;align=center;fillColor=#FEF9E7;strokeColor=#E67E22;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="275" y="188" width="170" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- RE step -->
+        <mxCell id="m4-note" value="RE关系抽取 (引用/推导/包含/前置依赖边)" style="text;fontSize=8;fontColor=#E67E22;align=center;fillColor=#FEF9E7;strokeColor=#E67E22;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="275" y="212" width="200" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- Write nodes -->
+        <mxCell id="m5" value="CREATE (n:KnowledgePoint {...})&#xa;UNWIND entities batch create" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="335" y="242" as="sourcePoint"/><mxPoint x="485" y="242" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m6" value="N nodes created" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999999;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="485" y="262" as="sourcePoint"/><mxPoint x="335" y="262" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Write edges -->
+        <mxCell id="m7" value="CREATE (a)-[r:RELATES {type}]->(b)&#xa;UNWIND relations batch create" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="335" y="285" as="sourcePoint"/><mxPoint x="485" y="285" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m8" value="M edges created" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999999;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="485" y="305" as="sourcePoint"/><mxPoint x="335" y="305" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Extraction relations -->
+        <mxCell id="m9" value="CREATE (d:Document)-[:EXTRACTS]->(kp)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="335" y="328" as="sourcePoint"/><mxPoint x="485" y="328" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m10" value="ok" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999999;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="485" y="348" as="sourcePoint"/><mxPoint x="335" y="348" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Return result -->
+        <mxCell id="m11" value="ExtractionResultVO{entityCount:N, relationCount:M}" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E67E22;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="335" y="378" as="sourcePoint"/><mxPoint x="180" y="378" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m12" value="图谱构建完成: N个知识点, M条关系" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="405" as="sourcePoint"/><mxPoint x="65" y="405" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- PHASE 2: 图谱融合 -->
+        <!-- ============================================ -->
+        <mxCell id="p2-note" value="阶段2: 图谱融合 — POST /analysis/fusion/execute (FuzzyMatch全量融合 + MASTERS权重重算)" style="text;fontSize=9;fontStyle=2;fontColor=#8E44AD;fillColor=#F4ECF7;strokeColor=#8E44AD;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="440" width="650" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Trigger fusion -->
+        <mxCell id="f1" value="点击执行宽图谱融合" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="65" y="475" as="sourcePoint"/><mxPoint x="180" y="475" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="f2" value="POST /analysis/fusion/execute" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#8E44AD;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="500" as="sourcePoint"/><mxPoint x="630" y="500" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Check concurrency -->
+        <mxCell id="f2-note" value="① 并发检查 (已有融合进行中→409拒绝)" style="text;fontSize=8;fontColor=#8E44AD;align=center;" vertex="1" parent="1">
+          <mxGeometry x="280" y="522" width="210" height="14" as="geometry"/>
+        </mxCell>
+
+        <!-- FuzzyMatch -->
+        <mxCell id="f3" value="MATCH FuzzyMatch&#xa;levenshteinSimilarity(name1, name2) >= 0.85" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="630" y="548" as="sourcePoint"/><mxPoint x="485" y="548" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="f4" value="候选KP组列表 (按相似度降序)" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999999;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="485" y="572" as="sourcePoint"/><mxPoint x="630" y="572" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Merge operations -->
+        <mxCell id="f5-note" value="② 逐组: 保留主KP → 迁移副KP的所有边 → DETACH DELETE副KP" style="text;fontSize=8;fontColor=#8E44AD;align=center;fillColor=#F4ECF7;strokeColor=#8E44AD;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="595" width="320" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- Recalculate MASTERS -->
+        <mxCell id="f6-note" value="③ 重算受影响学生的 MASTERS 权重 (TimeDecay 时间衰减)" style="text;fontSize=8;fontColor=#8E44AD;align=center;fillColor=#F4ECF7;strokeColor=#8E44AD;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="620" width="320" height="16" as="geometry"/>
+        </mxCell>
+
+        <!-- Write back -->
+        <mxCell id="f7" value="UPDATE Neo4j&#xa;(合并节点 + 迁移边 + 更新MASTERS权重)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="630" y="650" as="sourcePoint"/><mxPoint x="485" y="650" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="f8" value="更新完成" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999999;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="485" y="674" as="sourcePoint"/><mxPoint x="630" y="674" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Persist log -->
+        <mxCell id="f9" value="INSERT fusion_log&#xa;(fusionDetailJson + mastersSnapshotJson)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="630" y="698" as="sourcePoint"/><mxPoint x="485" y="698" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="f10" value="fusionLogId=N" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999999;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="485" y="722" as="sourcePoint"/><mxPoint x="630" y="722" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Return fusion result -->
+        <mxCell id="f11" value="FusionExecuteVO{fusionLogId, mergedKpGroupCount, mastersEdgeCount}" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#8E44AD;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="630" y="752" as="sourcePoint"/><mxPoint x="180" y="752" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="f12" value="融合完成: 合并N组知识点, 更新M条MASTERS边" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="780" as="sourcePoint"/><mxPoint x="65" y="780" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Rollback note -->
+        <mxCell id="rb-note" value="回滚: POST /analysis/fusion/rollback/{fusionLogId} (仅ADMIN) → 读取快照 → 恢复被合并KP+迁移的边+旧MASTERS权重 → 标记rolled_back=true" style="text;fontSize=8;fontStyle=2;fontColor=#E74C3C;fillColor=#FDEDEC;strokeColor=#E74C3C;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="65" y="818" width="700" height="22" as="geometry"/>
+        </mxCell>
+
+        <!-- Summary box -->
+        <mxCell id="summary-box" value="" style="rounded=1;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#999999;strokeWidth=1;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="65" y="855" width="700" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="summary-text" value="端到端流水线: 图谱构建 (NER+RE → Neo4j) → 图谱融合 (FuzzyMatch≥0.85 → KP合并 → MASTERS重算) → 可回滚" style="text;fontSize=9;fontFamily=Courier New;fontColor=#666666;align=left;" vertex="1" parent="1">
+          <mxGeometry x="75" y="863" width="680" height="20" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

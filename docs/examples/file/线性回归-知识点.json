@@ -1,0 +1,154 @@
+[
+  {
+    "n": {
+      "identity": 1,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-24T12:33:44.486971",
+        "gradeLevel": "本科/研究生",
+        "name": "正规方程求解",
+        "description": "通过矩阵运算直接求导得到损失函数极小值的闭式解析解",
+        "documentId": "3",
+        "id": "6b4f3f96-f856-47f2-87dd-50411408fc06",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:8dd1cddb-dbed-4436-aa15-454131c034bd:1"
+    }
+  },
+  {
+    "n": {
+      "identity": 2,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-24T12:33:44.486976",
+        "gradeLevel": "本科/研究生",
+        "name": "梯度下降原理",
+        "description": "利用目标函数梯度反方向迭代更新参数以逼近最优解的数值方法",
+        "documentId": "3",
+        "id": "c1bea58c-5f48-4d21-a749-60862a23a976",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:8dd1cddb-dbed-4436-aa15-454131c034bd:2"
+    }
+  },
+  {
+    "n": {
+      "identity": 3,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-24T12:33:44.486981",
+        "gradeLevel": "本科/研究生",
+        "name": "学习率调优",
+        "description": "控制参数更新步长的超参数，直接影响算法收敛速度与稳定性",
+        "documentId": "3",
+        "id": "34beb88d-60c1-4fcb-80ce-6a66254ac73c",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:8dd1cddb-dbed-4436-aa15-454131c034bd:3"
+    }
+  },
+  {
+    "n": {
+      "identity": 4,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-24T12:33:44.486986",
+        "gradeLevel": "本科/研究生",
+        "name": "随机梯度下降算法",
+        "description": "每次迭代仅使用单个样本估计梯度，平衡计算效率与收敛稳定性的优化变体",
+        "documentId": "3",
+        "id": "33b28425-f59b-4c52-8c68-0a78000db1fd",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:8dd1cddb-dbed-4436-aa15-454131c034bd:4"
+    }
+  },
+  {
+    "n": {
+      "identity": 5,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-24T12:33:44.486990",
+        "gradeLevel": "本科/研究生",
+        "name": "线性回归工程实践",
+        "description": "结合数据预处理、模型训练与评估指标完成真实数据集的回归预测任务",
+        "documentId": "3",
+        "id": "c90b392e-0387-411f-9eae-cf047baba879",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:8dd1cddb-dbed-4436-aa15-454131c034bd:5"
+    }
+  },
+  {
+    "n": {
+      "identity": 55,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-24T12:33:44.486965",
+        "gradeLevel": "本科/研究生",
+        "name": "损失函数与优化目标",
+        "description": "采用均方误差衡量预测值与真实值差距，并以此作为最小化目标",
+        "documentId": "3",
+        "id": "3070b946-d9dc-4d67-b4ed-e5c41dd9176d",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:8dd1cddb-dbed-4436-aa15-454131c034bd:55"
+    }
+  },
+  {
+    "n": {
+      "identity": 66,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-24T12:33:44.486943",
+        "gradeLevel": "本科/研究生",
+        "name": "线性回归基本概念",
+        "description": "假设输入输出呈线性关系并建立模型求解参数的监督学习基础任务",
+        "documentId": "3",
+        "id": "0c0193ce-97ae-4214-826c-8ea02a3b5537",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:8dd1cddb-dbed-4436-aa15-454131c034bd:66"
+    }
+  },
+  {
+    "n": {
+      "identity": 69,
+      "labels": [
+        "KnowledgePoint"
+      ],
+      "properties": {
+        "createdAt": "2026-06-24T12:33:44.486960",
+        "gradeLevel": "本科/研究生",
+        "name": "线性回归模型表示",
+        "description": "使用参数向量与特征向量的内积表示线性映射关系",
+        "documentId": "3",
+        "id": "cda8ca46-439a-40a7-9242-afc316530bcf",
+        "nodeType": "KnowledgePoint",
+        "fusionSource": "DOCUMENT"
+      },
+      "elementId": "4:8dd1cddb-dbed-4436-aa15-454131c034bd:69"
+    }
+  }
+]

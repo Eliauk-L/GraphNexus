@@ -1,48 +1,176 @@
 <mxfile host="app.diagrams.net">
-  <diagram name="S5-LLM降级链" id="s05-llm">
-    <mxGraphModel dx="1500" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="950" math="0" shadow="0">
-      <root><mxCell id="0"/><mxCell id="1" parent="0"/>
+  <diagram name="S5-LLM降级与熔断" id="s05-llm-degradation">
+    <mxGraphModel dx="1400" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1050" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
 
-        <mxCell id="title" value="S5 · LLM降级与熔断 (横切关注点) — 完整降级链" style="rounded=1;whiteSpace=wrap;fillColor=#2C3E50;strokeColor=#1a252f;fontSize=14;fontColor=#ffffff;fontStyle=1;arcSize=5;" vertex="1" parent="1"><mxGeometry x="150" y="10" width="1200" height="32" as="geometry"/></mxCell>
+        <mxCell id="title" value="S5 · LLM调用降级与熔断 (横切关注点) — LlmGateway内部降级链" style="rounded=1;whiteSpace=wrap;fillColor=#2C3E50;strokeColor=#1a252f;fontSize=14;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="10" width="1100" height="32" as="geometry"/>
+        </mxCell>
 
-        <mxCell id="h-C" value="调用方(智能查询/文档处理)" style="rounded=1;whiteSpace=wrap;fillColor=#D5F5E3;strokeColor=#27AE60;fontSize=9;arcSize=3;" vertex="1" parent="1"><mxGeometry x="30" y="55" width="80" height="26" as="geometry"/></mxCell>
-        <mxCell id="h-GW" value="基础数据.LLM网关" style="rounded=1;whiteSpace=wrap;fillColor=#E8DAEF;strokeColor=#8E44AD;fontSize=9;arcSize=3;" vertex="1" parent="1"><mxGeometry x="170" y="55" width="110" height="26" as="geometry"/></mxCell>
-        <mxCell id="h-Cache" value="Redis(缓存)" style="rounded=1;whiteSpace=wrap;fillColor=#FADBD8;strokeColor=#E74C3C;fontSize=9;arcSize=3;" vertex="1" parent="1"><mxGeometry x="340" y="55" width="90" height="26" as="geometry"/></mxCell>
-        <mxCell id="h-Q" value="智能查询.配置管理" style="rounded=1;whiteSpace=wrap;fillColor=#FADBD8;strokeColor=#E74C3C;fontSize=9;arcSize=3;" vertex="1" parent="1"><mxGeometry x="490" y="55" width="80" height="26" as="geometry"/></mxCell>
-        <mxCell id="h-CB" value="智能查询.配置管理" style="rounded=1;whiteSpace=wrap;fillColor=#FADBD8;strokeColor=#E74C3C;fontSize=9;arcSize=3;" vertex="1" parent="1"><mxGeometry x="630" y="55" width="80" height="26" as="geometry"/></mxCell>
-        <mxCell id="h-Opus" value="A6:Claude(首选)" style="rounded=1;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;fontSize=9;fontStyle=1;arcSize=3;" vertex="1" parent="1"><mxGeometry x="770" y="55" width="90" height="26" as="geometry"/></mxCell>
-        <mxCell id="h-Sonnet" value="A6:Claude(次选)" style="rounded=1;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;fontSize=9;arcSize=3;" vertex="1" parent="1"><mxGeometry x="920" y="55" width="90" height="26" as="geometry"/></mxCell>
-        <mxCell id="h-Haiku" value="A6:Claude(兜底)" style="rounded=1;whiteSpace=wrap;fillColor=#D5D8DC;strokeColor=#566573;fontSize=9;arcSize=3;" vertex="1" parent="1"><mxGeometry x="1070" y="55" width="90" height="26" as="geometry"/></mxCell>
-        <mxCell id="h-M7" value="横切.通知" style="rounded=1;whiteSpace=wrap;fillColor=#EBDEF0;strokeColor=#8E44AD;fontSize=9;arcSize=3;" vertex="1" parent="1"><mxGeometry x="1220" y="55" width="80" height="26" as="geometry"/></mxCell>
-        <mxCell id="h-LogDB" value="L4:MySQL(日志DB)" style="rounded=1;whiteSpace=wrap;fillColor=#D5D8DC;strokeColor=#566573;fontSize=9;arcSize=3;" vertex="1" parent="1"><mxGeometry x="1350" y="55" width="110" height="26" as="geometry"/></mxCell>
+        <mxCell id="api-note" value="API层: LlmGateway.chat(systemPrompt, userMessage) → String (内部封装下列降级逻辑)" style="text;fontSize=10;fontStyle=1;fontColor=#8E44AD;fillColor=#F4ECF7;strokeColor=#8E44AD;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="50" width="650" height="22" as="geometry"/>
+        </mxCell>
 
-        <mxCell id="m1" value="callLLM(taskType, templateId, vars)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="70" y="100" as="sourcePoint"/><mxPoint x="225" y="100" as="targetPoint"/></mxGeometry></mxCell>
+        <!-- Participants -->
+        <mxCell id="Caller" value="调用方(智能查询)" style="rounded=1;whiteSpace=wrap;fillColor=#D5F5E3;strokeColor=#27AE60;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="85" width="100" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-Caller" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="80" y="113" as="sourcePoint"/><mxPoint x="80" y="850" as="targetPoint"/></mxGeometry>
+        </mxCell>
 
-        <mxCell id="l0" value="第0层: 缓存检查" style="text;fontSize=9;fontStyle=2;color=#566573;fillColor=#EAECEE;strokeColor=#7F8C8D;rounded=1;" vertex="1" parent="1"><mxGeometry x="170" y="120" width="110" height="18" as="geometry"/></mxCell>
-        <mxCell id="m2" value="检查缓存(taskType+hash)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="145" as="sourcePoint"/><mxPoint x="385" y="145" as="targetPoint"/></mxGeometry></mxCell>
-        <mxCell id="m3" value="未命中" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999999;fontSize=8;dashed=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="385" y="165" as="sourcePoint"/><mxPoint x="225" y="165" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="GW" value="基础数据.LLM网关" style="rounded=1;whiteSpace=wrap;fillColor=#E8DAEF;strokeColor=#8E44AD;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="85" width="110" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-GW" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="113" as="sourcePoint"/><mxPoint x="235" y="850" as="targetPoint"/></mxGeometry>
+        </mxCell>
 
-        <mxCell id="l1" value="第1层: 首选 Opus" style="text;fontSize=9;fontStyle=2;color=#E67E22;fillColor=#FEF9E7;strokeColor=#E67E22;rounded=1;" vertex="1" parent="1"><mxGeometry x="170" y="195" width="120" height="18" as="geometry"/></mxCell>
-        <mxCell id="m4" value="checkQuota(Opus)→OK" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="220" as="sourcePoint"/><mxPoint x="530" y="220" as="targetPoint"/></mxGeometry></mxCell>
-        <mxCell id="m5" value="isCircuitOpen(Opus)→CLOSED" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="240" as="sourcePoint"/><mxPoint x="670" y="240" as="targetPoint"/></mxGeometry></mxCell>
-        <mxCell id="m6" value="call(完整Prompt)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="260" as="sourcePoint"/><mxPoint x="815" y="260" as="targetPoint"/></mxGeometry></mxCell>
-        <mxCell id="m7" value="Timeout (>30s)" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;dashed=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="815" y="285" as="sourcePoint"/><mxPoint x="225" y="285" as="targetPoint"/></mxGeometry></mxCell>
-        <mxCell id="n1" value="recordFailure → 降级" style="text;fontSize=8;fontStyle=2;color=#E74C3C;align=center;" vertex="1" parent="1"><mxGeometry x="225" y="295" width="140" height="14" as="geometry"/></mxCell>
+        <mxCell id="Cache" value="L4:Redis(缓存)" style="rounded=1;whiteSpace=wrap;fillColor=#D5D8DC;strokeColor=#7F8C8D;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="340" y="85" width="90" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-Cache" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="385" y="113" as="sourcePoint"/><mxPoint x="385" y="450" as="targetPoint"/></mxGeometry>
+        </mxCell>
 
-        <mxCell id="l2" value="第2层: 降级 Sonnet" style="text;fontSize=9;fontStyle=2;color=#E67E22;fillColor=#FEF9E7;strokeColor=#E67E22;rounded=1;" vertex="1" parent="1"><mxGeometry x="170" y="325" width="130" height="18" as="geometry"/></mxCell>
-        <mxCell id="m8" value="checkQuota(Sonnet)→OK" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="350" as="sourcePoint"/><mxPoint x="530" y="350" as="targetPoint"/></mxGeometry></mxCell>
-        <mxCell id="m9" value="call(Sonnet) → 503" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="375" as="sourcePoint"/><mxPoint x="965" y="375" as="targetPoint"/></mxGeometry></mxCell>
-        <mxCell id="n2" value="recordFailure+通知运维" style="text;fontSize=8;fontStyle=2;color=#E74C3C;align=center;" vertex="1" parent="1"><mxGeometry x="225" y="390" width="160" height="14" as="geometry"/></mxCell>
+        <mxCell id="Quota" value="智能查询.配置管理" style="rounded=1;whiteSpace=wrap;fillColor=#FADBD8;strokeColor=#E74C3C;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="480" y="85" width="110" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-Quota" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="535" y="113" as="sourcePoint"/><mxPoint x="535" y="850" as="targetPoint"/></mxGeometry>
+        </mxCell>
 
-        <mxCell id="l3" value="第3层: 兜底 Haiku" style="text;fontSize=9;fontStyle=2;color=#566573;fillColor=#EAECEE;strokeColor=#7F8C8D;rounded=1;" vertex="1" parent="1"><mxGeometry x="170" y="420" width="130" height="18" as="geometry"/></mxCell>
-        <mxCell id="m10" value="call(精简Prompt, Haiku) → Timeout" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="450" as="sourcePoint"/><mxPoint x="1115" y="450" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="CB" value="智能查询.配置管理" style="rounded=1;whiteSpace=wrap;fillColor=#FADBD8;strokeColor=#E74C3C;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="640" y="85" width="110" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-CB" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="695" y="113" as="sourcePoint"/><mxPoint x="695" y="850" as="targetPoint"/></mxGeometry>
+        </mxCell>
 
-        <mxCell id="l4" value="第4层: 断路器熔断" style="text;fontSize=9;fontStyle=2;color=#E74C3C;fillColor=#FDEDEC;strokeColor=#E74C3C;rounded=1;" vertex="1" parent="1"><mxGeometry x="170" y="480" width="130" height="18" as="geometry"/></mxCell>
-        <mxCell id="m11" value="openCircuit(ALL, 60s) + 通知运维" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="510" as="sourcePoint"/><mxPoint x="1260" y="510" as="targetPoint"/></mxGeometry></mxCell>
-        <mxCell id="m12" value="Error: LLM_UNAVAILABLE (retryAfter:60s)" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;dashed=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="540" as="sourcePoint"/><mxPoint x="70" y="540" as="targetPoint"/></mxGeometry></mxCell>
+        <mxCell id="Opus" value="A6:Claude Opus(首选)" style="rounded=1;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="85" width="120" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-Opus" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="860" y="113" as="sourcePoint"/><mxPoint x="860" y="850" as="targetPoint"/></mxGeometry>
+        </mxCell>
 
-        <mxCell id="sum" value="降级路径: 缓存命中(零延迟) → Opus(首选) → Sonnet(次选) → Haiku(兜底) → 断路器熔断(60s)   |   配额: 80%预警→95%自动降级→100%熔断" style="text;fontSize=9;fontStyle=2;color=#888888;align=center;fillColor=#F5F5F5;strokeColor=#cccccc;rounded=1;" vertex="1" parent="1"><mxGeometry x="100" y="580" width="1100" height="22" as="geometry"/></mxCell>
-        <mxCell id="ll-s5-1260" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="1260" y="85" as="sourcePoint"/><mxPoint x="1260" y="570" as="targetPoint"/></mxGeometry></mxCell>        <mxCell id="ll-s5-1115" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="1115" y="85" as="sourcePoint"/><mxPoint x="1115" y="570" as="targetPoint"/></mxGeometry></mxCell>        <mxCell id="ll-s5-965" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="965" y="85" as="sourcePoint"/><mxPoint x="965" y="570" as="targetPoint"/></mxGeometry></mxCell>        <mxCell id="ll-s5-815" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="815" y="85" as="sourcePoint"/><mxPoint x="815" y="570" as="targetPoint"/></mxGeometry></mxCell>        <mxCell id="ll-s5-670" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="670" y="85" as="sourcePoint"/><mxPoint x="670" y="570" as="targetPoint"/></mxGeometry></mxCell>        <mxCell id="ll-s5-530" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="530" y="85" as="sourcePoint"/><mxPoint x="530" y="570" as="targetPoint"/></mxGeometry></mxCell>        <mxCell id="ll-s5-385" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="385" y="85" as="sourcePoint"/><mxPoint x="385" y="570" as="targetPoint"/></mxGeometry></mxCell>        <mxCell id="ll-s5-225" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="225" y="85" as="sourcePoint"/><mxPoint x="225" y="570" as="targetPoint"/></mxGeometry></mxCell>        <mxCell id="ll-s5-70" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="70" y="85" as="sourcePoint"/><mxPoint x="70" y="570" as="targetPoint"/></mxGeometry></mxCell>        <mxCell id="ll-s5-1405" value="" style="endArrow=none;dashed=1;dashPattern=8 8;strokeWidth=1;strokeColor=#999999;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="1405" y="85" as="sourcePoint"/><mxPoint x="1405" y="570" as="targetPoint"/></mxGeometry></mxCell>      </root>
+        <mxCell id="Sonnet" value="A6:Claude Sonnet(次选)" style="rounded=1;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="970" y="85" width="120" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-Sonnet" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1030" y="113" as="sourcePoint"/><mxPoint x="1030" y="850" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="Haiku" value="A6:Claude Haiku(兜底)" style="rounded=1;whiteSpace=wrap;fillColor=#D5D8DC;strokeColor=#566573;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="85" width="110" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-Haiku" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1195" y="113" as="sourcePoint"/><mxPoint x="1195" y="850" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Layer 0: Cache -->
+        <mxCell id="l0-note" value="第0层: 幂等缓存检查" style="text;fontSize=9;fontStyle=2;fontColor=#7F8C8D;fillColor=#EAECEE;strokeColor=#7F8C8D;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="130" width="140" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="l0-m1" value="callLLM" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="80" y="160" as="sourcePoint"/><mxPoint x="235" y="160" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l0-m2" value="GET(cacheKey)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="180" as="sourcePoint"/><mxPoint x="385" y="180" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l0-m3" value="null (缓存未命中 → 继续)" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="385" y="200" as="sourcePoint"/><mxPoint x="235" y="200" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Layer 1: Opus -->
+        <mxCell id="l1-note" value="第1层: 首选模型 Opus" style="text;fontSize=9;fontStyle=2;fontColor=#E67E22;fillColor=#FEF9E7;strokeColor=#E67E22;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="230" width="140" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="l1-m1" value="checkQuota(Opus)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="260" as="sourcePoint"/><mxPoint x="535" y="260" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l1-m2" value="OK" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="535" y="280" as="sourcePoint"/><mxPoint x="235" y="280" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l1-m3" value="isCircuitOpen(Opus) → CLOSED" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="300" as="sourcePoint"/><mxPoint x="695" y="300" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l1-m4" value="POST /v1/messages (完整Prompt)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="325" as="sourcePoint"/><mxPoint x="860" y="325" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l1-m5" value="Timeout (>30s)" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="860" y="350" as="sourcePoint"/><mxPoint x="235" y="350" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l1-note-fail" value="recordFailure(Opus) → 降级Sonnet" style="text;fontSize=8;fontColor=#E74C3C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="235" y="365" width="180" height="14" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 2: Sonnet -->
+        <mxCell id="l2-note" value="第2层: 降级 Sonnet" style="text;fontSize=9;fontStyle=2;fontColor=#E67E22;fillColor=#FEF9E7;strokeColor=#E67E22;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="395" width="140" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="l2-m1" value="checkQuota(Sonnet) → OK" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="425" as="sourcePoint"/><mxPoint x="535" y="425" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l2-m2" value="POST /v1/messages (Sonnet)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#E67E22;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="450" as="sourcePoint"/><mxPoint x="1030" y="450" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l2-m3" value="503 Service Unavailable" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1030" y="475" as="sourcePoint"/><mxPoint x="235" y="475" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l2-note-fail" value="recordFailure(Sonnet) → 降级Haiku" style="text;fontSize=8;fontColor=#E74C3C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="235" y="490" width="180" height="14" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 3: Haiku -->
+        <mxCell id="l3-note" value="第3层: 兜底 Haiku" style="text;fontSize=9;fontStyle=2;fontColor=#566573;fillColor=#EAECEE;strokeColor=#7F8C8D;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="520" width="140" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3-m1" value="POST /v1/messages (精简Prompt, Haiku)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#566573;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="550" as="sourcePoint"/><mxPoint x="1195" y="550" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l3-m2" value="Timeout" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1195" y="575" as="sourcePoint"/><mxPoint x="235" y="575" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Layer 4: Circuit Breaker -->
+        <mxCell id="l4-note" value="第4层: 断路器熔断" style="text;fontSize=9;fontStyle=2;fontColor=#E74C3C;fillColor=#FDEDEC;strokeColor=#E74C3C;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="605" width="140" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="l4-m1" value="openCircuit(ALL, 60s)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="635" as="sourcePoint"/><mxPoint x="695" y="635" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l4-m2" value="Circuit OPENED (60s)" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="695" y="660" as="sourcePoint"/><mxPoint x="235" y="660" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Result -->
+        <mxCell id="result-box" value="" style="rounded=1;whiteSpace=wrap;fillColor=#FDEDEC;strokeColor=#E74C3C;strokeWidth=1;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="180" y="690" width="250" height="48" as="geometry"/>
+        </mxCell>
+        <mxCell id="result-text" value="alt [任务支持无LLM降级]: PartialResult(仅子图数据)
+else [强依赖LLM]: Error{code:LLM_UNAVAILABLE, retryAfter:60}" style="text;fontSize=8;fontColor=#E74C3C;align=left;" vertex="1" parent="1">
+          <mxGeometry x="190" y="695" width="230" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="l4-ret" value="Error: LLM_UNAVAILABLE" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="235" y="760" as="sourcePoint"/><mxPoint x="80" y="760" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Summary box -->
+        <mxCell id="summary-box" value="" style="rounded=1;whiteSpace=wrap;fillColor=#F5F5F5;strokeColor=#999;strokeWidth=1;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="30" y="810" width="1300" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="summary-text" value="降级路径: 缓存命中(TTL 5min) → Opus(首选, 超时30s) → Sonnet(次选) → Haiku(兜底, 精简Prompt) → 断路器熔断(60s)  |  配额: 80%预警 → 95%自动降级 → 100%熔断" fontFamily="monospace" style="text;fontSize=9;fontColor=#666;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="818" width="1280" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Debug API note -->
+        <mxCell id="debug-note" value="调试接口 (仅ADMIN/OPS_STAFF): POST /llm/ping (连通性测试) | POST /llm/debug (自定义Prompt调试)" style="text;fontSize=9;fontStyle=2;fontColor=#2980B9;fillColor=#EBF5FB;strokeColor=#2980B9;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="885" width="650" height="22" as="geometry"/>
+        </mxCell>
+      </root>
     </mxGraphModel>
   </diagram>
 </mxfile>

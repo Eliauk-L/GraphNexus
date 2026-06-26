@@ -1,0 +1,160 @@
+<mxfile host="Electron">
+  <diagram name="S1-PDF上传与图谱构建" id="s01-pdf-upload">
+    <mxGraphModel dx="1222" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1050" background="#FFFFFF" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#2C3E50;strokeColor=#1a252f;fontSize=14;fontColor=#ffffff;fontStyle=0;" value="PDF 上传与解析" vertex="1">
+          <mxGeometry height="32" width="870" x="20" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-A" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#D5F5E3;strokeColor=#27AE60;fontSize=10;fontStyle=1;" value="管理员" vertex="1">
+          <mxGeometry height="30" width="70" x="30" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-A" edge="1" parent="1" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="65" y="115" as="sourcePoint" />
+            <mxPoint x="65" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="participant-P1" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=10;" value="管理后台" vertex="1">
+          <mxGeometry height="30" width="80" x="130" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-P1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="170" y="115" as="sourcePoint" />
+            <mxPoint x="170" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="participant-DocUp" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;fontSize=10;" value="文件处理.文件上传" vertex="1">
+          <mxGeometry height="30" width="100" x="260" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-DocUp" edge="1" parent="1" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="310" y="115" as="sourcePoint" />
+            <mxPoint x="310" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="participant-MinIO" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#D5D8DC;strokeColor=#7F8C8D;fontSize=10;" value="MinIO" vertex="1">
+          <mxGeometry height="30" width="70" x="400" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-MinIO" edge="1" parent="1" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="435" y="115" as="sourcePoint" />
+            <mxPoint x="435" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="participant-DocParse" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;fontSize=10;" value="文件处理.文件解析" vertex="1">
+          <mxGeometry height="30" width="100" x="510" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-DocParse" edge="1" parent="1" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="560" y="115" as="sourcePoint" />
+            <mxPoint x="560" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="participant-GraphExt" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;fontSize=10;" value="文档处理.图构建" vertex="1">
+          <mxGeometry height="30" width="100" x="650" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-GraphExt" edge="1" parent="1" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="115" as="sourcePoint" />
+            <mxPoint x="700" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="participant-DB" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#D5D8DC;strokeColor=#566573;fontSize=10;" value="MySQL" vertex="1">
+          <mxGeometry height="30" width="70" x="790" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-DB" edge="1" parent="1" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="825" y="115" as="sourcePoint" />
+            <mxPoint x="825" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m1" edge="1" parent="1" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" value="选择学科+PDF文件">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="65" y="140" as="sourcePoint" />
+            <mxPoint x="170" y="140" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m2" edge="1" parent="1" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" value="POST /file/textbooks/upload">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="170" y="160" as="sourcePoint" />
+            <mxPoint x="310" y="160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m3" edge="1" parent="1" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" value="putObject(file)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="310" y="195" as="sourcePoint" />
+            <mxPoint x="435" y="195" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m4" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999999;fontSize=8;dashed=1;" value="stored">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="435" y="215" as="sourcePoint" />
+            <mxPoint x="310" y="215" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m5" edge="1" parent="1" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" value="INSERT textbook(status=UPLOADED)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="310" y="240" as="sourcePoint" />
+            <mxPoint x="825" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m6" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;fontSize=8;dashed=1;" value="TextbookVO{id, status:UPLOADED}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="310" y="265" as="sourcePoint" />
+            <mxPoint x="170" y="265" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m7" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;fontSize=8;dashed=1;" value="上传成功 ✓">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="170" y="285" as="sourcePoint" />
+            <mxPoint x="65" y="285" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m8" edge="1" parent="1" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" value="点击解析按钮">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="65" y="345" as="sourcePoint" />
+            <mxPoint x="170" y="345" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m9" edge="1" parent="1" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" value="POST /file/textbooks/parse/42">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="170" y="365" as="sourcePoint" />
+            <mxPoint x="560" y="365" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m10" edge="1" parent="1" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" value="getObject(file)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="560" y="385" as="sourcePoint" />
+            <mxPoint x="435" y="385" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m11" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999999;fontSize=8;dashed=1;" value="fileStream">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="435" y="405" as="sourcePoint" />
+            <mxPoint x="560" y="405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m12" edge="1" parent="1" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333333;fontSize=8;" value="UPDATE textbook SET status=PARSED">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="560" y="450" as="sourcePoint" />
+            <mxPoint x="825" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m13" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E67E22;fontSize=8;dashed=1;" value="TextbookParseResultVO{status:PARSED}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="560" y="500" as="sourcePoint" />
+            <mxPoint x="170" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m14" edge="1" parent="1" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;fontSize=8;dashed=1;" value="解析完成 ✓">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="170" y="520" as="sourcePoint" />
+            <mxPoint x="65" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,118 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="S2-成绩CSV导入" id="s02-grade-import">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="750" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="S2 · 成绩CSV导入 (UC-02, Story 1.2) — 同步上传→MySQL" style="rounded=1;whiteSpace=wrap;fillColor=#2C3E50;strokeColor=#1a252f;fontSize=14;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="10" width="850" height="32" as="geometry"/>
+        </mxCell>
+
+        <!-- Participants -->
+        <mxCell id="A" value="管理员" style="rounded=1;whiteSpace=wrap;fillColor=#D5F5E3;strokeColor=#27AE60;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="60" width="60" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-A" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="60" y="90" as="sourcePoint"/><mxPoint x="60" y="550" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="P1" value="P1:管理后台" style="rounded=1;whiteSpace=wrap;fillColor=#D6EAF8;strokeColor=#2980B9;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="140" y="60" width="80" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-P1" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="90" as="sourcePoint"/><mxPoint x="180" y="550" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="Grade" value="文档处理.数据源管理" style="rounded=1;whiteSpace=wrap;fillColor=#FDEBD0;strokeColor=#E67E22;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="280" y="60" width="120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-Grade" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="90" as="sourcePoint"/><mxPoint x="340" y="550" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <mxCell id="MySQL" value="L4:MySQL" style="rounded=1;whiteSpace=wrap;fillColor=#D5D8DC;strokeColor=#566573;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="470" y="60" width="70" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll-MySQL" value="" style="endArrow=none;dashed=1;strokeWidth=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="505" y="90" as="sourcePoint"/><mxPoint x="505" y="550" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Upload flow -->
+        <mxCell id="p1-note" value="成绩 CSV/Excel 上传" style="text;fontSize=10;fontStyle=1;fontColor=#E67E22;fillColor=#FEF9E7;strokeColor=#E67E22;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="110" width="140" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="m1" value="选择学科+CSV" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="60" y="145" as="sourcePoint"/><mxPoint x="180" y="145" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m2" value="POST /file/grades/upload (CSV+subject)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="170" as="sourcePoint"/><mxPoint x="340" y="170" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m2-note" value="双行表头校验+逐行解析" style="text;fontSize=8;fontColor=#E67E22;align=center;" vertex="1" parent="1">
+          <mxGeometry x="280" y="190" width="120" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="m3" value="INSERT grade_record (逐行)" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="215" as="sourcePoint"/><mxPoint x="505" y="215" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m3-loop" value="loop 逐行写入" style="text;fontSize=7;fontStyle=2;fontColor=#999;align=center;" vertex="1" parent="1">
+          <mxGeometry x="350" y="230" width="80" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="m4" value="ok" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="505" y="255" as="sourcePoint"/><mxPoint x="340" y="255" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m5" value="GradeUploadResultVO{success:42, fail:3}" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E67E22;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="280" as="sourcePoint"/><mxPoint x="180" y="280" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="m6" value="上传完成 ✓ 42条成功" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="305" as="sourcePoint"/><mxPoint x="60" y="305" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Query flow -->
+        <mxCell id="p2-note" value="成绩查询" style="text;fontSize=10;fontStyle=1;fontColor=#2980B9;fillColor=#EBF5FB;strokeColor=#2980B9;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="335" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="q1" value="查看成绩列表" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="60" y="365" as="sourcePoint"/><mxPoint x="180" y="365" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="q2" value="GET /file/grades?examNo=...&amp;studentNo=..." style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="390" as="sourcePoint"/><mxPoint x="340" y="390" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="q3" value="SELECT ... FROM grade_record" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#333;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="415" as="sourcePoint"/><mxPoint x="505" y="415" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="q4" value="rows" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#999;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="505" y="440" as="sourcePoint"/><mxPoint x="340" y="440" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="q5" value="PageResult&lt;GradeRecordVO&gt;" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#2980B9;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="465" as="sourcePoint"/><mxPoint x="180" y="465" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="q6" value="成绩列表" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#27AE60;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="180" y="490" as="sourcePoint"/><mxPoint x="60" y="490" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Delete flow -->
+        <mxCell id="p3-note" value="删除" style="text;fontSize=10;fontStyle=1;fontColor=#E74C3C;fillColor=#FDEDEC;strokeColor=#E74C3C;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="520" width="50" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="d1" value="DELETE /file/grades/exam/{examNo}" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="60" y="555" as="sourcePoint"/><mxPoint x="340" y="555" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="d2" value="DELETE FROM grade_record" style="endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="580" as="sourcePoint"/><mxPoint x="505" y="580" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="d3" value="DeleteResultVO{deletedCount}" style="endArrow=open;endFill=0;strokeWidth=1.5;strokeColor=#E74C3C;fontSize=8;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="505" y="605" as="sourcePoint"/><mxPoint x="340" y="605" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Design note box -->
+        <mxCell id="note-box" value="" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9E6;strokeColor=#E67E22;strokeWidth=1;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="30" y="645" width="560" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="note-text" value="⚠ MVP版: 成绩仅写入MySQL。Neo4j EventNode创建、MasteryRelation权重引擎、前置依赖链衰减传播为设计预留功能。" style="text;fontSize=9;fontColor=#E67E22;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="655" width="540" height="30" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
