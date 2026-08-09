@@ -55,7 +55,9 @@ services:
       - neo4j-plugins:/plugins
     environment:
       NEO4J_AUTH: neo4j/graphnexus123
-      NEO4J_server_threads_worker_count: "2"
+      # Neo4j maps single underscores to dots; double underscore preserves
+      # the underscore in the setting name: server.threads.worker_count.
+      NEO4J_server_threads_worker__count: "2"
       NEO4J_PLUGINS: '["graph-data-science"]'
     healthcheck:
       test: ["CMD-SHELL", "cypher-shell -u neo4j -p graphnexus123 'RETURN 1' || exit 1"]
