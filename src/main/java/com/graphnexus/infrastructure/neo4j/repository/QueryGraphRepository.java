@@ -130,6 +130,31 @@ public class QueryGraphRepository {
 
     // ======================== 前置依赖链查询 ========================
 
+    /** 按名称和描述检索知识点，并返回一跳依赖摘要。 */
+    public List<Map<String, Object>> searchKnowledgePoints(String query, String subject, int topK) {
+        if (query == null || query.isBlank()) return Collections.emptyList();
+        int limit = Math.max(1, Math.min(topK, 20));
+        try {
+            return new ArrayList<>(neo4jClient.query(
+                    "MATCH (kp:KnowledgePoint)-[:BELONGS_TO_SUBJECT]->(:Subject {name: $subject}) " +
+                    "WHERE toLower(coalesce(kp.name, '')) CONTAINS toLower($query) " +
+                    "   OR toLower(coalesce(kp.description, '')) CONTAINS toLower($query) " +
+                    "OPTIONAL MATCH (pre:KnowledgePoint)-[pr:PREREQUISITE_OF]->(kp) " +
+                    "OPTIONAL MATCH (kp)-[nr:PREREQUISITE_OF]->(next:KnowledgePoint) " +
+                    "RETURN kp.id AS kpId, kp.name AS kpName, kp.description AS description, " +
+                    "kp.documentId AS documentId, collect(DISTINCT pre.name) AS prerequisites, " +
+                    "collect(DISTINCT next.name) AS dependents, " +
+                    "CASE WHEN toLower(kp.name) = toLower($query) THEN 1.0 " +
+                    "     WHEN toLower(kp.name) CONTAINS toLower($query) THEN 0.8 ELSE 0.5 END AS score " +
+                    "ORDER BY score DESC, kp.name ASC LIMIT $limit")
+                    .bindAll(Map.of("query", query.trim(), "subject", subject, "limit", limit))
+                    .fetch().all());
+        } catch (Exception exception) {
+            log.warn("检索知识点失败: query={}, subject={}, error={}", query, subject, exception.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     /**
      * 展开前置依赖链（上游方向），最多 maxHops 跳。
      *
