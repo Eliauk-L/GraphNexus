@@ -7,18 +7,21 @@ import com.graphnexus.application.graph.construction.extract.registry.Extraction
 import com.graphnexus.application.graph.construction.extract.registry.ExtractionNodeHandler;
 import com.graphnexus.application.graph.construction.extract.registry.ExtractionNodeHandlerRegistry;
 import com.graphnexus.application.graph.construction.model.ExtractionRawResult;
+import com.graphnexus.application.graph.construction.validate.GraphQualityValidator;
 import com.graphnexus.common.LlmGateway;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
 import com.graphnexus.infrastructure.neo4j.edge.*;
 import com.graphnexus.infrastructure.neo4j.node.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 知识图谱抽取编排服务 — 文本 → LLM → JSON Schema 校验 → 领域对象。
@@ -31,7 +34,6 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ExtractionService {
 
     private final LlmGateway llmGateway;
@@ -40,6 +42,31 @@ public class ExtractionService {
     private final ExtractionJsonParser jsonParser;
     private final ExtractionEdgeFactoryRegistry edgeFactoryRegistry;
     private final ExtractionNodeHandlerRegistry nodeHandlerRegistry;
+    private final GraphQualityValidator graphQualityValidator;
+
+    @Autowired
+    public ExtractionService(LlmGateway llmGateway, ExtractionPromptBuilder promptBuilder,
+                             ExtractionValidator validator, ExtractionJsonParser jsonParser,
+                             ExtractionEdgeFactoryRegistry edgeFactoryRegistry,
+                             ExtractionNodeHandlerRegistry nodeHandlerRegistry,
+                             GraphQualityValidator graphQualityValidator) {
+        this.llmGateway = llmGateway;
+        this.promptBuilder = promptBuilder;
+        this.validator = validator;
+        this.jsonParser = jsonParser;
+        this.edgeFactoryRegistry = edgeFactoryRegistry;
+        this.nodeHandlerRegistry = nodeHandlerRegistry;
+        this.graphQualityValidator = graphQualityValidator;
+    }
+
+    /** 兼容领域级单元测试和外部嵌入调用。 */
+    public ExtractionService(LlmGateway llmGateway, ExtractionPromptBuilder promptBuilder,
+                             ExtractionValidator validator, ExtractionJsonParser jsonParser,
+                             ExtractionEdgeFactoryRegistry edgeFactoryRegistry,
+                             ExtractionNodeHandlerRegistry nodeHandlerRegistry) {
+        this(llmGateway, promptBuilder, validator, jsonParser, edgeFactoryRegistry,
+                nodeHandlerRegistry, new GraphQualityValidator());
+    }
 
     /**
      * 用于扩展段 {@code Map → Raw POJO} 的类型转换（D4）。
@@ -72,7 +99,7 @@ public class ExtractionService {
         validator.validate(rawResult);
 
         // 4. 转换为领域对象
-        ExtractionResult result = convertToDomain(rawResult, documentId);
+        ExtractionResult result = validateGraph(convertToDomain(rawResult, documentId));
 
         // 前置依赖覆盖度检测：覆盖率 < 30% 记录 warn 日志
         int kpCount = result.knowledgePoints().size();
@@ -91,6 +118,22 @@ public class ExtractionService {
                 result.categories().size(),
                 result.edges().size());
         return result;
+    }
+
+    private ExtractionResult validateGraph(ExtractionResult result) {
+        Set<String> nodeIds = new HashSet<>();
+        result.entities().forEach(node -> nodeIds.add(node.getId()));
+        result.knowledgePoints().forEach(node -> nodeIds.add(node.getId()));
+        result.categories().forEach(node -> nodeIds.add(node.getId()));
+        result.extensionNodes().forEach(node -> nodeIds.add(node.getId()));
+        GraphQualityValidator.ValidationResult validation =
+                graphQualityValidator.validate(result.edges(), nodeIds);
+        if (!validation.rejected().isEmpty()) {
+            log.warn("图谱质量门禁隔离 {} 条关系，保留 {} 条关系",
+                    validation.rejected().size(), validation.accepted().size());
+        }
+        return new ExtractionResult(result.entities(), result.knowledgePoints(), result.categories(),
+                validation.accepted(), result.extensionNodes());
     }
 
     /**
