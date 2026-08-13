@@ -33,6 +33,12 @@ const router = createRouter({
       component: () => import('@/views/query/IntelligentQAPage.vue'),
     },
     {
+      path: '/teaching-agent',
+      name: 'teaching-agent',
+      component: () => import('@/views/agent/TeachingAgentPage.vue'),
+      meta: { roles: ['ADMIN', 'TEACHER', 'STUDENT'] },
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/auth/LoginPage.vue'),

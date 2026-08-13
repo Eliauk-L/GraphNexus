@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
+import DOMPurify from 'dompurify'
 import 'highlight.js/styles/github.css'
 
 const props = withDefaults(defineProps<{
@@ -18,7 +19,7 @@ marked.setOptions({
 
 const html = computed(() => {
   if (!props.content) return ''
-  return marked.parse(props.content) as string
+  return DOMPurify.sanitize(marked.parse(props.content) as string)
 })
 </script>
 
