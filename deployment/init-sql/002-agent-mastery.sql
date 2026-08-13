@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS mastery_update_event (
+    id                   BIGINT NOT NULL AUTO_INCREMENT,
+    event_id             VARCHAR(36) NOT NULL,
+    student_no           VARCHAR(64) NOT NULL,
+    exam_no              VARCHAR(64) NOT NULL,
+    subject              VARCHAR(32) NOT NULL,
+    knowledge_point_id   VARCHAR(64) NOT NULL,
+    knowledge_point_name VARCHAR(255) NOT NULL,
+    score_rate           DECIMAL(8,7) NOT NULL,
+    old_weight           DECIMAL(8,7),
+    new_weight           DECIMAL(8,7) NOT NULL,
+    alpha                DECIMAL(8,7) NOT NULL,
+    sample_count         INT NOT NULL,
+    confidence           DECIMAL(8,7) NOT NULL,
+    evidence_json        JSON,
+    occurred_at          DATETIME NOT NULL,
+    create_time          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_mastery_exam_kp (student_no, exam_no, knowledge_point_id),
+    UNIQUE KEY uk_mastery_event_id (event_id),
+    INDEX idx_mastery_student_kp (student_no, knowledge_point_id, occurred_at),
+    INDEX idx_mastery_exam (exam_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识点掌握度更新事件账本';

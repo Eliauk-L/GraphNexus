@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -45,6 +46,7 @@ public class GradeGraphEventListener {
      * 成绩上传 → 构建 Neo4j 图。
      */
     @EventListener
+    @Order(10)
     public void onGradeUploaded(GradeUploadedEvent event) {
         String examNo = event.getExamNo();
         String subject = event.getSubject();
@@ -100,6 +102,7 @@ public class GradeGraphEventListener {
      * KP 名称在删边前取出，用于后续孤点检查。</p>
      */
     @EventListener
+    @Order(10)
     public void onGradeDeleted(GradeDeletedEvent event) {
         String examNo = event.getExamNo();
 
