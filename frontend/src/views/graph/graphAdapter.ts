@@ -48,6 +48,10 @@ export interface G6GraphEdge {
   }
 }
 
+function g6LineStyle(edgeType: string): 'solid' | 'dashed' {
+  return EDGE_LINE_STYLES[edgeType] === 'solid' ? 'solid' : 'dashed'
+}
+
 // ── 统一转换入口 ──
 
 /**
@@ -102,7 +106,7 @@ function transformDocumentSubgraph(vo: GraphSubgraphVO): G6GraphData {
           type: e.edgeType,
           color: EDGE_COLORS[e.edgeType] ?? DEFAULT_EDGE_COLOR,
           width: EDGE_WIDTHS[e.edgeType] ?? DEFAULT_EDGE_WIDTH,
-          lineStyle: EDGE_LINE_STYLES[e.edgeType] ?? 'solid' as const,
+          lineStyle: g6LineStyle(e.edgeType),
         },
       })),
   }
@@ -137,11 +141,10 @@ function transformFullGraph(vo: GraphSubgraphVO): G6GraphData {
         source: e.sourceNodeId,
         target: e.targetNodeId,
         data: {
-          edgeType: e.edgeType,
-          ...e.properties,
+          type: e.edgeType,
           color: EDGE_COLORS[e.edgeType] ?? DEFAULT_EDGE_COLOR,
           width: EDGE_WIDTHS[e.edgeType] ?? DEFAULT_EDGE_WIDTH,
-          lineStyle: EDGE_LINE_STYLES[e.edgeType] ?? 'solid' as const,
+          lineStyle: g6LineStyle(e.edgeType),
         },
       })),
   }
@@ -173,7 +176,7 @@ function transformPruningSubgraph(res: SubgraphResponse): G6GraphData {
           type: e.edgeType,
           color: EDGE_COLORS[e.edgeType] ?? DEFAULT_EDGE_COLOR,
           width: DEFAULT_EDGE_WIDTH + Math.min(e.weight, 3),
-          lineStyle: EDGE_LINE_STYLES[e.edgeType] ?? 'solid' as const,
+          lineStyle: g6LineStyle(e.edgeType),
           weight: e.weight,
         },
       })),

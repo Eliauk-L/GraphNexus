@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import VChart from 'vue-echarts'
 import { NSkeleton } from 'naive-ui'
-import { getDefaultChartOption, getPieChartOption, mergeDefaultOption } from '@/common/components/chartTheme'
+import { getDefaultChartOption } from '@/common/components/chartTheme'
 import type { EChartsOption } from 'echarts'
 
 const props = withDefaults(defineProps<{

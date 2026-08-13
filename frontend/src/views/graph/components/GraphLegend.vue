@@ -61,8 +61,9 @@ function edgeColor(type: string) {
   return EDGE_COLORS[type] ?? DEFAULT_EDGE_COLOR
 }
 
-function edgeLineStyle(type: string): string {
-  return EDGE_LINE_STYLES[type] ?? 'solid'
+function edgeLineStyle(type: string): 'solid' | 'dashed' | 'dotted' {
+  const style = EDGE_LINE_STYLES[type]
+  return style === 'dashed' || style === 'dotted' ? style : 'solid'
 }
 
 function edgeWidth(type: string): number {

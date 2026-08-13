@@ -38,7 +38,7 @@ const ALLOWED_ATTR = [
 const FORBID_TAGS = ['script', 'foreignObject', 'iframe', 'object', 'embed', 'use']
 const FORBID_ATTR = ['onclick', 'onload', 'onerror', 'onmouseover', 'onfocus', 'xlink:href']
 
-const purifyConfig: DOMPurify.Config = {
+const purifyConfig = {
   ALLOWED_TAGS,
   ALLOWED_ATTR,
   FORBID_TAGS,

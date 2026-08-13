@@ -29,7 +29,7 @@ export const useOpsStore = defineStore('ops', () => {
     error.value = null
     try {
       const res = await opsApi.getSummary()
-      summary.value = res.data ?? res
+      summary.value = res
       lastSummaryFetch = now
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '加载摘要数据失败'
@@ -44,7 +44,7 @@ export const useOpsStore = defineStore('ops', () => {
     trendLoading.value = true
     try {
       const res = await opsApi.getTrend(metric, granularity.value, range)
-      trend.value = res.data ?? res
+      trend.value = res
     } catch (e: unknown) {
       console.error('[opsStore] fetchTrend failed:', e)
     } finally {
@@ -55,8 +55,7 @@ export const useOpsStore = defineStore('ops', () => {
   async function fetchSubjects() {
     try {
       const res = await opsApi.getSubjects()
-      const data = (res.data ?? res) as unknown as string[]
-      subjects.value = Array.isArray(data) ? data : []
+      subjects.value = Array.isArray(res) ? res : []
     } catch (e: unknown) {
       console.error('[opsStore] fetchSubjects failed:', e)
     }

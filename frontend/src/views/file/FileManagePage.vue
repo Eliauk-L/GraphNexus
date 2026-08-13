@@ -18,13 +18,13 @@ const dialog = useDialog()
 const page = ref(1)
 const pageSize = ref(10)
 const searchName = ref('')
-const filterFileType = ref<string | null>(null)
-const searchSubject = ref<string | null>(null)
+const filterFileType = ref('')
+const searchSubject = ref('')
 
 const fileTypeOptions = computed(() => {
   const types = [...new Set(store.files.map((f) => f.fileType).filter(Boolean))]
   return [
-    { label: '全部类型', value: null },
+    { label: '全部类型', value: '' },
     ...types.map((t) => ({ label: t, value: t })),
   ]
 })
@@ -32,7 +32,7 @@ const fileTypeOptions = computed(() => {
 const subjectOptions = computed(() => {
   const subjects = [...new Set(store.files.map((f) => f.subject).filter(Boolean))]
   return [
-    { label: '全部学科', value: null },
+    { label: '全部学科', value: '' },
     ...subjects.map((s) => ({ label: s, value: s })),
   ]
 })
