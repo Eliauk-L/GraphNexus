@@ -16,5 +16,8 @@ public interface MasteryUpdateEventRepository extends JpaRepository<MasteryUpdat
     List<MasteryUpdateEventDO> findByStudentNoAndKnowledgePointIdOrderByOccurredAtAscIdAsc(
             String studentNo, String knowledgePointId);
 
+    List<MasteryUpdateEventDO> findByStudentNoAndSubjectOrderByKnowledgePointNameAscOccurredAtDesc(
+            String studentNo, String subject);
+
     void deleteByStudentNoAndSubject(String studentNo, String subject);
 }
