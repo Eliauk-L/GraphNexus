@@ -54,6 +54,9 @@ public class ClassWeaknessOverviewStrategy implements SubgraphPruningStrategy {
         String subject = request.subject();
         double weakThreshold = getParam(request.params(), "weakThreshold", DEFAULT_WEAK_THRESHOLD);
         int maxHops = (int) getParam(request.params(), "maxHops", (double) DEFAULT_MAX_HOPS);
+        int topK = Math.max(1, Math.min(
+                (int) getParam(request.params(), "topK", (double) MAX_WEAK_KP_COUNT),
+                MAX_WEAK_KP_COUNT));
 
         // Step 1: 从 MySQL 查询班级学生列表
         List<Object[]> classStudents = examRecordRepository.findDistinctStudentsByClassName(className);
@@ -122,9 +125,11 @@ public class ClassWeaknessOverviewStrategy implements SubgraphPruningStrategy {
                 .sorted((a, b) -> {
                     // 按薄弱人数降序，相同则按平均掌握度升序
                     int cmp = Integer.compare(b.getValue().weakCount, a.getValue().weakCount);
-                    return cmp != 0 ? cmp : Double.compare(a.getValue().avgWeight, b.getValue().avgWeight);
+                    if (cmp != 0) return cmp;
+                    cmp = Double.compare(a.getValue().avgWeight, b.getValue().avgWeight);
+                    return cmp != 0 ? cmp : a.getKey().compareTo(b.getKey());
                 })
-                .limit(MAX_WEAK_KP_COUNT)
+                .limit(topK)
                 .collect(Collectors.toList());
 
         List<String> weakKpIds = weakKpEntries.stream().map(Map.Entry::getKey).collect(Collectors.toList());

@@ -43,6 +43,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
 
     private static final double DEFAULT_WEAK_THRESHOLD = 0.6;
     private static final int DEFAULT_MAX_HOPS = 2;
+    private static final int DEFAULT_TOP_K = 10;
 
     @Override
     public PrunedSubgraph prune(PruningRequest request) {
@@ -55,6 +56,7 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         String subject = request.subject();
         double weakThreshold = getParam(request.params(), "weakThreshold", DEFAULT_WEAK_THRESHOLD);
         int maxHops = (int) getParam(request.params(), "maxHops", (double) DEFAULT_MAX_HOPS);
+        int topK = normalizeTopK((int) getParam(request.params(), "topK", DEFAULT_TOP_K));
 
         // Step 1: 确认学生存在
         var studentOpt = queryGraphRepository.findStudentByNo(studentNo);
@@ -93,6 +95,9 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             }
             weakKpIds = kpMasteryMap.entrySet().stream()
                     .filter(e -> e.getValue() < weakThreshold)
+                    .sorted(Map.Entry.<String, Double>comparingByValue()
+                            .thenComparing(Map.Entry.comparingByKey()))
+                    .limit(topK)
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
         } else {
@@ -110,6 +115,9 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             }
             weakKpIds = kpMasteryMap.entrySet().stream()
                     .filter(e -> e.getValue() < weakThreshold)
+                    .sorted(Map.Entry.<String, Double>comparingByValue()
+                            .thenComparing(Map.Entry.comparingByKey()))
+                    .limit(topK)
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
         }
@@ -327,6 +335,10 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         Object val = params.get(key);
         if (val instanceof Number n) return n.doubleValue();
         return defaultValue;
+    }
+
+    private int normalizeTopK(int topK) {
+        return Math.max(1, Math.min(topK, 50));
     }
 
     private PrunedSubgraph emptyResult(String reason) {

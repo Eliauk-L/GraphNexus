@@ -73,6 +73,31 @@ class StudentDiagnosisStrategyTest {
                 .filter(edge -> "PREREQUISITE_OF".equals(edge.edgeType())).count());
     }
 
+    @Test
+    void selectsWeakestKnowledgePointsWithStableTopK() {
+        when(queryGraphRepository.findStudentByNo("S001")).thenReturn(Optional.of(mapOf(
+                "id", "student-1", "studentNo", "S001", "name", "张三",
+                "className", "九年级一班", "grade", "九年级")));
+        when(queryGraphRepository.findMastersByStudentAndSubject("student-1", "数学"))
+                .thenReturn(List.of(
+                        mapOf("kpId", "kp-c", "kpName", "C", "weight", 0.4),
+                        mapOf("kpId", "kp-b", "kpName", "B", "weight", 0.2),
+                        mapOf("kpId", "kp-a", "kpName", "A", "weight", 0.2)));
+        when(queryGraphRepository.findPrerequisitesUpstream(List.of("kp-a", "kp-b"), 2))
+                .thenReturn(List.of());
+
+        PrunedSubgraph result = strategy.prune(new PruningRequest(
+                "STUDENT_DIAGNOSIS", "S001", "数学",
+                Map.of("weakThreshold", 0.6, "maxHops", 2.0, "topK", 2.0)));
+
+        List<String> masteryTargets = result.edges().stream()
+                .filter(edge -> "MASTERS".equals(edge.edgeType()))
+                .map(edge -> edge.targetNodeId())
+                .toList();
+        assertEquals(List.of("kp-a", "kp-b"), masteryTargets);
+        assertFalse(result.nodes().stream().anyMatch(node -> "kp-c".equals(node.id())));
+    }
+
     private Map<String, Object> edge(String sourceId, String sourceName,
                                      String targetId, String targetName, double strength) {
         return mapOf("sourceKpId", sourceId, "sourceKpName", sourceName,
