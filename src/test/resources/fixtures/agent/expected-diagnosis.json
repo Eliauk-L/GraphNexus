@@ -1,0 +1,15 @@
+{
+  "studentNo": "S-FIXTURE-001",
+  "subject": "数学",
+  "weakKnowledgePoint": "顶点坐标",
+  "weakThreshold": 0.6,
+  "expectedPrerequisitePath": [
+    "二次函数定义",
+    "二次函数一般式",
+    "对称轴",
+    "顶点坐标"
+  ],
+  "forbiddenPrerequisiteNodes": [
+    "二次函数综合应用"
+  ]
+}
