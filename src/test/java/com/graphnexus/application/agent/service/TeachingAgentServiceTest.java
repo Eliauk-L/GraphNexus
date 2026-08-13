@@ -9,6 +9,7 @@ import com.graphnexus.application.agent.tool.TeachingTool;
 import com.graphnexus.application.agent.tool.TeachingToolRegistry;
 import com.graphnexus.application.agent.tool.ToolExecutionContext;
 import com.graphnexus.application.agent.tool.ToolResult;
+import com.graphnexus.application.agent.trace.AgentTraceService;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -81,7 +82,7 @@ class TeachingAgentServiceTest {
         properties.setTotalTimeoutMs(30000);
         return new TeachingAgentService(new TeachingToolRegistry(List.of(tools)),
                 planner instanceof LlmAgentPlanner llm ? llm : proxy(planner),
-                fallback, objectMapper, properties);
+                fallback, objectMapper, properties, mock(AgentTraceService.class));
     }
 
     private LlmAgentPlanner proxy(AgentPlanner planner) {

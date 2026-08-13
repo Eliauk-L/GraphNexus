@@ -11,6 +11,7 @@ import com.graphnexus.application.agent.tool.TeachingTool;
 import com.graphnexus.application.agent.tool.TeachingToolRegistry;
 import com.graphnexus.application.agent.tool.ToolExecutionContext;
 import com.graphnexus.application.agent.tool.ToolResult;
+import com.graphnexus.application.agent.trace.AgentTraceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,7 @@ public class TeachingAgentService {
     private final RuleBasedAgentPlanner fallbackPlanner;
     private final ObjectMapper objectMapper;
     private final AgentProperties properties;
+    private final AgentTraceService traceService;
 
     public AgentResponse execute(AgentRequest request, ToolExecutionContext suppliedContext) {
         String taskId = suppliedContext.taskId() == null ? UUID.randomUUID().toString() : suppliedContext.taskId();
@@ -62,7 +64,9 @@ public class TeachingAgentService {
             }
             if (action.type() == AgentAction.ActionType.FINAL_ANSWER) {
                 String answer = planner.finalAnswer(request, history, action.answerPlan());
-                return response(taskId, "COMPLETED", answer, history, warnings, fallbackReason);
+                AgentResponse response = response(taskId, "COMPLETED", answer, history, warnings, fallbackReason);
+                traceService.save(response, context.userId());
+                return response;
             }
             String signature = action.tool() + ":" + action.arguments();
             if (!signatures.add(signature)) {
@@ -81,8 +85,10 @@ public class TeachingAgentService {
             }
         }
         String answer = fallbackPlanner.finalAnswer(request, history, "根据已有证据生成不完整回答");
-        return response(taskId, "PARTIAL", answer, history, warnings,
+        AgentResponse response = response(taskId, "PARTIAL", answer, history, warnings,
                 fallbackReason == null ? "MAX_ROUNDS_OR_TIMEOUT" : fallbackReason);
+        traceService.save(response, context.userId());
+        return response;
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
