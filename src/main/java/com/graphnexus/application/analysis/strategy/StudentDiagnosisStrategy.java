@@ -118,12 +118,18 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
         List<Map<String, Object>> prereqRows = weakKpIds.isEmpty()
                 ? Collections.emptyList()
                 : queryGraphRepository.findPrerequisitesUpstream(weakKpIds, maxHops);
-        Set<String> preKpIds = new HashSet<>();
+        Set<String> preKpIds = new LinkedHashSet<>();
         for (var row : prereqRows) {
-            String toKpId = (String) row.get("toKpId");
-            String toKpName = (String) row.get("toKpName");
-            preKpIds.add(toKpId);
-            kpNameMap.putIfAbsent(toKpId, toKpName);
+            String sourceKpId = (String) row.get("sourceKpId");
+            String targetKpId = (String) row.get("targetKpId");
+            if (sourceKpId != null) {
+                preKpIds.add(sourceKpId);
+                kpNameMap.putIfAbsent(sourceKpId, (String) row.get("sourceKpName"));
+            }
+            if (targetKpId != null) {
+                preKpIds.add(targetKpId);
+                kpNameMap.putIfAbsent(targetKpId, (String) row.get("targetKpName"));
+            }
         }
 
         // Step 4: 补全前置 KP 的掌握度（同时补全可能缺失的名称）
@@ -259,17 +265,21 @@ public class StudentDiagnosisStrategy implements SubgraphPruningStrategy {
             }
         }
         for (var row : prereqRows) {
-            Object toKpIdObj = row.get("toKpId");
-            if (toKpIdObj == null) continue;
-            String toKpId = toKpIdObj.toString();
-            // 确保目标节点在 nodes 中
-            if (seenNodeIds.add(toKpId)) {
-                var kpNode = buildKpNode(toKpId, kpNameMap.get(toKpId), subject);
-                enrichKpNodeProperties(kpNode, kpMasteryMap, kpExamHistoryMap, toKpId);
-                nodes.add(kpNode);
+            String sourceKpId = (String) row.get("sourceKpId");
+            String targetKpId = (String) row.get("targetKpId");
+            if (sourceKpId == null || targetKpId == null) continue;
+            // 查询返回的是路径中的真实逐边关系：前置知识 source → 被依赖知识 target。
+            for (String kpId : List.of(sourceKpId, targetKpId)) {
+                if (seenNodeIds.add(kpId)) {
+                    var kpNode = buildKpNode(kpId, kpNameMap.get(kpId), subject);
+                    enrichKpNodeProperties(kpNode, kpMasteryMap, kpExamHistoryMap, kpId);
+                    nodes.add(kpNode);
+                }
             }
+            double strength = row.get("strength") instanceof Number number
+                    ? number.doubleValue() : 1.0;
             edges.add(new GraphEdgeData(
-                    (String) row.get("fromKpId"), toKpId, "PREREQUISITE_OF", 1.0, null));
+                    sourceKpId, targetKpId, "PREREQUISITE_OF", strength, null));
         }
 
         // 元信息

@@ -132,22 +132,35 @@ public class QueryGraphRepository {
 
     /**
      * 展开前置依赖链（上游方向），最多 maxHops 跳。
+     *
+     * <p>关系语义固定为 {@code prerequisite-[:PREREQUISITE_OF]->dependent}。
+     * 因此查询必须以薄弱知识点为路径终点，沿入边反向找到前置知识。
+     * 返回结果会展开为路径中的真实逐边关系，避免把多跳路径压缩成一条不存在的边。</p>
      */
     public List<Map<String, Object>> findPrerequisitesUpstream(List<String> kpIds, int maxHops) {
         if (kpIds == null || kpIds.isEmpty()) return Collections.emptyList();
         int hops = Math.max(1, Math.min(maxHops, 3));
         try {
-            String cypher = String.format(
-                    "MATCH path = (kp:KnowledgePoint)-[:PREREQUISITE_OF*1..%d]->(pre:KnowledgePoint) " +
-                    "WHERE kp.id IN $ids " +
-                    "RETURN DISTINCT kp.id AS fromKpId, pre.id AS toKpId, COALESCE(pre.name, '未命名知识点') AS toKpName, " +
-                    "length(path) AS hops " +
-                    "LIMIT 200", hops);
+            String cypher = buildPrerequisitesUpstreamCypher(hops);
             return new ArrayList<>(neo4jClient.query(cypher).bindAll(Map.of("ids", kpIds)).fetch().all());
         } catch (Exception e) {
             log.warn("查询 PREREQUISITE_OF 链失败: kpIds={}, maxHops={}, {}", kpIds, maxHops, e.getMessage());
             return Collections.emptyList();
         }
+    }
+
+    static String buildPrerequisitesUpstreamCypher(int maxHops) {
+        int hops = Math.max(1, Math.min(maxHops, 3));
+        return String.format(
+                "MATCH path = (prerequisite:KnowledgePoint)-[:PREREQUISITE_OF*1..%d]->(weak:KnowledgePoint) " +
+                "WHERE weak.id IN $ids " +
+                "UNWIND relationships(path) AS relation " +
+                "WITH DISTINCT startNode(relation) AS source, endNode(relation) AS target, relation " +
+                "RETURN source.id AS sourceKpId, COALESCE(source.name, '未命名知识点') AS sourceKpName, " +
+                "target.id AS targetKpId, COALESCE(target.name, '未命名知识点') AS targetKpName, " +
+                "COALESCE(relation.strength, relation.weight, 1.0) AS strength " +
+                "ORDER BY sourceKpId, targetKpId " +
+                "LIMIT 200", hops);
     }
 
     // ======================== 学科列表查询 ========================

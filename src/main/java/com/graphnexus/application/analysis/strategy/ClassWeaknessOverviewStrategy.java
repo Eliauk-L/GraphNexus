@@ -133,12 +133,18 @@ public class ClassWeaknessOverviewStrategy implements SubgraphPruningStrategy {
         List<Map<String, Object>> prereqRows = weakKpIds.isEmpty()
                 ? Collections.emptyList()
                 : queryGraphRepository.findPrerequisitesUpstream(weakKpIds, maxHops);
-        Set<String> preKpIds = new HashSet<>();
+        Set<String> preKpIds = new LinkedHashSet<>();
         for (var row : prereqRows) {
-            String toKpId = (String) row.get("toKpId");
-            String toKpName = (String) row.get("toKpName");
-            preKpIds.add(toKpId);
-            kpNameMap.putIfAbsent(toKpId, toKpName);
+            String sourceKpId = (String) row.get("sourceKpId");
+            String targetKpId = (String) row.get("targetKpId");
+            if (sourceKpId != null) {
+                preKpIds.add(sourceKpId);
+                kpNameMap.putIfAbsent(sourceKpId, (String) row.get("sourceKpName"));
+            }
+            if (targetKpId != null) {
+                preKpIds.add(targetKpId);
+                kpNameMap.putIfAbsent(targetKpId, (String) row.get("targetKpName"));
+            }
         }
 
         // Step 5: 组装结果
@@ -257,19 +263,23 @@ public class ClassWeaknessOverviewStrategy implements SubgraphPruningStrategy {
         }
 
         for (var row : prereqRows) {
-            Object toKpIdObj = row.get("toKpId");
-            if (toKpIdObj == null) continue;
-            String toKpId = toKpIdObj.toString();
-            if (seenNodeIds.add(toKpId)) {
-                String kpName = kpNameMap.getOrDefault(toKpId, "未知知识点");
-                Map<String, Object> props = new LinkedHashMap<>();
-                props.put("name", kpName);
-                props.put("subject", subject);
-                props.put("dependencyOnly", true);
-                nodes.add(new GraphNodeData(toKpId, "KnowledgePoint", kpName, null, null, props));
+            String sourceKpId = (String) row.get("sourceKpId");
+            String targetKpId = (String) row.get("targetKpId");
+            if (sourceKpId == null || targetKpId == null) continue;
+            for (String kpId : List.of(sourceKpId, targetKpId)) {
+                if (seenNodeIds.add(kpId)) {
+                    String kpName = kpNameMap.getOrDefault(kpId, "未知知识点");
+                    Map<String, Object> props = new LinkedHashMap<>();
+                    props.put("name", kpName);
+                    props.put("subject", subject);
+                    props.put("dependencyOnly", true);
+                    nodes.add(new GraphNodeData(kpId, "KnowledgePoint", kpName, null, null, props));
+                }
             }
+            double strength = row.get("strength") instanceof Number number
+                    ? number.doubleValue() : 1.0;
             edges.add(new GraphEdgeData(
-                    (String) row.get("fromKpId"), toKpId, "PREREQUISITE_OF", 1.0, null));
+                    sourceKpId, targetKpId, "PREREQUISITE_OF", strength, null));
         }
 
         // 元信息
