@@ -12,6 +12,7 @@ import com.graphnexus.application.agent.tool.TeachingToolRegistry;
 import com.graphnexus.application.agent.tool.ToolExecutionContext;
 import com.graphnexus.application.agent.tool.ToolResult;
 import com.graphnexus.application.agent.trace.AgentTraceService;
+import com.graphnexus.application.agent.trace.AgentMetrics;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -31,8 +32,10 @@ public class TeachingAgentService {
     private final ObjectMapper objectMapper;
     private final AgentProperties properties;
     private final AgentTraceService traceService;
+    private final AgentMetrics metrics;
 
     public AgentResponse execute(AgentRequest request, ToolExecutionContext suppliedContext) {
+        long startedAt = System.currentTimeMillis();
         String taskId = suppliedContext.taskId() == null ? UUID.randomUUID().toString() : suppliedContext.taskId();
         Instant deadline = Instant.now().plusMillis(properties.getTotalTimeoutMs());
         ToolExecutionContext context = new ToolExecutionContext(taskId, suppliedContext.userId(),
@@ -66,6 +69,7 @@ public class TeachingAgentService {
                 String answer = planner.finalAnswer(request, history, action.answerPlan());
                 AgentResponse response = response(taskId, "COMPLETED", answer, history, warnings, fallbackReason);
                 traceService.save(response, context.userId());
+                metrics.record(response, System.currentTimeMillis() - startedAt);
                 return response;
             }
             String signature = action.tool() + ":" + action.arguments();
@@ -88,6 +92,7 @@ public class TeachingAgentService {
         AgentResponse response = response(taskId, "PARTIAL", answer, history, warnings,
                 fallbackReason == null ? "MAX_ROUNDS_OR_TIMEOUT" : fallbackReason);
         traceService.save(response, context.userId());
+        metrics.record(response, System.currentTimeMillis() - startedAt);
         return response;
     }
 

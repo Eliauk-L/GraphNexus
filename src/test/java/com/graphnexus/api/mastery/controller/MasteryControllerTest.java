@@ -7,6 +7,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +16,8 @@ import java.util.List;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.graphnexus.common.exception.BusinessException;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -53,5 +57,15 @@ class MasteryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.eventCount").value(6));
         verify(updateService).rebuild("S001", "数学");
+    }
+
+    @Test
+    void studentCannotReadAnotherStudentsMastery() {
+        MasteryController controller = new MasteryController(queryService, updateService);
+        var authentication = new UsernamePasswordAuthenticationToken("S001", "n/a",
+                List.of(new SimpleGrantedAuthority("ROLE_STUDENT")));
+
+        assertThrows(BusinessException.class,
+                () -> controller.current("S002", "数学", authentication));
     }
 }
