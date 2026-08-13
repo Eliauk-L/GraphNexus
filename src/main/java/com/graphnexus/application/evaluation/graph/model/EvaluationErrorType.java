@@ -1,0 +1,13 @@
+package com.graphnexus.application.evaluation.graph.model;
+
+public enum EvaluationErrorType {
+    FALSE_POSITIVE_TOPIC,
+    FALSE_NEGATIVE_TOPIC,
+    WRONG_TOPIC_TYPE,
+    WRONG_TOPIC_DOMAIN,
+    FALSE_POSITIVE_DEPENDENCY,
+    FALSE_NEGATIVE_DEPENDENCY,
+    REVERSED_DEPENDENCY,
+    WRONG_DEPENDENCY_STRENGTH,
+    UNMATCHED_DEPENDENCY_ENDPOINT
+}
