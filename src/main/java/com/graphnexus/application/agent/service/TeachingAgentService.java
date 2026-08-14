@@ -1,16 +1,13 @@
 package com.graphnexus.application.agent.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphnexus.application.agent.config.AgentProperties;
 import com.graphnexus.application.agent.model.AgentAction;
 import com.graphnexus.application.agent.model.AgentRequest;
 import com.graphnexus.application.agent.model.AgentResponse;
 import com.graphnexus.application.agent.model.AgentToolCall;
 import com.graphnexus.application.agent.tool.EvidenceRef;
-import com.graphnexus.application.agent.tool.TeachingTool;
 import com.graphnexus.application.agent.tool.TeachingToolRegistry;
 import com.graphnexus.application.agent.tool.ToolExecutionContext;
-import com.graphnexus.application.agent.tool.ToolResult;
 import com.graphnexus.application.agent.trace.AgentTraceService;
 import com.graphnexus.application.agent.trace.AgentMetrics;
 import lombok.RequiredArgsConstructor;
@@ -29,10 +26,10 @@ public class TeachingAgentService {
     private final TeachingToolRegistry registry;
     private final LlmAgentPlanner llmPlanner;
     private final RuleBasedAgentPlanner fallbackPlanner;
-    private final ObjectMapper objectMapper;
     private final AgentProperties properties;
     private final AgentTraceService traceService;
     private final AgentMetrics metrics;
+    private final AgentToolExecutor toolExecutor;
 
     public AgentResponse execute(AgentRequest request, ToolExecutionContext suppliedContext) {
         long startedAt = System.currentTimeMillis();
@@ -79,7 +76,7 @@ public class TeachingAgentService {
                 if (consecutiveErrors >= properties.getMaxConsecutiveErrors()) break;
                 continue;
             }
-            ToolResult<?> observation = executeTool(action, context);
+            var observation = toolExecutor.execute(action, context);
             history.add(new AgentToolCall(round, action.tool(), action.arguments().toString(),
                     action.decisionSummary(), observation));
             consecutiveErrors = observation.success() ? 0 : consecutiveErrors + 1;
@@ -94,18 +91,6 @@ public class TeachingAgentService {
         traceService.save(response, context.userId());
         metrics.record(response, System.currentTimeMillis() - startedAt);
         return response;
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private ToolResult<?> executeTool(AgentAction action, ToolExecutionContext context) {
-        TeachingTool tool = registry.find(action.tool()).orElse(null);
-        if (tool == null) return ToolResult.failure("UNKNOWN_TOOL", "未知 Tool: " + action.tool(), 0);
-        try {
-            Object input = objectMapper.treeToValue(action.arguments(), tool.inputType());
-            return tool.execute(input, context);
-        } catch (Exception exception) {
-            return ToolResult.failure("TOOL_EXECUTION_FAILED", exception.getMessage(), 0);
-        }
     }
 
     private void validate(AgentAction action) {

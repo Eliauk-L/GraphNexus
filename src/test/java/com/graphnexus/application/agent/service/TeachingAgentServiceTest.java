@@ -18,6 +18,7 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -83,7 +84,13 @@ class TeachingAgentServiceTest {
         properties.setTotalTimeoutMs(30000);
         return new TeachingAgentService(new TeachingToolRegistry(List.of(tools)),
                 planner instanceof LlmAgentPlanner llm ? llm : proxy(planner),
-                fallback, objectMapper, properties, mock(AgentTraceService.class), mock(AgentMetrics.class));
+                fallback, properties, mock(AgentTraceService.class), mock(AgentMetrics.class),
+                new AgentToolExecutor(new TeachingToolRegistry(List.of(tools)), objectMapper, properties,
+                        Executors.newCachedThreadPool(runnable -> {
+                            Thread thread = new Thread(runnable);
+                            thread.setDaemon(true);
+                            return thread;
+                        })));
     }
 
     private LlmAgentPlanner proxy(AgentPlanner planner) {
