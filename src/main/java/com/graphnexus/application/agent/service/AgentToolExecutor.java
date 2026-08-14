@@ -30,7 +30,7 @@ public class AgentToolExecutor {
 
     public AgentToolExecutor(TeachingToolRegistry registry, ObjectMapper objectMapper,
                              AgentProperties properties,
-                             @Qualifier("agentToolExecutor") ExecutorService executor) {
+                             @Qualifier("agentToolTaskExecutor") ExecutorService executor) {
         this.registry = registry;
         this.objectMapper = objectMapper;
         this.properties = properties;

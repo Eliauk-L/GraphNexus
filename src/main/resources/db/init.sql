@@ -102,6 +102,36 @@ CREATE TABLE IF NOT EXISTS query_task (
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='智能问答任务记录表(日志类表，不设逻辑删除)';
 
+-- ======================== teaching-agent 任务与工具轨迹表 ========================
+CREATE TABLE IF NOT EXISTS agent_task (
+    task_id          VARCHAR(36)  NOT NULL COMMENT 'Agent 任务UUID',
+    user_id          VARCHAR(128) NOT NULL COMMENT '任务所属用户标识',
+    status           VARCHAR(20)  NOT NULL COMMENT '任务状态：COMPLETED/PARTIAL',
+    answer_text      MEDIUMTEXT            COMMENT 'Agent 最终回答',
+    fallback_reason  VARCHAR(64)            COMMENT '降级或提前结束原因',
+    create_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (task_id),
+    INDEX idx_agent_task_user_time (user_id, create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Agent 任务执行摘要';
+
+CREATE TABLE IF NOT EXISTS agent_tool_call (
+    id               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '技术主键',
+    task_id          VARCHAR(36)  NOT NULL COMMENT '关联 Agent 任务UUID',
+    round_no         INT          NOT NULL COMMENT 'Agent 执行轮次',
+    tool_name        VARCHAR(64)  NOT NULL COMMENT '工具名称',
+    arguments_json   JSON         NOT NULL COMMENT '工具调用参数',
+    observation_json MEDIUMTEXT            COMMENT '工具观察结果',
+    decision_summary VARCHAR(512)           COMMENT '公开决策摘要',
+    status           VARCHAR(20)  NOT NULL COMMENT '工具执行状态',
+    elapsed_ms       BIGINT                 COMMENT '工具执行耗时（毫秒）',
+    error_message    VARCHAR(1000)          COMMENT '失败信息',
+    create_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_agent_task_round (task_id, round_no),
+    INDEX idx_agent_tool_task (task_id, round_no),
+    CONSTRAINT fk_agent_tool_task FOREIGN KEY (task_id) REFERENCES agent_task(task_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Agent 可审计工具调用轨迹';
+
 -- =============================================================================
 -- user-auth-rbac 用户认证与角色权限管理
 -- =============================================================================

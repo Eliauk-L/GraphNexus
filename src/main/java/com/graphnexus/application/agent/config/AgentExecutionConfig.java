@@ -9,8 +9,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Configuration
 public class AgentExecutionConfig {
-    @Bean(name = "agentToolExecutor", destroyMethod = "shutdownNow")
-    public ExecutorService agentToolExecutor() {
+    @Bean(name = "agentToolTaskExecutor", destroyMethod = "shutdownNow")
+    public ExecutorService agentToolTaskExecutor() {
         AtomicInteger sequence = new AtomicInteger();
         return Executors.newFixedThreadPool(8, runnable -> {
             Thread thread = new Thread(runnable, "agent-tool-" + sequence.incrementAndGet());
