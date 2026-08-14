@@ -41,15 +41,16 @@ public class AgentTraceService {
     }
 
     @Transactional(readOnly = true)
-    public List<AgentToolCallDO> get(String taskId, String userId, boolean admin) {
+    public List<AgentToolCallView> get(String taskId, String userId, boolean admin) {
         requireOwner(taskId, userId, admin);
-        return repository.findByTaskIdOrderByRoundNoAsc(taskId);
+        return repository.findByTaskIdOrderByRoundNoAsc(taskId).stream().map(this::toView).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<AgentTaskDO> recent(String userId, boolean admin) {
-        return admin ? taskRepository.findTop50ByOrderByCreateTimeDesc()
+    public List<AgentTaskView> recent(String userId, boolean admin) {
+        List<AgentTaskDO> rows = admin ? taskRepository.findTop50ByOrderByCreateTimeDesc()
                 : taskRepository.findTop50ByUserIdOrderByCreateTimeDesc(userId);
+        return rows.stream().map(this::toView).toList();
     }
 
     private void requireOwner(String taskId, String userId, boolean admin) {
@@ -63,5 +64,16 @@ public class AgentTraceService {
     private String json(Object value) {
         try { return objectMapper.writeValueAsString(value); }
         catch (Exception exception) { return "null"; }
+    }
+
+    private AgentTaskView toView(AgentTaskDO row) {
+        return new AgentTaskView(row.getTaskId(), row.getUserId(), row.getStatus(), row.getAnswerText(),
+                row.getFallbackReason(), row.getCreateTime());
+    }
+
+    private AgentToolCallView toView(AgentToolCallDO row) {
+        return new AgentToolCallView(row.getId(), row.getTaskId(), row.getRoundNo(), row.getToolName(),
+                row.getArgumentsJson(), row.getObservationJson(), row.getDecisionSummary(), row.getStatus(),
+                row.getElapsedMs(), row.getErrorMessage(), row.getCreateTime());
     }
 }

@@ -96,7 +96,8 @@ public class MasteryUpdateService {
             if (!latest.containsKey(removedKpId)) graphRepository.delete(studentNodeId, removedKpId);
         }
         latest.forEach((kpId, update) -> graphRepository.upsert(
-                studentNodeId, kpId, update.result, update.examNo, update.examDate, update.description));
+                studentNodeId, kpId, update.result.newWeight(), update.result.sampleCount(),
+                update.result.confidence(), update.examNo, update.examDate, update.description));
         return created;
     }
 

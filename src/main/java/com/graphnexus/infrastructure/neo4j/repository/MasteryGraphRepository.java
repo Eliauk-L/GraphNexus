@@ -1,6 +1,5 @@
 package com.graphnexus.infrastructure.neo4j.repository;
 
-import com.graphnexus.application.mastery.model.MasteryUpdateResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Repository;
@@ -31,7 +30,8 @@ public class MasteryGraphRepository {
     }
 
     public void upsert(String studentNodeId, String knowledgePointId,
-                       MasteryUpdateResult result, String examNo, LocalDate examDate,
+                       double weight, int sampleCount, double confidence,
+                       String examNo, LocalDate examDate,
                        String description) {
         neo4jClient.query(
                 "MATCH (s:Student {id: $studentId}), (kp:KnowledgePoint {id: $kpId}) "
@@ -44,9 +44,9 @@ public class MasteryGraphRepository {
                 .bindAll(Map.of(
                         "studentId", studentNodeId,
                         "kpId", knowledgePointId,
-                        "weight", result.newWeight(),
-                        "sampleCount", result.sampleCount(),
-                        "confidence", result.confidence(),
+                        "weight", weight,
+                        "sampleCount", sampleCount,
+                        "confidence", confidence,
                         "examNo", examNo,
                         "examDate", examDate.toString(),
                         "description", description))

@@ -23,6 +23,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -68,7 +70,8 @@ class MasteryUpdateServiceTest {
         assertEquals("E2", events.getAllValues().get(1).getExamNo());
         assertEquals(0.65, events.getAllValues().get(1).getNewWeight(), 1e-8);
         verify(graphRepository).upsert(eq("student-1"), eq("kp-axis"),
-                any(), eq("E2"), eq(LocalDate.of(2026, 2, 1)), any());
+                anyDouble(), anyInt(), anyDouble(), eq("E2"),
+                eq(LocalDate.of(2026, 2, 1)), any());
     }
 
     @Test

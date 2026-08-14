@@ -6,11 +6,11 @@ import com.graphnexus.application.agent.model.AgentResponse;
 import com.graphnexus.application.agent.service.TeachingAgentService;
 import com.graphnexus.application.agent.tool.ToolExecutionContext;
 import com.graphnexus.application.agent.trace.AgentTraceService;
+import com.graphnexus.application.agent.trace.AgentTaskView;
+import com.graphnexus.application.agent.trace.AgentToolCallView;
 import com.graphnexus.common.ApiResult;
 import com.graphnexus.common.exception.BusinessException;
 import com.graphnexus.common.exception.ErrorCode;
-import com.graphnexus.infrastructure.mysql.agent.entity.AgentTaskDO;
-import com.graphnexus.infrastructure.mysql.agent.entity.AgentToolCallDO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
@@ -59,7 +59,7 @@ public class TeachingAgentController {
 
     @GetMapping("/result/{taskId}/trace")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
-    public ApiResult<List<AgentToolCallDO>> trace(@PathVariable String taskId) {
+    public ApiResult<List<AgentToolCallView>> trace(@PathVariable String taskId) {
         Authentication authentication = org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication();
         return ApiResult.success(traceService.get(taskId, authentication.getName(), isAdmin(authentication)));
@@ -67,7 +67,7 @@ public class TeachingAgentController {
 
     @GetMapping("/tasks")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
-    public ApiResult<List<AgentTaskDO>> tasks(Authentication authentication) {
+    public ApiResult<List<AgentTaskView>> tasks(Authentication authentication) {
         return ApiResult.success(traceService.recent(authentication.getName(), isAdmin(authentication)));
     }
 
