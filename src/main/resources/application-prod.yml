@@ -158,6 +158,25 @@ query:
   output-format: html
 
 # ---------------------------------------------------------------------------
+# TypeSafe Jev（知识点候选对语义判断）
+# AUTO 必须在中文标注集校准和教师审核闭环验收后才可开启。
+# ---------------------------------------------------------------------------
+typesafe:
+  enabled: ${TYPESAFE_ENABLED:false}
+  base-url: ${TYPESAFE_BASE_URL:https://api.typesafe.ai}
+  api-key: ${TYPESAFE_API_KEY:}
+  model: ${TYPESAFE_MODEL:jev-1.13.0}
+  question-version: ${TYPESAFE_QUESTION_VERSION:kp-alignment-v1}
+  connect-timeout-ms: ${TYPESAFE_CONNECT_TIMEOUT_MS:2000}
+  read-timeout-ms: ${TYPESAFE_READ_TIMEOUT_MS:5000}
+  max-retries: ${TYPESAFE_MAX_RETRIES:2}
+  initial-backoff-ms: ${TYPESAFE_INITIAL_BACKOFF_MS:300}
+  max-concurrency: ${TYPESAFE_MAX_CONCURRENCY:4}
+  max-candidates-per-mention: ${TYPESAFE_MAX_CANDIDATES_PER_MENTION:8}
+  cache-max-entries: ${TYPESAFE_CACHE_MAX_ENTRIES:1000}
+  mode: ${TYPESAFE_MODE:OFF}
+
+# ---------------------------------------------------------------------------
 # JWT 认证配置
 # ---------------------------------------------------------------------------
 jwt:

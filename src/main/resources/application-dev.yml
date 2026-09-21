@@ -172,6 +172,25 @@ query:
   output-format: html  # html | markdown
 
 # ---------------------------------------------------------------------------
+# TypeSafe Jev（知识点候选对语义判断）
+# 默认关闭；待 KpMention、候选账本与审核闭环完成后以 SHADOW 启用。
+# ---------------------------------------------------------------------------
+typesafe:
+  enabled: false
+  base-url: https://api.typesafe.ai
+  api-key: ${TYPESAFE_API_KEY:}
+  model: jev-1.13.0
+  question-version: kp-alignment-v1
+  connect-timeout-ms: 2000
+  read-timeout-ms: 5000
+  max-retries: 2
+  initial-backoff-ms: 300
+  max-concurrency: 4
+  max-candidates-per-mention: 8
+  cache-max-entries: 1000
+  mode: OFF
+
+# ---------------------------------------------------------------------------
 # JWT 开发环境配置
 # ---------------------------------------------------------------------------
 jwt:
